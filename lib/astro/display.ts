@@ -12,12 +12,15 @@ export const PLANET_ABBR: Record<PlanetName, string> = {
   Ketu: "Ke",
 };
 
-/** Format a sidereal longitude as "12°34' Sign". */
+/** Format a sidereal longitude as "12°34' Sign" — minutes rounded to nearest
+ *  (matching Jagannātha Hora / Parashara's Light), with carry. Clamped to 29°59'
+ *  so the displayed sign never crosses a boundary and desyncs from the nakṣatra. */
 export function formatLongitude(lon: number, signs: readonly string[]): string {
   const s = Math.floor(lon / 30);
   const within = lon - s * 30;
-  const deg = Math.floor(within);
-  const min = Math.floor((within - deg) * 60);
+  const arcmin = Math.min(1799, Math.round(within * 60)); // 0-1799 within the sign
+  const deg = Math.floor(arcmin / 60);
+  const min = arcmin % 60;
   return `${deg}°${min.toString().padStart(2, "0")}' ${signs[s]}`;
 }
 
