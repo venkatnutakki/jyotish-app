@@ -76,6 +76,16 @@ const NAMA_AKSHARA: string[][] = [
   ["De", "Do", "Cha", "Chi"],        // Revatī
 ];
 
+// Puruṣārtha (primary life-aim) per nakṣatra — the widely-published traditional
+// assignment (0 Dharma, 1 Artha, 2 Kāma, 3 Mokṣa). Some lineages differ on a few
+// stars; this is the common version.
+const PURUSHARTHA_LABEL = ["Dharma (purpose / duty)", "Artha (prosperity / means)", "Kāma (desire / pleasure)", "Mokṣa (liberation)"];
+const NAK_PURUSHARTHA = [
+  0, 1, 2, 3, 3, 2, 1, 0, 0, // Aśvinī … Āśleṣā
+  1, 2, 3, 3, 2, 1, 0, 0, 1, // Maghā … Jyeṣṭhā
+  2, 3, 3, 1, 0, 0, 1, 2, 3, // Mūla … Revatī
+];
+
 const GANA_LABEL = ["Deva (divine)", "Manuṣya (human)", "Rākṣasa (demonic/intense)"];
 const NAK_GANA = [0, 1, 2, 1, 0, 1, 0, 0, 2, 2, 1, 1, 0, 2, 0, 2, 0, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0];
 const YONI_ANIMALS = ["Horse", "Elephant", "Sheep", "Serpent", "Dog", "Cat", "Rat", "Cow", "Buffalo", "Tiger", "Deer", "Monkey", "Mongoose", "Lion"];
@@ -93,7 +103,8 @@ export interface NakshatraProfile extends NakshatraAttr {
   index: number;
   gana: string;
   yoni: string;
-  guna: string; // via ruling planet
+  guna: string;        // via ruling planet
+  purushartha: string; // primary life-aim (common assignment)
 }
 
 /** Full traditional profile for a nakṣatra (0-26). */
@@ -105,6 +116,7 @@ export function nakshatraProfile(index: number): NakshatraProfile {
     gana: GANA_LABEL[NAK_GANA[i]],
     yoni: YONI_ANIMALS[NAK_YONI[i]],
     guna: LORD_GUNA[NAKSHATRAS[i].lord as PlanetName],
+    purushartha: PURUSHARTHA_LABEL[NAK_PURUSHARTHA[i]],
   };
 }
 

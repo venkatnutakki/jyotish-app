@@ -32,7 +32,7 @@ interface AvReduction {
   kakshya: { planet: string; sign: number; kakshya: number; kakshyaLord: string; benefic: boolean }[];
 }
 interface NakProfile {
-  index: number; deity: string; symbol: string; shakti: string; archetype: string; gana: string; yoni: string; guna: string;
+  index: number; deity: string; symbol: string; shakti: string; archetype: string; gana: string; yoni: string; guna: string; purushartha: string;
 }
 interface Details {
   specialPoints: SpecialPoint[];
@@ -127,6 +127,7 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
                     <div><span className="text-amber-100/40">Symbol:</span> {n.symbol}</div>
                     <div><span className="text-amber-100/40">Śakti:</span> {n.shakti}</div>
                     <div><span className="text-amber-100/40">Gaṇa · Yoni · Guṇa:</span> {n.gana} · {n.yoni} · {n.guna}</div>
+                    <div><span className="text-amber-100/40">Puruṣārtha:</span> {n.purushartha}</div>
                     {key === "janma" && d.nakshatraProfiles!.janmaPada && (
                       <div><span className="text-amber-100/40">Pāda {d.nakshatraProfiles!.janmaPada.pada}:</span> syllable “{d.nakshatraProfiles!.janmaPada.syllable}” · navāṁśa {d.nakshatraProfiles!.janmaPada.navamsaSign} ({d.nakshatraProfiles!.janmaPada.navamsaLord})</div>
                     )}
