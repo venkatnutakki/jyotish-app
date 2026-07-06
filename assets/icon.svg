@@ -1,0 +1,30 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#2a1f3d"/>
+      <stop offset="60%" stop-color="#191325"/>
+      <stop offset="100%" stop-color="#0e0a17"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="55%" stop-color="#f5b942"/>
+      <stop offset="100%" stop-color="#e08a2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <!-- outer ring of nakshatra dots -->
+  <g fill="#f5b94255">
+    <!-- 12 dots around a circle r=360 -->
+    <circle cx="512" cy="152" r="9"/><circle cx="692" cy="200" r="9"/><circle cx="824" cy="332" r="9"/>
+    <circle cx="872" cy="512" r="9"/><circle cx="824" cy="692" r="9"/><circle cx="692" cy="824" r="9"/>
+    <circle cx="512" cy="872" r="9"/><circle cx="332" cy="824" r="9"/><circle cx="200" cy="692" r="9"/>
+    <circle cx="152" cy="512" r="9"/><circle cx="200" cy="332" r="9"/><circle cx="332" cy="200" r="9"/>
+  </g>
+  <!-- 8-pointed dharma star -->
+  <g transform="translate(512 512)" fill="url(#gold)">
+    <path d="M0,-330 L52,-90 L292,-140 L118,-40 L292,140 L90,52 L0,330 L-52,90 L-292,140 L-118,40 L-292,-140 L-90,-52 Z"/>
+  </g>
+  <circle cx="512" cy="512" r="70" fill="#0e0a17"/>
+  <circle cx="512" cy="512" r="70" fill="none" stroke="url(#gold)" stroke-width="10"/>
+  <circle cx="512" cy="512" r="20" fill="url(#gold)"/>
+</svg>

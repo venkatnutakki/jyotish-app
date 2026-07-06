@@ -39,7 +39,9 @@ export function installApiShim() {
       } as Record<string, (b: unknown) => unknown>;
       const handler = route[path];
       if (!handler) return json({ error: `No offline handler for ${path}` }, 404);
-      return json(handler(body));
+      // interpret/ask are async (may call an on-device AI provider); the rest
+      // return plain objects. await handles both.
+      return json(await handler(body));
     } catch (e) {
       return json({ error: e instanceof Error ? e.message : "Offline compute failed" }, 500);
     }

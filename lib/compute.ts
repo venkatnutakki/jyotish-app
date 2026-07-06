@@ -51,6 +51,8 @@ import { computeCompatibility, type Person } from "./astro/compatibility";
 import { matchTopics, isTimingQuestion, TOPICS } from "./astro/question";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./astro/classical-evidence";
 import { SIGNS, NAKSHATRAS } from "./astro/constants";
+import { getAiConfig } from "./ai/ai-config";
+import { chatClient } from "./ai/llm-client";
 import type { BirthData, Chart } from "./astro/types";
 
 const weekdayOf = (b: BirthData) => new Date(Date.UTC(b.year, b.month - 1, b.day)).getUTCDay();
@@ -197,25 +199,103 @@ export function kpHoraryRoute(body: { number: number; latitude: number; longitud
   return { lagna, moment: now.toISOString(), kp: computeKpFull(chart, birth) };
 }
 
-// AI routes fall back to the classical reading offline (no server / no key).
-export function interpretRoute(birth: BirthData) {
+const ordinal = (n: number) => `${n}${["th", "st", "nd", "rd"][(n % 100 - n % 10 !== 10 ? 1 : 0) && n % 10 < 4 ? n % 10 : 0] || "th"}`;
+const trimSentence = (s: string) => { const t = s.trim(); return t.length > 200 ? t.slice(0, 197).trim() + "…" : t; };
+
+// System prompts mirror the server routes (app/api/interpret, app/api/ask) so an
+// on-device key yields the same grounded, cited natural-language reading.
+const INTERPRET_SYSTEM = `You are a knowledgeable, grounded Vedic (Jyotish) astrologer.
+You will be given a deterministic classical analysis of a birth chart (facts
+computed from the ephemeris) together with VERBATIM quotations from the classical
+texts (Bhṛgu Sūtras, Sārāvalī, Significations of the Planets) that apply to this
+chart. Write a warm, readable reading for the native — but strictly grounded in
+those classics.
+
+STRICT GROUNDING RULES (most important):
+- Every predictive statement MUST be traceable to a supplied classical quote or a
+  computed fact. Do NOT add claims that are not supported by the provided material.
+- When you make a prediction, cite the source in parentheses, e.g.
+  "(Bhṛgu Sūtras — Sun in the 9th)" or "(Sārāvalī — Moon in Taurus)". Prefer the
+  wording of the classical quote; paraphrase it into plain language, do not invent.
+- If the supplied classics DISAGREE on an area, say so honestly ("classical
+  opinion is mixed here") rather than forcing a single verdict.
+- Do NOT invent placements, degrees, yogas, or dasha periods.
+
+STYLE:
+- Organise by LIFE AREA using the supplied "Life predictions" (Personality,
+  Career, Wealth, Marriage, Education, Health, Fortune, etc.). One short Markdown
+  heading per area, then a plain-language paragraph a layperson understands,
+  reflecting the verdict (Excellent/Strong/Favourable/Mixed/Challenging).
+- Weave in Shadbala strengths, yogas, and the current dasha where relevant.
+- Encouraging and balanced; frame challenges as constructive guidance.
+- Minimal jargon. ~550-750 words. No preamble like "Here is".`;
+
+const ASK_SYSTEM = `You are a grounded Vedic (Jyotish) astrologer answering ONE specific
+question about ONE birth chart. You are given: the chart's key facts, the running
+daśā, the relevant bhāva (house) verdicts, and VERBATIM quotations from the
+classical texts (Bhṛgu Sūtras, Sārāvalī, Significations of the Planets) that the
+sages apply to this exact matter.
+
+RULES:
+- Answer ONLY the question asked, directly, in the first paragraph.
+- Reason STRICTLY from the supplied classical quotes and computed facts. Do NOT
+  invent placements, yogas, or rules not given to you.
+- Cite the source for each astrological claim in parentheses, e.g.
+  "(Bhṛgu Sūtras — Venus in the 7th)" or "(Sārāvalī — Moon in Cancer)".
+- If the question is about TIMING, use the daśā/antardaśā periods given to indicate
+  when the matter is most likely to activate; be clear these are indicative windows.
+- If the classics supplied are mixed, say so honestly instead of overstating.
+- Warm, plain language for an ordinary person. 150–300 words. No preamble.`;
+
+// AI routes fall back to the classical reading offline (no key / AI unreachable).
+export async function interpretRoute(birth: BirthData) {
   const chart = computeChart(birth);
   const dasha = vimshottariDasha(chart);
   const shadbala = computeShadbala(chart, birth);
   const yogas = computeYogas(chart);
   const bhavas = analyzeBhavas(chart, shadbala);
   const analysis = interpretChart(chart, dasha);
+  const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha);
+
+  // Build the same grounded summary the server route feeds the model.
+  const bhavaText = bhavas
+    .map((b) => `House ${b.house} (${b.significations}): ${b.verdict}. Lord ${b.lord} in ${SIGNS[b.lordSign]} (${b.lordDignity}, ${b.lordRupas?.toFixed(1)} rūpas), kāraka ${b.karaka}.`)
+    .join("\n");
+  const predictionText = predictions
+    .map((p) => {
+      const cites = p.evidence.map((e) => `    · [${e.source} — ${e.subject}] ${e.text}`).join("\n");
+      return `${p.title} — ${p.verdict} (${p.confidence} confidence; sources ${p.agreement}).\n  Synthesis: ${p.reading} Factors: ${p.factors.join(" ")}\n  Classical quotes to cite for this area:\n${cites || "    · (no direct classical quote available)"}`;
+    })
+    .join("\n\n");
+  const moonNak = chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;
+  const jn = nakshatraProfile(moonNak);
+  const nakLine = `Janma Nakṣatra (Moon): ${NAKSHATRAS[moonNak].name} — deity ${jn.deity}, symbol ${jn.symbol}, śakti = ${jn.shakti}; ${jn.gana} gaṇa. Archetype: ${jn.archetype}`;
+  const groundedSummary = `${analysis.classicalSummary}\n\n${nakLine}\n\nHouse (Bhāva) analysis — B.V. Raman's method:\n${bhavaText}\n\nLife predictions (synthesised):\n${predictionText}`;
+
+  const cfg = getAiConfig();
+  if (cfg) {
+    try {
+      const userMsg = `Native: ${birth.name || "(unnamed)"}, born ${birth.day}/${birth.month}/${birth.year} at ${birth.place || "given coordinates"}.\n\nClassical analysis:\n${groundedSummary}`;
+      const { text, provider, model } = await chatClient(INTERPRET_SYSTEM, userMsg, cfg);
+      if (text?.trim()) {
+        return { source: "ai", provider, model, headline: analysis.headline, reading: text, analysis, bhavas, predictions };
+      }
+    } catch (e) {
+      return {
+        source: "classical", headline: analysis.headline, reading: groundedSummary,
+        note: `AI request failed (${e instanceof Error ? e.message : "error"}); showing the classical analysis.`,
+        analysis, bhavas, predictions,
+      };
+    }
+  }
   return {
-    source: "classical", headline: analysis.headline, reading: analysis.classicalSummary,
-    note: "Offline mode: classical rule-based reading.",
-    analysis, bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha),
+    source: "classical", headline: analysis.headline, reading: groundedSummary,
+    note: cfg ? "Showing the classical analysis." : "Offline mode: classical rule-based reading. Add an AI key in About for a natural-language reading.",
+    analysis, bhavas, predictions,
   };
 }
 
-const ordinal = (n: number) => `${n}${["th", "st", "nd", "rd"][(n % 100 - n % 10 !== 10 ? 1 : 0) && n % 10 < 4 ? n % 10 : 0] || "th"}`;
-const trimSentence = (s: string) => { const t = s.trim(); return t.length > 200 ? t.slice(0, 197).trim() + "…" : t; };
-
-export function askRoute(body: { birth: BirthData; question: string }) {
+export async function askRoute(body: { birth: BirthData; question: string }) {
   const { birth, question } = body;
   if (!question?.trim()) return { error: "Please enter a question." };
   const chart = computeChart(birth);
@@ -238,6 +318,7 @@ export function askRoute(body: { birth: BirthData; question: string }) {
   const timing = isTimingQuestion(question);
   const upcoming = maha?.sub?.filter((s) => new Date(s.start).getTime() >= now).slice(0, 4)
     .map((s) => `${s.lord} (${new Date(s.start).getFullYear()}–${new Date(s.end).getFullYear()})`).join(", ");
+  const moon = chart.planets.find((p) => p.planet === "Moon")!;
 
   const primary = topics[0];
   const pv = bhavas[primary.houses[0] - 1];
@@ -246,11 +327,34 @@ export function askRoute(body: { birth: BirthData; question: string }) {
   const time = timing && (antar || upcoming)
     ? ` On timing: the current ${maha?.lord}${antar ? `/${antar.lord}` : ""} period is active${upcoming ? `, with ${upcoming} ahead` : ""}; matters ripen when the relevant significator's daśā runs.` : "";
   const note = conc.agreement === "mixed" ? " The classical indications here are mixed, so outcome depends on effort and supporting periods." : "";
-  const moon = chart.planets.find((p) => p.planet === "Moon")!;
-  void NAKSHATRAS;
+  const classicalAnswer = `${lead} ${cited}${time}${note}`;
+
+  const cfg = getAiConfig();
+  if (cfg) {
+    try {
+      const houseSet = [...new Set(topics.flatMap((t) => t.houses))];
+      const houseLines = houseSet.map((h) => {
+        const b = bhavas[h - 1];
+        return `House ${h} (${b.significations.split(",")[0]}): ${b.verdict}. Lord ${b.lord} in ${SIGNS[b.lordSign]} (${b.lordDignity}).`;
+      }).join("\n");
+      const chartFacts = `Lagna ${SIGNS[chart.ascendantSignIndex]}; Moon in ${SIGNS[moon.signIndex]} (${NAKSHATRAS[moon.nakshatraIndex].name} nakṣatra). ` + (maha ? `Current daśā: ${maha.lord}${antar ? ` / ${antar.lord}` : ""}.` : "");
+      const evidenceText = evidence.map((e) => `· [${e.source} — ${e.subject}] ${e.text}`).join("\n");
+      const context = `QUESTION: ${question}\n\nTopics: ${topics.map((t) => t.label).join("; ")}\n${chartFacts}\n\nRelevant house verdicts:\n${houseLines}\n\n` +
+        (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
+        `Classical rules that apply to this question (cite these):\n${evidenceText}`;
+      const { text, provider, model } = await chatClient(ASK_SYSTEM, context, cfg);
+      if (text?.trim()) {
+        return { source: "ai", provider, model, question, topics: topics.map((t) => t.label), answer: text, evidence };
+      }
+    } catch (e) {
+      return {
+        source: "classical", question, topics: topics.map((t) => t.label), answer: classicalAnswer, evidence,
+        note: `AI request failed (${e instanceof Error ? e.message : "error"}); showing the classical answer.`,
+      };
+    }
+  }
   return {
-    source: "classical", question, topics: topics.map((t) => t.label),
-    answer: `${lead} ${cited}${time}${note}`, evidence,
-    note: `Offline mode: rule-based classical answer (Lagna ${SIGNS[chart.ascendantSignIndex]}, Moon ${SIGNS[moon.signIndex]}).`,
+    source: "classical", question, topics: topics.map((t) => t.label), answer: classicalAnswer, evidence,
+    note: cfg ? undefined : `Offline mode: rule-based classical answer (Lagna ${SIGNS[chart.ascendantSignIndex]}, Moon ${SIGNS[moon.signIndex]}). Add an AI key in About for a fuller answer.`,
   };
 }

@@ -31,6 +31,7 @@ import { computeVarga, VARGAS } from "@/lib/astro/varga";
 import { computeYogas } from "@/lib/astro/yogas";
 import { PLANET_SANSKRIT, SIGNS } from "@/lib/astro/constants";
 import { APP_VERSION, isDesktop } from "@/lib/desktop";
+import { getAiConfig, setAiConfig } from "@/lib/ai/ai-config";
 import { CityAutocomplete, type CityHit } from "./CityAutocomplete";
 import { zoneOffsetHours } from "@/lib/geo";
 
@@ -175,6 +176,9 @@ function AboutModal({ onClose }: { onClose: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [provider, setProvider] = useState("deepseek");
   const [keyStatus, setKeyStatus] = useState<"none" | "set" | "saved" | "saving">("none");
+  // Offline (mobile) build: no Electron bridge, so the key lives in localStorage.
+  const offline = process.env.NEXT_PUBLIC_OFFLINE === "1";
+  const showKeyBox = isDesktop() || offline;
   useEffect(() => {
     if (isDesktop() && window.jyotish) {
       window.jyotish.getVersion().then(setVersion).catch(() => {});
@@ -182,14 +186,22 @@ function AboutModal({ onClose }: { onClose: () => void }) {
         setKeyStatus(r.hasKey ? "set" : "none");
         if (r.provider) setProvider(r.provider);
       }).catch(() => {});
+    } else if (offline) {
+      const cfg = getAiConfig();
+      if (cfg) { setKeyStatus("set"); setProvider(cfg.provider); }
     }
-  }, []);
+  }, [offline]);
 
   async function saveKey() {
-    if (!window.jyotish) return;
     setKeyStatus("saving");
-    const r = await window.jyotish.setAiKey(provider, apiKey);
-    setKeyStatus(r.ok ? "saved" : "none");
+    if (isDesktop() && window.jyotish) {
+      const r = await window.jyotish.setAiKey(provider, apiKey);
+      setKeyStatus(r.ok ? "saved" : "none");
+    } else {
+      // Mobile / offline: persist on-device only.
+      setAiConfig(provider, apiKey.trim());
+      setKeyStatus("saved");
+    }
     setApiKey("");
   }
 
@@ -259,7 +271,7 @@ function AboutModal({ onClose }: { onClose: () => void }) {
               offline.
             </p>
           </div>
-          {isDesktop() && (() => {
+          {showKeyBox && (() => {
             const PROVIDERS: Record<string, { label: string; placeholder: string; url: string }> = {
               deepseek: { label: "DeepSeek (V3) — direct, cheap & strong", placeholder: "sk-…", url: "platform.deepseek.com/api_keys" },
               openrouter: { label: "DeepSeek-V3 via OpenRouter — free", placeholder: "sk-or-…", url: "openrouter.ai/keys" },
@@ -275,7 +287,8 @@ function AboutModal({ onClose }: { onClose: () => void }) {
                 </h3>
                 <p className="mt-1 text-xs text-amber-100/50">
                   Pick a provider and paste its free API key to enable AI-written
-                  readings. Stored only on this PC; takes effect immediately.
+                  readings. Stored only on {offline ? "this device" : "this PC"};
+                  takes effect immediately.
                   {keyStatus === "set" && " A key is currently saved."}
                 </p>
                 <select

@@ -1,5 +1,8 @@
-# Render Blueprint for a temporary web deploy of the Jyotish app.
+# Render Blueprint for a web deploy of the Jyotish app.
 # In the Render dashboard: New → Blueprint → connect the repo containing this file.
+# The full Next.js server runs (real /api routes + server-side AI), so the URL
+# works on any phone/desktop browser. Set GEMINI_API_KEY in the dashboard to
+# enable AI readings; without it the classical readings still work.
 services:
   - type: web
     name: jyotish-app
@@ -7,8 +10,13 @@ services:
     plan: free                       # free tier: spins down when idle, cold-starts on next hit
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /
     envVars:
       - key: WEB_BUILD               # disables Next "standalone" output → plain `next start`
         value: "1"
       - key: NODE_VERSION
-        value: "20"
+        value: "20.18.0"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY          # set this in the Render dashboard (kept secret, not in git)
+        sync: false
