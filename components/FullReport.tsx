@@ -115,7 +115,7 @@ interface ReportData {
   };
 }
 
-const dms = (d: number) => `${Math.floor(d)}°${String(Math.floor((d - Math.floor(d)) * 60)).padStart(2, "0")}'`;
+const dms = (d: number) => { const a = Math.min(1799, Math.max(0, Math.round(d * 60))); return `${Math.floor(a / 60)}°${String(a % 60).padStart(2, "0")}'`; };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

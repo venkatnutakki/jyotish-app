@@ -11,9 +11,8 @@ interface Details {
 }
 
 const dms = (deg: number) => {
-  const d = Math.floor(deg);
-  const m = Math.floor((deg - d) * 60);
-  return `${d}°${String(m).padStart(2, "0")}'`;
+  const a = Math.min(1799, Math.max(0, Math.round(deg * 60))); // rounded arcmin, clamped
+  return `${Math.floor(a / 60)}°${String(a % 60).padStart(2, "0")}'`;
 };
 
 export function UpagrahaPanel({ birth }: { birth: BirthData }) {

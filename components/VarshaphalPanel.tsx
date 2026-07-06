@@ -16,7 +16,7 @@ interface Varshaphal {
   error?: string;
 }
 
-const dms = (d: number) => `${Math.floor(d)}°${String(Math.floor((d - Math.floor(d)) * 60)).padStart(2, "0")}'`;
+const dms = (d: number) => { const a = Math.min(1799, Math.max(0, Math.round(d * 60))); return `${Math.floor(a / 60)}°${String(a % 60).padStart(2, "0")}'`; };
 const fmt = (s: string) => new Date(s).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 const isNow = (s: string, e: string) => { const n = Date.now(); return new Date(s).getTime() <= n && n < new Date(e).getTime(); };
 

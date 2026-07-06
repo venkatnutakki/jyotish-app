@@ -17,11 +17,14 @@ export const PLANET_ABBR: Record<PlanetName, string> = {
  *  so the displayed sign never crosses a boundary and desyncs from the nakṣatra. */
 export function formatLongitude(lon: number, signs: readonly string[]): string {
   const s = Math.floor(lon / 30);
-  const within = lon - s * 30;
-  const arcmin = Math.min(1799, Math.round(within * 60)); // 0-1799 within the sign
-  const deg = Math.floor(arcmin / 60);
-  const min = arcmin % 60;
-  return `${deg}°${min.toString().padStart(2, "0")}' ${signs[s]}`;
+  return `${formatDegMin(lon - s * 30)} ${signs[s]}`;
+}
+
+/** Format a within-sign degree (0-30) as "12°34'", minutes rounded to nearest
+ *  (clamped to 29°59' so it never rolls into the next sign). */
+export function formatDegMin(deg: number): string {
+  const arcmin = Math.min(1799, Math.max(0, Math.round(deg * 60)));
+  return `${Math.floor(arcmin / 60)}°${(arcmin % 60).toString().padStart(2, "0")}'`;
 }
 
 /** Grid cell (col,row) for each sign in a 4×4 South-Indian chart. */
