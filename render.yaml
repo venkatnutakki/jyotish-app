@@ -1,0 +1,14 @@
+# Render Blueprint for a temporary web deploy of the Jyotish app.
+# In the Render dashboard: New → Blueprint → connect the repo containing this file.
+services:
+  - type: web
+    name: jyotish-app
+    runtime: node
+    plan: free                       # free tier: spins down when idle, cold-starts on next hit
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: WEB_BUILD               # disables Next "standalone" output → plain `next start`
+        value: "1"
+      - key: NODE_VERSION
+        value: "20"
