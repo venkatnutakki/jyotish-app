@@ -51,6 +51,7 @@ import { computeCompatibility, type Person } from "./astro/compatibility";
 import { matchTopics, isTimingQuestion, TOPICS } from "./astro/question";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./astro/classical-evidence";
 import { SIGNS, NAKSHATRAS } from "./astro/constants";
+import { buildReading, READING_SYSTEM } from "./astro/reading";
 import { getAiConfig } from "./ai/ai-config";
 import { chatClient } from "./ai/llm-client";
 import type { BirthData, Chart } from "./astro/types";
@@ -202,34 +203,6 @@ export function kpHoraryRoute(body: { number: number; latitude: number; longitud
 const ordinal = (n: number) => `${n}${["th", "st", "nd", "rd"][(n % 100 - n % 10 !== 10 ? 1 : 0) && n % 10 < 4 ? n % 10 : 0] || "th"}`;
 const trimSentence = (s: string) => { const t = s.trim(); return t.length > 200 ? t.slice(0, 197).trim() + "…" : t; };
 
-// System prompts mirror the server routes (app/api/interpret, app/api/ask) so an
-// on-device key yields the same grounded, cited natural-language reading.
-const INTERPRET_SYSTEM = `You are a knowledgeable, grounded Vedic (Jyotish) astrologer.
-You will be given a deterministic classical analysis of a birth chart (facts
-computed from the ephemeris) together with VERBATIM quotations from the classical
-texts (Bhṛgu Sūtras, Sārāvalī, Significations of the Planets) that apply to this
-chart. Write a warm, readable reading for the native — but strictly grounded in
-those classics.
-
-STRICT GROUNDING RULES (most important):
-- Every predictive statement MUST be traceable to a supplied classical quote or a
-  computed fact. Do NOT add claims that are not supported by the provided material.
-- When you make a prediction, cite the source in parentheses, e.g.
-  "(Bhṛgu Sūtras — Sun in the 9th)" or "(Sārāvalī — Moon in Taurus)". Prefer the
-  wording of the classical quote; paraphrase it into plain language, do not invent.
-- If the supplied classics DISAGREE on an area, say so honestly ("classical
-  opinion is mixed here") rather than forcing a single verdict.
-- Do NOT invent placements, degrees, yogas, or dasha periods.
-
-STYLE:
-- Organise by LIFE AREA using the supplied "Life predictions" (Personality,
-  Career, Wealth, Marriage, Education, Health, Fortune, etc.). One short Markdown
-  heading per area, then a plain-language paragraph a layperson understands,
-  reflecting the verdict (Excellent/Strong/Favourable/Mixed/Challenging).
-- Weave in Shadbala strengths, yogas, and the current dasha where relevant.
-- Encouraging and balanced; frame challenges as constructive guidance.
-- Minimal jargon. ~550-750 words. No preamble like "Here is".`;
-
 const ASK_SYSTEM = `You are a grounded Vedic (Jyotish) astrologer answering ONE specific
 question about ONE birth chart. You are given: the chart's key facts, the running
 daśā, the relevant bhāva (house) verdicts, and VERBATIM quotations from the
@@ -249,47 +222,26 @@ RULES:
 
 // AI routes fall back to the classical reading offline (no key / AI unreachable).
 export async function interpretRoute(birth: BirthData) {
-  const chart = computeChart(birth);
-  const dasha = vimshottariDasha(chart);
-  const shadbala = computeShadbala(chart, birth);
-  const yogas = computeYogas(chart);
-  const bhavas = analyzeBhavas(chart, shadbala);
-  const analysis = interpretChart(chart, dasha);
-  const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha);
-
-  // Build the same grounded summary the server route feeds the model.
-  const bhavaText = bhavas
-    .map((b) => `House ${b.house} (${b.significations}): ${b.verdict}. Lord ${b.lord} in ${SIGNS[b.lordSign]} (${b.lordDignity}, ${b.lordRupas?.toFixed(1)} rūpas), kāraka ${b.karaka}.`)
-    .join("\n");
-  const predictionText = predictions
-    .map((p) => {
-      const cites = p.evidence.map((e) => `    · [${e.source} — ${e.subject}] ${e.text}`).join("\n");
-      return `${p.title} — ${p.verdict} (${p.confidence} confidence; sources ${p.agreement}).\n  Synthesis: ${p.reading} Factors: ${p.factors.join(" ")}\n  Classical quotes to cite for this area:\n${cites || "    · (no direct classical quote available)"}`;
-    })
-    .join("\n\n");
-  const moonNak = chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;
-  const jn = nakshatraProfile(moonNak);
-  const nakLine = `Janma Nakṣatra (Moon): ${NAKSHATRAS[moonNak].name} — deity ${jn.deity}, symbol ${jn.symbol}, śakti = ${jn.shakti}; ${jn.gana} gaṇa. Archetype: ${jn.archetype}`;
-  const groundedSummary = `${analysis.classicalSummary}\n\n${nakLine}\n\nHouse (Bhāva) analysis — B.V. Raman's method:\n${bhavaText}\n\nLife predictions (synthesised):\n${predictionText}`;
+  // Same rich, classics-complete prompt the web route uses (lib/astro/reading).
+  const { analysis, bhavas, predictions, headline, userContext } = buildReading(birth);
 
   const cfg = getAiConfig();
   if (cfg) {
     try {
-      const userMsg = `Native: ${birth.name || "(unnamed)"}, born ${birth.day}/${birth.month}/${birth.year} at ${birth.place || "given coordinates"}.\n\nClassical analysis:\n${groundedSummary}`;
-      const { text, provider, model } = await chatClient(INTERPRET_SYSTEM, userMsg, cfg);
+      const { text, provider, model } = await chatClient(READING_SYSTEM, userContext, cfg);
       if (text?.trim()) {
-        return { source: "ai", provider, model, headline: analysis.headline, reading: text, analysis, bhavas, predictions };
+        return { source: "ai", provider, model, headline, reading: text, analysis, bhavas, predictions };
       }
     } catch (e) {
       return {
-        source: "classical", headline: analysis.headline, reading: groundedSummary,
+        source: "classical", headline, reading: analysis.classicalSummary,
         note: `AI request failed (${e instanceof Error ? e.message : "error"}); showing the classical analysis.`,
         analysis, bhavas, predictions,
       };
     }
   }
   return {
-    source: "classical", headline: analysis.headline, reading: groundedSummary,
+    source: "classical", headline, reading: analysis.classicalSummary,
     note: cfg ? "Showing the classical analysis." : "Offline mode: classical rule-based reading. Add an AI key in About for a natural-language reading.",
     analysis, bhavas, predictions,
   };

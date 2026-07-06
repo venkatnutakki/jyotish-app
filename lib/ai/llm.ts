@@ -83,7 +83,7 @@ async function chatOpenAICompatible(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1200,
+      max_tokens: 4096,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -108,7 +108,9 @@ async function chatGemini(
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { maxOutputTokens: 1400 },
+      // thinkingBudget:0 disables 2.5-Flash's internal reasoning, which otherwise
+      // consumes the output-token budget (truncating long readings) and is slow.
+      generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -158,7 +160,7 @@ async function chatAnthropic(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1200,
+      max_tokens: 4096,
       system,
       messages: [{ role: "user", content: user }],
     }),

@@ -39,7 +39,7 @@ async function openAICompat(
     headers: { "content-type": "application/json", authorization: `Bearer ${key}`, ...extraHeaders },
     body: JSON.stringify({
       model,
-      max_tokens: 1200,
+      max_tokens: 4096,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -59,7 +59,9 @@ async function chatGemini(key: string, model: string, system: string, user: stri
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { maxOutputTokens: 1400 },
+      // thinkingBudget:0 disables 2.5-Flash's internal reasoning, which otherwise
+      // consumes the output-token budget (truncating long readings) and is slow.
+      generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -79,7 +81,7 @@ async function chatAnthropic(key: string, model: string, system: string, user: s
       // Allow the key to be used directly from a browser/WebView context.
       "anthropic-dangerous-direct-browser-access": "true",
     },
-    body: JSON.stringify({ model, max_tokens: 1200, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model, max_tokens: 4096, system, messages: [{ role: "user", content: user }] }),
   });
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
