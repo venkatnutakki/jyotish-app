@@ -25,6 +25,9 @@ import { computeGrahaRasmi, computeSamudayaAV, computeAvLongevity } from "@/lib/
 import { computeRulingPlanets } from "@/lib/astro/kp-horary";
 import { nakshatraProfile, padaDetail } from "@/lib/astro/nakshatra-attributes";
 import { NAKSHATRA_ARC } from "@/lib/astro/constants";
+import { computeMuhurtaTimings } from "@/lib/astro/muhurta-timings";
+import { computeVarnada } from "@/lib/astro/varnada";
+import { computeNaraBodyMap, computeChandraKriya } from "@/lib/astro/prasna-nara";
 import type { BirthData } from "@/lib/astro/types";
 
 export async function POST(req: NextRequest) {
@@ -44,6 +47,10 @@ export async function POST(req: NextRequest) {
       samudayaAV: computeSamudayaAV(chart, ashtakavarga),
       avLongevity: computeAvLongevity(ashtakavarga),
       rulingPlanets: computeRulingPlanets(chart, weekday),
+      muhurtaTimings: computeMuhurtaTimings(birth),
+      varnada: computeVarnada(chart, birth),
+      naraBodyMap: computeNaraBodyMap(chart),
+      chandraKriya: computeChandraKriya(chart),
       nakshatraProfiles: {
         janma: nakshatraProfile(chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex),
         lagna: nakshatraProfile(Math.floor(chart.ascendant / NAKSHATRA_ARC)),

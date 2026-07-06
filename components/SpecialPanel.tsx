@@ -75,6 +75,9 @@ interface Details {
     janma: NakProfile; lagna: NakProfile; sun: NakProfile;
     janmaPada: { pada: number; syllable: string; navamsaSign: string; navamsaLord: string };
   };
+  varnada?: { sign: string; lord: string; note: string };
+  naraBodyMap?: { lagnaPart: string; vulnerable: string[]; placements: { part: string; sign: string; planets: string[]; malefic: boolean }[] };
+  chandraKriya?: { number: number; note: string };
   rulingPlanets?: {
     dayLord: string;
     moon: { signLord: string; starLord: string; subLord: string };
@@ -168,6 +171,35 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
           </table>
         </div>
       </div>
+
+      {/* Varṇada Lagna + Kāla-puruṣa (Nara) body-map + Chandra Kriyā */}
+      {(d.varnada || d.naraBodyMap) && (
+        <div>
+          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-amber-200/80">Varṇada Lagna &amp; Kāla-puruṣa (Body-map)</h4>
+          {d.varnada && (
+            <p className="text-xs text-amber-50/85"><b>Varṇada Lagna:</b> {d.varnada.sign} (lord {d.varnada.lord}) — Jaimini standing/longevity indicator. <span className="text-amber-100/40">Parāśara method.</span></p>
+          )}
+          {d.naraBodyMap && (
+            <div className="mt-2 text-xs text-amber-50/80">
+              <p><b>Kāla-puruṣa:</b> the Lagna governs the <b className="text-amber-100">{d.naraBodyMap.lagnaPart}</b>.</p>
+              {d.naraBodyMap.vulnerable.length > 0 && (
+                <p className="mt-0.5 text-rose-200/80">Malefics fall on: {d.naraBodyMap.vulnerable.join(", ")} — parts to watch for the native&apos;s constitution.</p>
+              )}
+              <div className="mt-1 grid gap-x-4 gap-y-0.5 sm:grid-cols-2">
+                {d.naraBodyMap.placements.map((p, i) => (
+                  <div key={i} className={p.malefic ? "text-rose-200/70" : "text-amber-50/70"}>
+                    <span className="text-amber-100/40">{p.part}:</span> {p.planets.join(", ")}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {d.chandraKriya && (
+            <p className="mt-1.5 text-[11px] text-amber-100/50"><b>Chandra Kriyā:</b> {d.chandraKriya.number}/60 (Praśna Mārga — the Moon&apos;s 60-fold division; consult the text for the kriyā&apos;s omen).</p>
+          )}
+          <p className="mt-1 text-[10px] text-amber-100/40">Rāśi→body from the Kāla-puruṣa (Aries head … Pisces feet). Public-domain classical technique.</p>
+        </div>
+      )}
 
       {/* Ayurdaya (longevity) + Balarishta */}
       {d.ayurdaya && (

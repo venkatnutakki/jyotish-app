@@ -15,6 +15,10 @@ interface Details {
     choghadiya: { name: string; good: boolean; from: string; to: string; night: boolean }[];
     endTimes: { name: string; endsInHours: number; endsAt: string }[];
   } | null;
+  muhurtaTimings?: {
+    durmuhurta: { from: string; to: string }[];
+    varjyam: { from: string; to: string; note: string } | null;
+  } | null;
 }
 
 export function PanchangPanel({ birth }: { birth: BirthData }) {
@@ -82,6 +86,19 @@ export function PanchangPanel({ birth }: { birth: BirthData }) {
             Rāhu Kālam / Yamagaṇḍa / Gulika Kālam are best avoided for new
             beginnings; Abhijit is auspicious.
           </p>
+          {d.muhurtaTimings && (d.muhurtaTimings.durmuhurta.length > 0 || d.muhurtaTimings.varjyam) && (
+            <div className="mt-3 border-t border-white/10 pt-3 text-xs">
+              {d.muhurtaTimings.durmuhurta.length > 0 && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <span className="text-rose-200/80"><b>Durmuhūrta:</b> {d.muhurtaTimings.durmuhurta.map((m) => `${m.from}–${m.to}`).join(", ")}</span>
+                </div>
+              )}
+              {d.muhurtaTimings.varjyam && (
+                <div className="mt-1 text-rose-200/75"><b>Varjyam (Tyājya):</b> {d.muhurtaTimings.varjyam.from} → {d.muhurtaTimings.varjyam.to}</div>
+              )}
+              <p className="mt-1 text-[10px] text-amber-100/40">Durmuhūrta &amp; Varjyam are inauspicious windows to avoid for beginnings (traditional tables).</p>
+            </div>
+          )}
         </div>
       )}
 
