@@ -50,22 +50,44 @@ function cfgKey(envName: string, fileName: string): string | undefined {
   return process.env[envName] || fileConfig()[fileName] || undefined;
 }
 
-/** Which provider to use, or null if none is configured. */
+/** True if a given provider has a usable key/config present. */
+function hasKeyFor(p: Provider): boolean {
+  switch (p) {
+    case "deepseek": return !!cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey");
+    case "cerebras": return !!cfgKey("CEREBRAS_API_KEY", "cerebrasApiKey");
+    case "groq": return !!cfgKey("GROQ_API_KEY", "groqApiKey");
+    case "gemini": return !!cfgKey("GEMINI_API_KEY", "geminiApiKey");
+    case "openrouter": return !!cfgKey("OPENROUTER_API_KEY", "openrouterApiKey");
+    case "openai": return !!cfgKey("OPENAI_API_KEY", "openaiApiKey");
+    case "ollama": return !!(process.env.OLLAMA_MODEL || fileConfig().ollamaModel);
+    case "anthropic": {
+      const ak = cfgKey("ANTHROPIC_API_KEY", "anthropicApiKey");
+      return !!(ak && ak.trim().length > 8);
+    }
+  }
+}
+
+// Default order when the app just has keys and no explicit preference. Gemini
+// leads (best quality for this task); Groq next (fast, generous free tier) — so
+// a Gemini quota/429 falls straight through to Groq. AI_PROVIDER overrides the head.
+const FALLBACK_ORDER: Provider[] = ["gemini", "groq", "cerebras", "deepseek", "openrouter", "openai", "anthropic", "ollama"];
+
+/**
+ * The ordered list of configured providers to try (primary first, then
+ * fallbacks). Empty if none configured. AI_PROVIDER, if set, is tried first.
+ */
+export function availableProviders(): Provider[] {
+  const configured = FALLBACK_ORDER.filter(hasKeyFor);
+  const explicit = (process.env.AI_PROVIDER || fileConfig().aiProvider)?.toLowerCase() as Provider | undefined;
+  if (explicit && configured.includes(explicit)) {
+    return [explicit, ...configured.filter((p) => p !== explicit)];
+  }
+  return configured;
+}
+
+/** The primary provider, or null if none is configured. */
 export function detectProvider(): Provider | null {
-  const explicit = (process.env.AI_PROVIDER || fileConfig().aiProvider)
-    ?.toLowerCase() as Provider | undefined;
-  if (explicit && explicit !== "anthropic") return explicit;
-  if (cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")) return "deepseek";
-  if (cfgKey("CEREBRAS_API_KEY", "cerebrasApiKey")) return "cerebras";
-  if (cfgKey("GROQ_API_KEY", "groqApiKey")) return "groq";
-  if (cfgKey("GEMINI_API_KEY", "geminiApiKey")) return "gemini";
-  if (cfgKey("OPENROUTER_API_KEY", "openrouterApiKey")) return "openrouter";
-  if (cfgKey("OPENAI_API_KEY", "openaiApiKey")) return "openai";
-  if (process.env.OLLAMA_MODEL || fileConfig().ollamaModel) return "ollama";
-  // Anthropic only if a non-empty key is actually present.
-  const ak = cfgKey("ANTHROPIC_API_KEY", "anthropicApiKey");
-  if (ak && ak.trim().length > 8) return "anthropic";
-  return null;
+  return availableProviders()[0] ?? null;
 }
 
 async function chatOpenAICompatible(
@@ -172,11 +194,8 @@ async function chatAnthropic(
   return data?.content?.map((b: { text?: string }) => b.text ?? "").join("") ?? "";
 }
 
-/** Send a system+user prompt to the configured provider. Throws if none. */
-export async function chat(system: string, user: string): Promise<ChatResult> {
-  const provider = detectProvider();
-  if (!provider) throw new Error("No AI provider configured");
-
+/** Send a system+user prompt to ONE specific provider. Throws on failure. */
+async function chatWith(provider: Provider, system: string, user: string): Promise<ChatResult> {
   switch (provider) {
     case "deepseek": {
       // DeepSeek direct API (OpenAI-compatible). Very strong, very cheap.
@@ -265,6 +284,25 @@ export async function chat(system: string, user: string): Promise<ChatResult> {
   }
 }
 
+/**
+ * Send a system+user prompt, trying each configured provider in order until one
+ * succeeds (primary → fallbacks). Throws only if every provider fails / none set.
+ */
+export async function chat(system: string, user: string): Promise<ChatResult> {
+  const providers = availableProviders();
+  if (!providers.length) throw new Error("No AI provider configured");
+  let lastErr: unknown;
+  for (const p of providers) {
+    try {
+      return await chatWith(p, system, user);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[llm] provider ${p} failed, trying next:`, e instanceof Error ? e.message : e);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
+}
+
 // ── Multi-turn chat (for the conversational /api/chat route) ─────────────────
 
 async function msgsOpenAICompatible(
@@ -323,10 +361,8 @@ async function msgsAnthropic(key: string, model: string, system: string, message
   return data?.content?.map((b: { text?: string }) => b.text ?? "").join("") ?? "";
 }
 
-/** Multi-turn version of chat(): a system prompt plus a running conversation. */
-export async function chatMessages(system: string, messages: ChatMessage[]): Promise<ChatResult> {
-  const provider = detectProvider();
-  if (!provider) throw new Error("No AI provider configured");
+/** Multi-turn against ONE specific provider. Throws on failure. */
+async function chatMessagesWith(provider: Provider, system: string, messages: ChatMessage[]): Promise<ChatResult> {
   switch (provider) {
     case "deepseek": {
       const model = process.env.DEEPSEEK_MODEL || fileConfig().deepseekModel || "deepseek-chat";
@@ -365,4 +401,20 @@ export async function chatMessages(system: string, messages: ChatMessage[]): Pro
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
+}
+
+/** Multi-turn version of chat(): tries each configured provider until one succeeds. */
+export async function chatMessages(system: string, messages: ChatMessage[]): Promise<ChatResult> {
+  const providers = availableProviders();
+  if (!providers.length) throw new Error("No AI provider configured");
+  let lastErr: unknown;
+  for (const p of providers) {
+    try {
+      return await chatMessagesWith(p, system, messages);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[llm] provider ${p} failed, trying next:`, e instanceof Error ? e.message : e);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
 }
