@@ -10,6 +10,7 @@
 // not deterministic verdicts.
 
 import * as Astronomy from "astronomy-engine";
+import { sunEvent } from "./sunrise";
 import {
   SIGN_LORDS, SIGNS, NAKSHATRAS, NAKSHATRA_ARC, type PlanetName,
 } from "./constants";
@@ -144,12 +145,12 @@ export interface Pranapada {
 export function computePranapada(chart: Chart, birth: BirthData): Pranapada | null {
   const observer = new Astronomy.Observer(birth.latitude, birth.longitude, 0);
   const dayStart = new Date(Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) - birth.tzOffsetHours * 3600000);
-  let rise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, dayStart, 1);
+  let rise = sunEvent(observer, +1, dayStart, 1);
   if (!rise) return null;
   const birthUTC = Date.UTC(birth.year, birth.month - 1, birth.day, birth.hour, birth.minute, birth.second ?? 0) - birth.tzOffsetHours * 3600000;
   // If born before the day's sunrise, the Vedic day began at the previous sunrise.
   if (birthUTC < rise.date.getTime()) {
-    const prev = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, new Date(dayStart.getTime() - 86400000), 1);
+    const prev = sunEvent(observer, +1, new Date(dayStart.getTime() - 86400000), 1);
     if (prev) rise = prev;
   }
   const ishtaMs = birthUTC - rise.date.getTime();

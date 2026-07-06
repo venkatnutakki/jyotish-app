@@ -5,6 +5,7 @@
 // not copied from any software.
 
 import * as Astronomy from "astronomy-engine";
+import { sunEvent } from "./sunrise";
 import { SIGNS, SIGN_LORDS, NAKSHATRA_ARC, type PlanetName } from "./constants";
 import { planetSidereal } from "./ephemeris";
 import { utcFromLocal } from "./time";
@@ -48,12 +49,12 @@ function birthSunrise(birth: BirthData): { sunrise: Date; sunLonAtRise: number; 
     Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) -
       birth.tzOffsetHours * 3600 * 1000
   );
-  let rise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, dayStartUtc, 1);
+  let rise = sunEvent(observer, +1, dayStartUtc, 1);
   if (!rise) return null;
   // Pre-dawn birth → use the previous day's sunrise.
   if (birthUtc.getTime() < rise.date.getTime()) {
     const prevStart = new Date(dayStartUtc.getTime() - 24 * 3600 * 1000);
-    const prevRise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, prevStart, 1);
+    const prevRise = sunEvent(observer, +1, prevStart, 1);
     if (prevRise) rise = prevRise;
   }
   const sunLonAtRise = planetSidereal("Sun", rise.date).longitude;

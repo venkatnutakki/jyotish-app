@@ -4,6 +4,7 @@
 // as the common assignment. Public-domain technique.
 
 import * as Astronomy from "astronomy-engine";
+import { sunEvent } from "./sunrise";
 import { planetSidereal } from "./ephemeris";
 import { utcFromLocal } from "./time";
 import { NAKSHATRA_ARC } from "./constants";
@@ -43,9 +44,9 @@ export interface MuhurtaTimings {
 export function computeMuhurtaTimings(birth: BirthData): MuhurtaTimings | null {
   const observer = new Astronomy.Observer(birth.latitude, birth.longitude, 0);
   const dayStart = new Date(Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) - birth.tzOffsetHours * 3600000);
-  const rise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, dayStart, 1);
+  const rise = sunEvent(observer, +1, dayStart, 1);
   if (!rise) return null;
-  const set = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, -1, rise.date, 1);
+  const set = sunEvent(observer, -1, rise.date, 1);
   if (!set) return null;
   const tz = birth.tzOffsetHours;
   const weekday = new Date(Date.UTC(birth.year, birth.month - 1, birth.day)).getUTCDay();

@@ -2,6 +2,7 @@
 // Gulika Kālam, Abhijit) — based on sunrise/sunset for the birth day.
 
 import * as Astronomy from "astronomy-engine";
+import { sunEvent } from "./sunrise";
 import { SIGNS } from "./constants";
 import { ascendantSidereal } from "./ephemeris";
 import { utcFromLocal } from "./time";
@@ -57,8 +58,8 @@ export function computeUpagraha(chart: Chart, birth: BirthData): Upagraha | null
     Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) -
       birth.tzOffsetHours * 3600 * 1000
   );
-  const rise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, dayStartUtc, 1);
-  const set = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, -1, rise ? rise.date : dayStartUtc, 1);
+  const rise = sunEvent(observer, +1, dayStartUtc, 1);
+  const set = sunEvent(observer, -1, rise ? rise.date : dayStartUtc, 1);
   if (!rise || !set) return null;
 
   const sunrise = rise.date;

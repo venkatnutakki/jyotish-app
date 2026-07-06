@@ -3,6 +3,7 @@
 // karaṇa (reckoned from the birth/query instant).
 
 import * as Astronomy from "astronomy-engine";
+import { sunEvent } from "./sunrise";
 import { planetSidereal } from "./ephemeris";
 import { utcFromLocal } from "./time";
 import { NAKSHATRA_ARC } from "./constants";
@@ -39,10 +40,10 @@ export interface PanchangExtra {
 export function computePanchangExtra(birth: BirthData): PanchangExtra | null {
   const observer = new Astronomy.Observer(birth.latitude, birth.longitude, 0);
   const dayStart = new Date(Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) - birth.tzOffsetHours * 3600000);
-  const rise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, dayStart, 1);
+  const rise = sunEvent(observer, +1, dayStart, 1);
   if (!rise) return null;
-  const set = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, -1, rise.date, 1);
-  const nextRise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, +1, set ? set.date : rise.date, 1);
+  const set = sunEvent(observer, -1, rise.date, 1);
+  const nextRise = sunEvent(observer, +1, set ? set.date : rise.date, 1);
   if (!set || !nextRise) return null;
   const sunrise = rise.date, sunset = set.date, nextSunrise = nextRise.date;
   const tz = birth.tzOffsetHours;
