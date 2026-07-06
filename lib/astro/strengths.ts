@@ -7,6 +7,7 @@
 import { SIGN_LORDS, SIGNS, type PlanetName } from "./constants";
 import { vargaSign } from "./varga";
 import type { Chart } from "./types";
+import { computeRelationships } from "./sphuta-mks";
 import type { ShadbalaResult } from "./shadbala";
 
 const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
@@ -14,23 +15,21 @@ const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus
 const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
 const MOOLA: Partial<Record<PlanetName, number>> = { Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10 };
 const OWN: Partial<Record<PlanetName, number[]>> = { Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10] };
-const FRIENDS: Partial<Record<PlanetName, PlanetName[]>> = {
-  Sun: ["Moon", "Mars", "Jupiter"], Moon: ["Sun", "Mercury"], Mars: ["Sun", "Moon", "Jupiter"],
-  Mercury: ["Sun", "Venus"], Jupiter: ["Sun", "Moon", "Mars"], Venus: ["Mercury", "Saturn"], Saturn: ["Mercury", "Venus"],
-};
-const ENEMIES: Partial<Record<PlanetName, PlanetName[]>> = {
-  Sun: ["Venus", "Saturn"], Moon: [], Mars: ["Mercury"], Mercury: ["Moon"],
-  Jupiter: ["Mercury", "Venus"], Venus: ["Sun", "Moon"], Saturn: ["Sun", "Moon", "Mars"],
-};
 
-/** Vimśopaka dignity points (0–20) of a planet in a given sign. */
-function dignityPoints(planet: PlanetName, sign: number): number {
+// Full BPHS Vimśopaka dignity gradation (own/exalt 20 · great-friend 18 ·
+// friend 15 · neutral 10 · enemy 7 · great-enemy 5) using the compound
+// (pañcadhā) relationship to the sign-lord — matching the standard method.
+const REL_POINTS: Record<string, number> = {
+  "Great friend": 18, "Friend": 15, "Neutral": 10, "Enemy": 7, "Great enemy": 5,
+};
+function dignityPoints(
+  planet: PlanetName, sign: number,
+  relOf: (a: PlanetName, b: PlanetName) => string
+): number {
   if (EXALT[planet] === sign || MOOLA[planet] === sign || OWN[planet]?.includes(sign)) return 20;
   const lord = SIGN_LORDS[sign];
   if (lord === planet) return 20;
-  if (FRIENDS[planet]?.includes(lord)) return 15;
-  if (ENEMIES[planet]?.includes(lord)) return 7;
-  return 10; // neutral
+  return REL_POINTS[relOf(planet, lord)] ?? 10;
 }
 
 // ---- Iṣṭa / Kaṣṭa Phala -----------------------------------------------------
@@ -73,12 +72,15 @@ export interface Vimsopaka {
   grade: string;
 }
 
-function vimsopakaFor(chart: Chart, planet: PlanetName, scheme: [number, number][]): number {
+function vimsopakaFor(
+  chart: Chart, planet: PlanetName, scheme: [number, number][],
+  relOf: (a: PlanetName, b: PlanetName) => string
+): number {
   const p = chart.planets.find((x) => x.planet === planet)!;
   let sum = 0;
   for (const [n, w] of scheme) {
     const s = n === 1 ? p.signIndex : vargaSign(p.signIndex, p.degreeInSign, n);
-    sum += (dignityPoints(planet, s) / 20) * w;
+    sum += (dignityPoints(planet, s, relOf) / 20) * w;
   }
   return Math.round(sum * 100) / 100;
 }
@@ -92,11 +94,14 @@ function grade(v: number): string {
 }
 
 export function computeVimsopaka(chart: Chart): Vimsopaka[] {
+  const relRows = computeRelationships(chart);
+  const relOf = (a: PlanetName, b: PlanetName) =>
+    relRows.find((r) => r.planet === a)?.relations[b] ?? "Neutral";
   return SEVEN.map((p) => {
-    const shodashavarga = vimsopakaFor(chart, p, SHODASHA);
+    const shodashavarga = vimsopakaFor(chart, p, SHODASHA, relOf);
     return {
       planet: p,
-      shadvarga: vimsopakaFor(chart, p, SHADVARGA),
+      shadvarga: vimsopakaFor(chart, p, SHADVARGA, relOf),
       shodashavarga,
       grade: grade(shodashavarga),
     };

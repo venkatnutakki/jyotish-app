@@ -315,5 +315,51 @@ export function computeYogas(chart: Chart): Yoga[] {
       && [5, 7, 9].includes(rel(P.Jupiter.signIndex, P[l1c].signIndex)))
     yogas.push({ name: "Chāmara Yoga", category: "Raja", description: "The exalted Lagna-lord is angular and aspected by Jupiter — long life, learning, eloquence and royal favour." });
 
+  // ---- Additional classical Rāja / Dhana yogas ----
+  const MAL2 = new Set<PlanetName>(["Sun", "Mars", "Saturn", "Rahu", "Ketu"]);
+  const beneficsIn = (h: number) => chart.planets.filter((p) => p.house === h && BENEFIC.has(p.planet)).map((p) => p.planet);
+  const anyIn = (h: number) => chart.planets.some((p) => p.house === h);
+  const digY = (pl: PlanetName) => OWN[pl]?.includes(P[pl].signIndex) || EXALT[pl] === P[pl].signIndex;
+  const strongY = (pl: PlanetName) => digY(pl) || KENDRA.includes(P[pl].house) || TRIKONA.includes(P[pl].house);
+  const mutualKendra = (a: PlanetName, b: PlanetName) => KENDRA.includes(rel(P[a].signIndex, P[b].signIndex));
+
+  // Parvata — benefics in kendras and the 6th & 8th free of malefics.
+  const malIn = (h: number) => chart.planets.some((p) => p.house === h && MAL2.has(p.planet));
+  if (KENDRA.some((h) => beneficsIn(h).length > 0) && !malIn(6) && !malIn(8))
+    yogas.push({ name: "Parvata Yoga", category: "Raja", description: "Benefics hold the angles while the 6th and 8th are free of malefics — fortune, eloquence, charity and lasting fame." });
+
+  // Sādhu — only benefics (no malefics) in the 3rd & 6th from the Arudha Lagna.
+  const l1sign = P[lordOf(1)].signIndex;
+  let al = ((2 * l1sign - asc) % 12 + 12) % 12;      // Arudha of the Lagna
+  if (al === asc || rel(asc, al) === 7) al = (al + 9) % 12; // 1st/7th → 10th from there
+  const fromAl = (h: number) => chart.planets.filter((p) => rel(al, p.signIndex) === h);
+  const sadhu36 = [3, 6].flatMap(fromAl);
+  if (sadhu36.length > 0 && sadhu36.every((p) => BENEFIC.has(p.planet)))
+    yogas.push({ name: "Sādhu Yoga", category: "Raja", description: "The 3rd and 6th from the Ārūḍha Lagna hold only benefics — a righteous, principled and saintly disposition." });
+
+  // Chāmara (2nd form) — two or more benefics together in the 1st, 7th, 9th or 10th.
+  if (!yogas.some((y) => y.name.startsWith("Chāmara")))
+    for (const h of [1, 7, 9, 10])
+      if (beneficsIn(h).length >= 2) { yogas.push({ name: "Chāmara Yoga", category: "Raja", description: "Two benefics conjoin in an angle/trine — long life, learning and a well-regarded, eloquent nature." }); break; }
+
+  // Śaṅkha — 5th & 6th lords in mutual kendras with a strong Lagna lord.
+  if (mutualKendra(lordOf(5), lordOf(6)) && strongY(lordOf(1)))
+    yogas.push({ name: "Śaṅkha Yoga", category: "Raja", description: "The 5th and 6th lords are mutually angular with a strong Lagna-lord — a long, virtuous, prosperous and well-supported life." });
+
+  // Bheri — Jupiter, Venus and the Lagna lord mutually angular, strong 9th lord.
+  const bl1 = lordOf(1);
+  if (mutualKendra("Jupiter", "Venus") && mutualKendra("Venus", bl1) && mutualKendra("Jupiter", bl1) && strongY(lordOf(9)))
+    yogas.push({ name: "Bheri Yoga", category: "Raja", description: "Jupiter, Venus and the Lagna-lord are mutually angular with a strong 9th-lord — health, wealth, good family and renown." });
+
+  // Kalpadruma (Pārijāta) — the Lagna-lord dignity chain: L1, its dispositor and
+  // the next dispositor all angular/trinal or in own/exaltation signs.
+  const c1 = lordOf(1), d1 = SIGN_LORDS[P[c1].signIndex], d2 = SIGN_LORDS[P[d1].signIndex];
+  if ([c1, d1, d2].every(strongY))
+    yogas.push({ name: "Kalpadruma (Pārijāta) Yoga", category: "Raja", description: "The Lagna-lord and its dispositor-chain are all dignified/angular — a wish-fulfilling yoga of authority, principle and prosperity." });
+
+  // Mṛdaṅga — a planet in its own/exaltation sign in a kendra/trikoṇa, strong Lagna lord.
+  if (chart.planets.some((p) => digY(p.planet) && (KENDRA.includes(p.house) || TRIKONA.includes(p.house))) && strongY(lordOf(1)))
+    yogas.push({ name: "Mṛdaṅga Yoga", category: "Raja", description: "A dignified planet holds an angle or trine with a strong Lagna-lord — happiness, status and a life as comfortable as a king's." });
+
   return yogas;
 }
