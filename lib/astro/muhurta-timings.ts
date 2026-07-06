@@ -16,14 +16,15 @@ function fmt(d: Date, tz: number): string {
 }
 
 // Durmuhūrta: which of the 15 day-muhūrtas are inauspicious, by weekday (Sun..Sat).
+// Verified against the standard muhūrta table (Raman, "Muhurtha").
 const DURMUHURTA_DAY: number[][] = [
-  [14],     // Sunday
-  [9, 13],  // Monday
-  [4],      // Tuesday
-  [8],      // Wednesday
-  [6, 12],  // Thursday
-  [4, 9],   // Friday
-  [3],      // Saturday
+  [14],     // Sunday   — Aryama
+  [8, 12],  // Monday   — Vidhi, Naktañcara
+  [4, 11],  // Tuesday  — Pitṛ, Vahni
+  [8],      // Wednesday— Abhijit
+  [12, 13], // Thursday — Naktañcara, Varuṇa
+  [4, 8],   // Friday   — Pitṛ, Vidhi
+  [1, 2],   // Saturday — Rudra, Ahi
 ];
 
 // Varjyam (Tyājya) — the starting ghaṭikā of the poison-portion within each
