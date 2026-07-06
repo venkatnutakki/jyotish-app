@@ -5,6 +5,10 @@ contextBridge.exposeInMainWorld("jyotish", {
   isDesktop: true,
   getVersion: () => ipcRenderer.invoke("get-version"),
   exportPdf: (suggestedName) => ipcRenderer.invoke("export-pdf", suggestedName),
-  setAiKey: (key) => ipcRenderer.invoke("set-ai-key", key),
+  // setAiKey(provider, key) — or legacy setAiKey(key) which defaults to Gemini.
+  setAiKey: (provider, key) =>
+    key === undefined
+      ? ipcRenderer.invoke("set-ai-key", provider)
+      : ipcRenderer.invoke("set-ai-key", provider, key),
   getAiKey: () => ipcRenderer.invoke("get-ai-key"),
 });

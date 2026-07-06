@@ -13,8 +13,8 @@ interface JyotishBridge {
   isDesktop: boolean;
   getVersion: () => Promise<string>;
   exportPdf: (suggestedName?: string) => Promise<ExportResult>;
-  setAiKey: (key: string) => Promise<{ ok: boolean; error?: string }>;
-  getAiKey: () => Promise<{ hasKey: boolean }>;
+  setAiKey: (provider: string, key?: string) => Promise<{ ok: boolean; error?: string }>;
+  getAiKey: () => Promise<{ hasKey: boolean; provider?: string | null }>;
 }
 
 declare global {

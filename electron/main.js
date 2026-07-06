@@ -154,20 +154,34 @@ async function createWindow() {
 // --- IPC: version + one-click PDF export ---
 ipcMain.handle("get-version", () => app.getVersion());
 
+// Map a provider id → the config.json key field it stores its API key in.
+const PROVIDER_KEY_FIELD = {
+  deepseek: "deepseekApiKey",
+  gemini: "geminiApiKey",
+  cerebras: "cerebrasApiKey",
+  openrouter: "openrouterApiKey",
+  groq: "groqApiKey",
+  openai: "openaiApiKey",
+  anthropic: "anthropicApiKey",
+};
+
 // Save the AI key from inside the app (no file editing, no restart needed —
-// the server reads config.json live).
-ipcMain.handle("set-ai-key", (_e, key) => {
+// the server reads config.json live). Back-compat: a single string arg = Gemini.
+ipcMain.handle("set-ai-key", (_e, arg1, arg2) => {
   try {
+    const provider = arg2 !== undefined ? String(arg1 || "gemini") : "gemini";
+    const key = arg2 !== undefined ? arg2 : arg1;
+    const field = PROVIDER_KEY_FIELD[provider] || "geminiApiKey";
     const p = configPath();
     fs.mkdirSync(path.dirname(p), { recursive: true });
     const cfg = loadConfig();
     const k = String(key || "").trim();
+    // Clear any previously-stored provider key so only one is active.
+    for (const f of Object.values(PROVIDER_KEY_FIELD)) delete cfg[f];
     if (k) {
-      cfg.geminiApiKey = k;
-      cfg.aiProvider = "gemini";
+      cfg[field] = k;
+      cfg.aiProvider = provider;
     } else {
-      // Empty → clear it so the app reports "no key" cleanly.
-      delete cfg.geminiApiKey;
       delete cfg.aiProvider;
     }
     fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
@@ -177,11 +191,12 @@ ipcMain.handle("set-ai-key", (_e, key) => {
   }
 });
 
-// Report whether a key is set (never returns the key itself).
+// Report whether a key is set (never returns the key itself) + which provider.
 ipcMain.handle("get-ai-key", () => {
   const cfg = loadConfig();
-  const k = cfg.geminiApiKey || cfg.anthropicApiKey;
-  return { hasKey: !!(k && k.length > 10) };
+  const field = PROVIDER_KEY_FIELD[cfg.aiProvider] || null;
+  const k = (field && cfg[field]) || cfg.geminiApiKey || cfg.anthropicApiKey;
+  return { hasKey: !!(k && k.length > 10), provider: cfg.aiProvider || null };
 });
 
 ipcMain.handle("export-pdf", async (event, suggestedName) => {

@@ -169,18 +169,22 @@ const SAVED_KEY = "jyotish.saved";
 function AboutModal({ onClose }: { onClose: () => void }) {
   const [version, setVersion] = useState(APP_VERSION);
   const [apiKey, setApiKey] = useState("");
+  const [provider, setProvider] = useState("deepseek");
   const [keyStatus, setKeyStatus] = useState<"none" | "set" | "saved" | "saving">("none");
   useEffect(() => {
     if (isDesktop() && window.jyotish) {
       window.jyotish.getVersion().then(setVersion).catch(() => {});
-      window.jyotish.getAiKey().then((r) => setKeyStatus(r.hasKey ? "set" : "none")).catch(() => {});
+      window.jyotish.getAiKey().then((r) => {
+        setKeyStatus(r.hasKey ? "set" : "none");
+        if (r.provider) setProvider(r.provider);
+      }).catch(() => {});
     }
   }, []);
 
   async function saveKey() {
     if (!window.jyotish) return;
     setKeyStatus("saving");
-    const r = await window.jyotish.setAiKey(apiKey);
+    const r = await window.jyotish.setAiKey(provider, apiKey);
     setKeyStatus(r.ok ? "saved" : "none");
     setApiKey("");
   }
@@ -251,43 +255,62 @@ function AboutModal({ onClose }: { onClose: () => void }) {
               offline.
             </p>
           </div>
-          {isDesktop() && (
-            <div className="rounded-lg border border-amber-300/25 bg-amber-400/[0.06] p-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-200/70">
-                AI Reading Key — Google Gemini (free)
-              </h3>
-              <p className="mt-1 text-xs text-amber-100/50">
-                Paste a free Google Gemini API key to enable AI-written readings.
-                Stored only on this PC. Takes effect immediately — no restart.
-                {keyStatus === "set" && " A key is currently saved."}
-              </p>
-              <div className="mt-2 flex gap-2">
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={keyStatus === "set" ? "•••••• (key saved)" : "AIza…"}
-                  className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-amber-50 outline-none focus:border-amber-300/60"
-                />
-                <button
-                  onClick={saveKey}
-                  disabled={keyStatus === "saving" || apiKey.trim().length < 8}
-                  className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-40"
-                >
-                  {keyStatus === "saving" ? "…" : "Save"}
-                </button>
-              </div>
-              {keyStatus === "saved" && (
-                <p className="mt-1 text-xs text-emerald-300">
-                  Key saved ✓ — generate a reading to use it.
+          {isDesktop() && (() => {
+            const PROVIDERS: Record<string, { label: string; placeholder: string; url: string }> = {
+              deepseek: { label: "DeepSeek (V3) — direct, cheap & strong", placeholder: "sk-…", url: "platform.deepseek.com/api_keys" },
+              openrouter: { label: "DeepSeek-V3 via OpenRouter — free", placeholder: "sk-or-…", url: "openrouter.ai/keys" },
+              cerebras: { label: "Cerebras (Qwen-3 / Llama-3.3) — free, fast", placeholder: "csk-…", url: "cloud.cerebras.ai" },
+              gemini: { label: "Google Gemini 2.5 Flash — free", placeholder: "AIza…", url: "aistudio.google.com/app/apikey" },
+              groq: { label: "Groq (Llama-3.3-70B) — free", placeholder: "gsk_…", url: "console.groq.com/keys" },
+            };
+            const info = PROVIDERS[provider] ?? PROVIDERS.deepseek;
+            return (
+              <div className="rounded-lg border border-amber-300/25 bg-amber-400/[0.06] p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-200/70">
+                  AI Reading — choose a free provider
+                </h3>
+                <p className="mt-1 text-xs text-amber-100/50">
+                  Pick a provider and paste its free API key to enable AI-written
+                  readings. Stored only on this PC; takes effect immediately.
+                  {keyStatus === "set" && " A key is currently saved."}
                 </p>
-              )}
-              <p className="mt-1 text-[11px] text-amber-100/30">
-                Get a free key at aistudio.google.com/app/apikey. Without one, the
-                classical readings and all predictions still work fully offline.
-              </p>
-            </div>
-          )}
+                <select
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-amber-50 outline-none focus:border-amber-300/60"
+                >
+                  {Object.entries(PROVIDERS).map(([id, p]) => (
+                    <option key={id} value={id} className="bg-[#1a1426]">{p.label}</option>
+                  ))}
+                </select>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={keyStatus === "set" ? "•••••• (key saved)" : info.placeholder}
+                    className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-amber-50 outline-none focus:border-amber-300/60"
+                  />
+                  <button
+                    onClick={saveKey}
+                    disabled={keyStatus === "saving" || apiKey.trim().length < 8}
+                    className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-40"
+                  >
+                    {keyStatus === "saving" ? "…" : "Save"}
+                  </button>
+                </div>
+                {keyStatus === "saved" && (
+                  <p className="mt-1 text-xs text-emerald-300">
+                    Key saved ✓ — generate a reading to use it.
+                  </p>
+                )}
+                <p className="mt-1 text-[11px] text-amber-100/30">
+                  Get a free key at {info.url}. Without one, the classical readings
+                  and all predictions still work fully offline.
+                </p>
+              </div>
+            );
+          })()}
 
           <p className="rounded-lg border border-amber-300/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-100/50">
             For guidance and self-reflection. Astrological readings are not a
