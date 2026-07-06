@@ -3,7 +3,7 @@
 
 "use client";
 import { useEffect, useState } from "react";
-import { SIGNS } from "@/lib/astro/constants";
+import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
 import type { BirthData } from "@/lib/astro/types";
 
 interface SpecialPoint {
@@ -68,6 +68,9 @@ interface Details {
     lifeThirds: { phase: string; benefics: number; malefics: number; tone: string }[];
   };
   avLongevity?: { years: number; band: string; note: string };
+  nakshatraProfiles?: Record<"janma" | "lagna" | "sun", {
+    index: number; deity: string; symbol: string; shakti: string; archetype: string; gana: string; yoni: string;
+  }>;
   rulingPlanets?: {
     dayLord: string;
     moon: { signLord: string; starLord: string; subLord: string };
@@ -103,6 +106,32 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
 
   return (
     <div className="space-y-5">
+      {/* Janma Nakṣatra profile (traditional archetype) */}
+      {d.nakshatraProfiles && (
+        <div>
+          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-amber-200/80">Nakṣatra Profiles (Deity · Symbol · Śakti)</h4>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {([["janma", "Janma (Moon)"], ["lagna", "Lagna"], ["sun", "Sun"]] as const).map(([key, label]) => {
+              const n = d.nakshatraProfiles![key];
+              return (
+                <div key={key} className={`rounded-xl border p-3 ${key === "janma" ? "border-amber-300/30 bg-amber-400/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
+                  <div className="text-[10px] uppercase tracking-wider text-amber-100/45">{label}</div>
+                  <div className="text-sm font-semibold text-amber-50">{NAKSHATRAS[n.index].name}</div>
+                  <div className="mt-1 text-xs italic text-amber-100/70">{n.archetype}</div>
+                  <div className="mt-1.5 space-y-0.5 text-[11px] text-amber-50/70">
+                    <div><span className="text-amber-100/40">Deity:</span> {n.deity}</div>
+                    <div><span className="text-amber-100/40">Symbol:</span> {n.symbol}</div>
+                    <div><span className="text-amber-100/40">Śakti:</span> {n.shakti}</div>
+                    <div><span className="text-amber-100/40">Gaṇa · Yoni:</span> {n.gana} · {n.yoni}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[10px] text-amber-100/40">Traditional nakṣatra attributes (Taittirīya Brāhmaṇa / classical). The Janma (Moon) nakṣatra most shapes temperament.</p>
+        </div>
+      )}
+
       {/* Special lagnas & points */}
       <div>
         <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-amber-200/80">

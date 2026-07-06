@@ -6,7 +6,8 @@ import { computeShadbala } from "@/lib/astro/shadbala";
 import { analyzeBhavas } from "@/lib/astro/bhava";
 import { computeYogas } from "@/lib/astro/yogas";
 import { computeLifePredictions } from "@/lib/astro/prediction";
-import { SIGNS } from "@/lib/astro/constants";
+import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
+import { nakshatraProfile } from "@/lib/astro/nakshatra-attributes";
 import { chat, detectProvider } from "@/lib/ai/llm";
 import type { BirthData } from "@/lib/astro/types";
 
@@ -67,7 +68,10 @@ export async function POST(req: NextRequest) {
         );
       })
       .join("\n\n");
-    const groundedSummary = `${analysis.classicalSummary}\n\nHouse (Bhāva) analysis — B.V. Raman's method:\n${bhavaText}\n\nLife predictions (synthesised):\n${predictionText}`;
+    const moonNak = chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;
+    const jn = nakshatraProfile(moonNak);
+    const nakLine = `Janma Nakṣatra (Moon): ${NAKSHATRAS[moonNak].name} — deity ${jn.deity}, symbol ${jn.symbol}, śakti = ${jn.shakti}; ${jn.gana} gaṇa. Archetype: ${jn.archetype}`;
+    const groundedSummary = `${analysis.classicalSummary}\n\n${nakLine}\n\nHouse (Bhāva) analysis — B.V. Raman's method:\n${bhavaText}\n\nLife predictions (synthesised):\n${predictionText}`;
 
     // No AI provider configured → return the classical rule-based reading.
     if (!detectProvider()) {
