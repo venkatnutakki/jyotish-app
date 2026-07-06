@@ -12,7 +12,10 @@
     "lint": "eslint",
     "desktop:prepare": "next build && node electron/prepare.js",
     "desktop:dev": "npm run desktop:prepare && electron .",
-    "desktop:build": "npm run desktop:prepare && electron-builder --win --x64"
+    "desktop:build": "npm run desktop:prepare && electron-builder --win --x64",
+    "gen:cities": "node scripts/gen-cities.mjs",
+    "mobile:build": "node scripts/build-mobile.mjs",
+    "mobile:open": "cap open android"
   },
   "build": {
     "appId": "com.jyotish.app",
@@ -46,6 +49,8 @@
     }
   },
   "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
     "all-the-cities": "^3.1.0",
     "astronomy-engine": "^2.1.19",
     "city-timezones": "^1.3.4",
@@ -54,6 +59,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { installApiShim } from "@/lib/api-shim";
 import type { Chart } from "@/lib/astro/types";
+
+// Offline build: route /api/* calls to the local compute layer (no-op elsewhere).
+installApiShim();
 import { SouthChart } from "./SouthChart";
 import { NorthChart } from "./NorthChart";
 import { PlanetTable } from "./PlanetTable";
