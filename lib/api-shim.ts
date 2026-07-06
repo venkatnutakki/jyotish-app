@@ -36,6 +36,7 @@ export function installApiShim() {
         "/api/shadbala": C.shadbalaRoute, "/api/transits": C.transitsRoute, "/api/forecast": C.forecastRoute,
         "/api/muhurta": C.muhurtaRoute, "/api/varsha": C.varshaRoute, "/api/compat": C.compatRoute,
         "/api/kp-horary": C.kpHoraryRoute, "/api/interpret": C.interpretRoute, "/api/ask": C.askRoute,
+        "/api/chat": C.chatRoute,
       } as Record<string, (b: unknown) => unknown>;
       const handler = route[path];
       if (!handler) return json({ error: `No offline handler for ${path}` }, 404);

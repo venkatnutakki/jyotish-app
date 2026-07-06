@@ -23,6 +23,7 @@ import { FullReport } from "./FullReport";
 import { PredictionCards, type LifePredictionView } from "./PredictionCards";
 import { CompatibilityView } from "./CompatibilityView";
 import { AskPanel } from "./AskPanel";
+import { ChatPanel } from "./ChatPanel";
 import { SpecialPanel } from "./SpecialPanel";
 import { VarshaphalPanel } from "./VarshaphalPanel";
 import { MuhurtaPanel } from "./MuhurtaPanel";
@@ -167,7 +168,7 @@ type FormState = {
   ayanamsa?: "lahiri" | "raman" | "kp";
   nodeType?: "mean" | "true";
 };
-type Tab = "chart" | "ask" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
+type Tab = "chart" | "chat" | "ask" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
 
 const SAVED_KEY = "jyotish.saved";
 
@@ -575,7 +576,8 @@ export function ChartApp() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "chart", label: "Chart" },
-    { id: "ask", label: "✦ Ask" },
+    { id: "chat", label: "✦ Chat" },
+    { id: "ask", label: "Ask" },
     { id: "ashtakavarga", label: "Ashtakavarga" },
     { id: "shadbala", label: "Strengths" },
     { id: "jaimini", label: "Jaimini" },
@@ -970,6 +972,9 @@ export function ChartApp() {
                   <TransitsPanel birth={birthPayload} />
                 )}
 
+                {tab === "chat" && birthPayload && (
+                  <ChatPanel birth={birthPayload} />
+                )}
                 {tab === "ask" && birthPayload && (
                   <AskPanel birth={birthPayload} />
                 )}

@@ -16,6 +16,8 @@ export interface ChatResult {
   model: string;
 }
 
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
 const DEFAULT_MODEL: Record<string, string> = {
   deepseek: "deepseek-chat",
   groq: "llama-3.3-70b-versatile",
@@ -121,6 +123,64 @@ export async function chatClient(system: string, user: string, cfg: AiConfig): P
       break;
     default:
       throw new Error(`Unknown provider: ${provider}`);
+  }
+  return { text, provider, model };
+}
+
+// ── Multi-turn chat (for the conversational Chat tab, offline build) ──────────
+
+async function msgsOpenAICompat(base: string, key: string, model: string, system: string, messages: ChatMessage[], extra: Record<string, string> = {}): Promise<string> {
+  const res = await fetch(`${base}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${key}`, ...extra },
+    body: JSON.stringify({ model, max_tokens: 3000, messages: [{ role: "system", content: system }, ...messages] }),
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return (await res.json())?.choices?.[0]?.message?.content ?? "";
+}
+
+async function msgsGemini(key: string, model: string, system: string, messages: ChatMessage[]): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
+    }),
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+}
+
+async function msgsAnthropic(key: string, model: string, system: string, messages: ChatMessage[]): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model, max_tokens: 3000, system, messages }),
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return data?.content?.map((b: { text?: string }) => b.text ?? "").join("") ?? "";
+}
+
+/** Multi-turn version of chatClient(): a system prompt plus a running conversation. */
+export async function chatClientMessages(system: string, messages: ChatMessage[], cfg: AiConfig): Promise<ChatResult> {
+  const provider = cfg.provider;
+  const model = cfg.model || DEFAULT_MODEL[provider] || "";
+  const key = cfg.apiKey;
+  let text: string;
+  switch (provider) {
+    case "deepseek": text = await msgsOpenAICompat("https://api.deepseek.com/v1", key, model, system, messages); break;
+    case "groq": text = await msgsOpenAICompat("https://api.groq.com/openai/v1", key, model, system, messages); break;
+    case "cerebras": text = await msgsOpenAICompat("https://api.cerebras.ai/v1", key, model, system, messages); break;
+    case "openrouter": text = await msgsOpenAICompat("https://openrouter.ai/api/v1", key, model, system, messages, { "HTTP-Referer": "https://jyotish.app", "X-Title": "Jyotish" }); break;
+    case "openai": text = await msgsOpenAICompat("https://api.openai.com/v1", key, model, system, messages); break;
+    case "gemini": text = await msgsGemini(key, model, system, messages); break;
+    case "anthropic": text = await msgsAnthropic(key, model, system, messages); break;
+    default: throw new Error(`Unknown provider: ${provider}`);
   }
   return { text, provider, model };
 }

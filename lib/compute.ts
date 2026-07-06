@@ -52,8 +52,9 @@ import { matchTopics, isTimingQuestion, TOPICS } from "./astro/question";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./astro/classical-evidence";
 import { SIGNS, NAKSHATRAS } from "./astro/constants";
 import { buildReading, READING_SYSTEM } from "./astro/reading";
+import { buildChatSystem } from "./astro/chat";
 import { getAiConfig } from "./ai/ai-config";
-import { chatClient } from "./ai/llm-client";
+import { chatClient, chatClientMessages, type ChatMessage } from "./ai/llm-client";
 import type { BirthData, Chart } from "./astro/types";
 
 const weekdayOf = (b: BirthData) => new Date(Date.UTC(b.year, b.month - 1, b.day)).getUTCDay();
@@ -308,5 +309,30 @@ export async function askRoute(body: { birth: BirthData; question: string }) {
   return {
     source: "classical", question, topics: topics.map((t) => t.label), answer: classicalAnswer, evidence,
     note: cfg ? undefined : `Offline mode: rule-based classical answer (Lagna ${SIGNS[chart.ascendantSignIndex]}, Moon ${SIGNS[moon.signIndex]}). Add an AI key in About for a fuller answer.`,
+  };
+}
+
+// Multi-turn chat about the chart (mirrors /api/chat). Needs an on-device key
+// for real conversation; without one, answers the latest message classically.
+export async function chatRoute(body: { birth: BirthData; messages: ChatMessage[] }) {
+  const { birth, messages } = body;
+  if (!Array.isArray(messages) || messages.length === 0) return { error: "No messages." };
+  const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+
+  const cfg = getAiConfig();
+  if (cfg) {
+    try {
+      const system = buildChatSystem(birth, lastUser);
+      const { text, provider, model } = await chatClientMessages(system, messages.slice(-16), cfg);
+      if (text?.trim()) return { source: "ai", provider, model, reply: text };
+    } catch (e) {
+      return { source: "classical", reply: "", note: `AI request failed (${e instanceof Error ? e.message : "error"}).` };
+    }
+  }
+  const a = await askRoute({ birth, question: lastUser });
+  return {
+    source: "classical",
+    reply: (a as { answer?: string }).answer ?? "",
+    note: cfg ? undefined : "Offline: one-shot classical answer. Add an AI key in About to enable full conversation.",
   };
 }
