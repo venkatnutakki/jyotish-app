@@ -3,6 +3,9 @@
 // ancient, public-domain facts; the archetype lines are original one-sentence
 // syntheses of those attributes (not drawn from any modern copyrighted text).
 
+import { NAKSHATRAS, SIGN_LORDS, SIGNS, NAKSHATRA_ARC, type PlanetName } from "./constants";
+import { vargaSign } from "./varga";
+
 export interface NakshatraAttr {
   deity: string;
   symbol: string;
@@ -41,15 +44,56 @@ export const NAK_ATTR: NakshatraAttr[] = [
   { deity: "Pūṣan (the nourisher, guide of travellers)", symbol: "a fish or drum", shakti: "the power of nourishment and safe passage", archetype: "The Guardian — kind, protective, guiding self and others safely to the far shore." },
 ];
 
+// Nāma-akṣara — the traditional naming syllable for each of the 4 pādas of every
+// nakṣatra (the standard Pañcāṅga set used for choosing a birth-name). Public-domain.
+const NAMA_AKSHARA: string[][] = [
+  ["Chu", "Che", "Cho", "La"],       // Aśvinī
+  ["Li", "Lu", "Le", "Lo"],          // Bharaṇī
+  ["A", "I", "U", "E"],              // Kṛttikā
+  ["O", "Va", "Vi", "Vu"],           // Rohiṇī
+  ["Ve", "Vo", "Ka", "Ki"],          // Mṛgaśira
+  ["Ku", "Gha", "Ṅa", "Chha"],       // Ārdrā
+  ["Ke", "Ko", "Ha", "Hi"],          // Punarvasu
+  ["Hu", "He", "Ho", "Ḍa"],          // Puṣya
+  ["Ḍi", "Ḍu", "Ḍe", "Ḍo"],          // Āśleṣā
+  ["Ma", "Mi", "Mu", "Me"],          // Maghā
+  ["Mo", "Ṭa", "Ṭi", "Ṭu"],          // Pūrva Phalgunī
+  ["Ṭe", "Ṭo", "Pa", "Pi"],          // Uttara Phalgunī
+  ["Pu", "Sha", "Ṇa", "Ṭha"],        // Hasta
+  ["Pe", "Po", "Ra", "Ri"],          // Chitrā
+  ["Ru", "Re", "Ro", "Ta"],          // Svātī
+  ["Ti", "Tu", "Te", "To"],          // Viśākhā
+  ["Na", "Ni", "Nu", "Ne"],          // Anurādhā
+  ["No", "Ya", "Yi", "Yu"],          // Jyeṣṭhā
+  ["Ye", "Yo", "Bha", "Bhi"],        // Mūla
+  ["Bhu", "Dha", "Pha", "Ḍha"],      // Pūrva Āṣāḍhā
+  ["Bhe", "Bho", "Ja", "Ji"],        // Uttara Āṣāḍhā
+  ["Ju", "Je", "Jo", "Gha"],         // Śravaṇa
+  ["Ga", "Gi", "Gu", "Ge"],          // Dhaniṣṭhā
+  ["Go", "Sa", "Si", "Su"],          // Śatabhiṣā
+  ["Se", "So", "Da", "Di"],          // Pūrva Bhādrapada
+  ["Du", "Tha", "Jha", "Ña"],        // Uttara Bhādrapada
+  ["De", "Do", "Cha", "Chi"],        // Revatī
+];
+
 const GANA_LABEL = ["Deva (divine)", "Manuṣya (human)", "Rākṣasa (demonic/intense)"];
 const NAK_GANA = [0, 1, 2, 1, 0, 1, 0, 0, 2, 2, 1, 1, 0, 2, 0, 2, 0, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0];
 const YONI_ANIMALS = ["Horse", "Elephant", "Sheep", "Serpent", "Dog", "Cat", "Rat", "Cow", "Buffalo", "Tiger", "Deer", "Monkey", "Mongoose", "Lion"];
 const NAK_YONI = [0, 1, 2, 3, 3, 4, 5, 2, 5, 6, 6, 7, 8, 9, 8, 9, 10, 10, 4, 11, 12, 11, 13, 0, 13, 7, 1];
 
+// Guṇa derived transparently from the nakṣatra's ruling planet (Sāttvika:
+// Sun/Moon/Jupiter; Rājasika: Mercury/Venus; Tāmasika: Mars/Saturn/nodes).
+const LORD_GUNA: Record<PlanetName, string> = {
+  Sun: "Sāttvika", Moon: "Sāttvika", Jupiter: "Sāttvika",
+  Mercury: "Rājasika", Venus: "Rājasika",
+  Mars: "Tāmasika", Saturn: "Tāmasika", Rahu: "Tāmasika", Ketu: "Tāmasika",
+};
+
 export interface NakshatraProfile extends NakshatraAttr {
   index: number;
   gana: string;
   yoni: string;
+  guna: string; // via ruling planet
 }
 
 /** Full traditional profile for a nakṣatra (0-26). */
@@ -60,5 +104,30 @@ export function nakshatraProfile(index: number): NakshatraProfile {
     ...NAK_ATTR[i],
     gana: GANA_LABEL[NAK_GANA[i]],
     yoni: YONI_ANIMALS[NAK_YONI[i]],
+    guna: LORD_GUNA[NAKSHATRAS[i].lord as PlanetName],
+  };
+}
+
+export interface PadaDetail {
+  pada: number;         // 1-4
+  syllable: string;     // nāma-akṣara
+  navamsaSign: string;  // D9 sign this pāda falls in
+  navamsaLord: string;
+}
+
+/** Traditional detail for one pāda (quarter) of a nakṣatra: its naming syllable
+ *  and the Navāṁśa (D9) sign it occupies (each pāda = exactly one navāṁśa). */
+export function padaDetail(nakIndex: number, pada: number): PadaDetail {
+  const i = ((nakIndex % 27) + 27) % 27;
+  const p = Math.min(4, Math.max(1, pada));
+  // Longitude at the middle of this pāda → its Navāṁśa sign.
+  const lon = i * NAKSHATRA_ARC + (p - 1) * (NAKSHATRA_ARC / 4) + NAKSHATRA_ARC / 8;
+  const sign = Math.floor(lon / 30);
+  const navSign = vargaSign(sign, lon - sign * 30, 9);
+  return {
+    pada: p,
+    syllable: NAMA_AKSHARA[i][p - 1],
+    navamsaSign: SIGNS[navSign],
+    navamsaLord: SIGN_LORDS[navSign],
   };
 }

@@ -31,6 +31,9 @@ interface AvReduction {
   reductions: { planet: string; shodhyaPinda: number; rasiPinda: number; grahaPinda: number }[];
   kakshya: { planet: string; sign: number; kakshya: number; kakshyaLord: string; benefic: boolean }[];
 }
+interface NakProfile {
+  index: number; deity: string; symbol: string; shakti: string; archetype: string; gana: string; yoni: string; guna: string;
+}
 interface Details {
   specialPoints: SpecialPoint[];
   argala: ArgalaResult[];
@@ -68,9 +71,10 @@ interface Details {
     lifeThirds: { phase: string; benefics: number; malefics: number; tone: string }[];
   };
   avLongevity?: { years: number; band: string; note: string };
-  nakshatraProfiles?: Record<"janma" | "lagna" | "sun", {
-    index: number; deity: string; symbol: string; shakti: string; archetype: string; gana: string; yoni: string;
-  }>;
+  nakshatraProfiles?: {
+    janma: NakProfile; lagna: NakProfile; sun: NakProfile;
+    janmaPada: { pada: number; syllable: string; navamsaSign: string; navamsaLord: string };
+  };
   rulingPlanets?: {
     dayLord: string;
     moon: { signLord: string; starLord: string; subLord: string };
@@ -122,13 +126,16 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
                     <div><span className="text-amber-100/40">Deity:</span> {n.deity}</div>
                     <div><span className="text-amber-100/40">Symbol:</span> {n.symbol}</div>
                     <div><span className="text-amber-100/40">Śakti:</span> {n.shakti}</div>
-                    <div><span className="text-amber-100/40">Gaṇa · Yoni:</span> {n.gana} · {n.yoni}</div>
+                    <div><span className="text-amber-100/40">Gaṇa · Yoni · Guṇa:</span> {n.gana} · {n.yoni} · {n.guna}</div>
+                    {key === "janma" && d.nakshatraProfiles!.janmaPada && (
+                      <div><span className="text-amber-100/40">Pāda {d.nakshatraProfiles!.janmaPada.pada}:</span> syllable “{d.nakshatraProfiles!.janmaPada.syllable}” · navāṁśa {d.nakshatraProfiles!.janmaPada.navamsaSign} ({d.nakshatraProfiles!.janmaPada.navamsaLord})</div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
-          <p className="mt-1 text-[10px] text-amber-100/40">Traditional nakṣatra attributes (Taittirīya Brāhmaṇa / classical). The Janma (Moon) nakṣatra most shapes temperament.</p>
+          <p className="mt-1 text-[10px] text-amber-100/40">Traditional nakṣatra attributes (Taittirīya Brāhmaṇa / classical); guṇa via the nakṣatra lord. The Janma (Moon) nakṣatra &amp; pāda most shape temperament and the traditional birth-name syllable.</p>
         </div>
       )}
 

@@ -23,7 +23,7 @@ import {
 import { computeKotaChakra } from "@/lib/astro/kota-chakra";
 import { computeGrahaRasmi, computeSamudayaAV, computeAvLongevity } from "@/lib/astro/bphs-av-rasmi";
 import { computeRulingPlanets } from "@/lib/astro/kp-horary";
-import { nakshatraProfile } from "@/lib/astro/nakshatra-attributes";
+import { nakshatraProfile, padaDetail } from "@/lib/astro/nakshatra-attributes";
 import { NAKSHATRA_ARC } from "@/lib/astro/constants";
 import type { BirthData } from "@/lib/astro/types";
 
@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
         janma: nakshatraProfile(chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex),
         lagna: nakshatraProfile(Math.floor(chart.ascendant / NAKSHATRA_ARC)),
         sun: nakshatraProfile(chart.planets.find((p) => p.planet === "Sun")!.nakshatraIndex),
+        janmaPada: padaDetail(
+          chart.planets.find((p) => p.planet === "Moon")!.nakshatraIndex,
+          chart.planets.find((p) => p.planet === "Moon")!.pada
+        ),
       },
       elements: computeElements(chart, shadbala.ranking),
       gunas: computeGunas(chart, shadbala.ranking),
