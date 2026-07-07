@@ -1,17 +1,18 @@
 import { RASHIS, SIGNS } from "@/lib/astro/constants";
-import { PLANET_ABBR, SOUTH_CELL } from "@/lib/astro/display";
+import { PLANET_ABBR, PLANET_COLOR, SOUTH_CELL } from "@/lib/astro/display";
 import type { Chart } from "@/lib/astro/types";
 
 const CELL = 90;
 const SIZE = CELL * 4;
 
 export function SouthChart({ chart }: { chart: Chart }) {
-  const byCell: Record<number, { abbr: string; deg: number; retro: boolean }[]> = {};
+  const byCell: Record<number, { abbr: string; deg: number; retro: boolean; color: string }[]> = {};
   for (const p of chart.planets) {
     (byCell[p.signIndex] ??= []).push({
       abbr: PLANET_ABBR[p.planet],
       deg: Math.floor(p.degreeInSign),
       retro: p.retrograde,
+      color: PLANET_COLOR[p.planet],
     });
   }
 
@@ -71,8 +72,8 @@ export function SouthChart({ chart }: { chart: Chart }) {
                 fontSize={11.5}
                 fontWeight={600}
               >
-                <tspan className="fill-amber-50">{p.abbr}</tspan>
-                <tspan className="fill-amber-200/70" fontSize={9.5} dx={2}>
+                <tspan fill={p.color}>{p.abbr}</tspan>
+                <tspan fill={p.color} fillOpacity={0.75} fontSize={9.5} dx={2}>
                   {p.deg}°{p.retro ? "℞" : ""}
                 </tspan>
               </text>
