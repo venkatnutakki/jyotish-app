@@ -12,6 +12,19 @@ export const PLANET_ABBR: Record<PlanetName, string> = {
   Ketu: "Ke",
 };
 
+/** Per-graha colours for chart glyphs (readable on the dark chart background). */
+export const PLANET_COLOR: Record<PlanetName, string> = {
+  Sun: "#ff9d5c",     // orange
+  Moon: "#d7dee9",    // silver
+  Mars: "#ff6b6b",    // red
+  Mercury: "#5fd39a", // green
+  Jupiter: "#ffd24a", // gold
+  Venus: "#f2a8e6",   // pink
+  Saturn: "#7fb0ff",  // blue
+  Rahu: "#b7a6dd",    // smoky violet
+  Ketu: "#cdb389",    // smoky tan
+};
+
 /** Format a sidereal longitude as "12°34' Sign" — minutes rounded to nearest
  *  (matching Jagannātha Hora / Parashara's Light), with carry. Clamped to 29°59'
  *  so the displayed sign never crosses a boundary and desyncs from the nakṣatra. */
@@ -43,34 +56,39 @@ export const SOUTH_CELL: Record<number, { col: number; row: number }> = {
   5: { col: 3, row: 3 }, // Virgo
 };
 
-/** Label anchor points for the 12 houses of a North-Indian diamond (400×400). */
+// North-Indian diamond geometry (400×400). Each house has TWO anchors: the
+// rāśi (sign) number sits toward the OUTER edge of the house, and the planet
+// stack sits in the house body toward the WIDE part of the region — so both
+// stay unambiguously inside the house even when several planets share it.
+
+/** Rāśi (sign) number anchor — toward the outer perimeter of each house. */
 export const NORTH_HOUSE_POS: Record<number, { x: number; y: number }> = {
-  1: { x: 200, y: 90 },
-  2: { x: 100, y: 45 },
-  3: { x: 55, y: 100 },
-  4: { x: 110, y: 200 },
-  5: { x: 55, y: 300 },
-  6: { x: 100, y: 355 },
-  7: { x: 200, y: 300 },
-  8: { x: 300, y: 355 },
-  9: { x: 345, y: 300 },
-  10: { x: 290, y: 200 },
-  11: { x: 345, y: 100 },
-  12: { x: 300, y: 45 },
+  1: { x: 200, y: 50 },
+  2: { x: 100, y: 24 },
+  3: { x: 26, y: 100 },
+  4: { x: 44, y: 200 },
+  5: { x: 26, y: 300 },
+  6: { x: 100, y: 378 },
+  7: { x: 200, y: 352 },
+  8: { x: 300, y: 378 },
+  9: { x: 374, y: 300 },
+  10: { x: 356, y: 200 },
+  11: { x: 374, y: 100 },
+  12: { x: 300, y: 24 },
 };
 
-/** Where to stack planets inside each North-Indian house. */
+/** Planet-stack centre for each North-Indian house (in the wide body). */
 export const NORTH_PLANET_POS: Record<number, { x: number; y: number }> = {
-  1: { x: 200, y: 130 },
-  2: { x: 100, y: 75 },
-  3: { x: 80, y: 130 },
-  4: { x: 140, y: 200 },
-  5: { x: 80, y: 275 },
-  6: { x: 100, y: 325 },
-  7: { x: 200, y: 260 },
-  8: { x: 300, y: 325 },
-  9: { x: 320, y: 275 },
-  10: { x: 260, y: 200 },
-  11: { x: 320, y: 130 },
-  12: { x: 300, y: 75 },
+  1: { x: 200, y: 120 },
+  2: { x: 100, y: 66 },
+  3: { x: 66, y: 100 },
+  4: { x: 112, y: 200 },
+  5: { x: 66, y: 300 },
+  6: { x: 100, y: 334 },
+  7: { x: 200, y: 284 },
+  8: { x: 300, y: 334 },
+  9: { x: 334, y: 300 },
+  10: { x: 288, y: 200 },
+  11: { x: 334, y: 100 },
+  12: { x: 300, y: 66 },
 };
