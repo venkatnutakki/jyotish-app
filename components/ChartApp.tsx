@@ -175,7 +175,17 @@ type Tab = "chart" | "chat" | "ask" | "ashtakavarga" | "shadbala" | "jaimini" | 
 
 const SAVED_KEY = "jyotish.saved";
 
-function AboutModal({ onClose }: { onClose: () => void }) {
+function AboutModal({
+  onClose,
+  user,
+  onLogin,
+  onLogout,
+}: {
+  onClose: () => void;
+  user: AuthUser | null;
+  onLogin: () => void;
+  onLogout: () => void;
+}) {
   const [version, setVersion] = useState(APP_VERSION);
   const [apiKey, setApiKey] = useState("");
   const [provider, setProvider] = useState("deepseek");
@@ -236,6 +246,36 @@ function AboutModal({ onClose }: { onClose: () => void }) {
           and strengths to the arc-second, with interpretations grounded in the
           classical texts.
         </p>
+
+        {/* Account */}
+        {authEnabled() && (
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            {user ? (
+              <>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wider text-amber-200/60">Signed in</p>
+                  <p className="truncate text-sm text-amber-50" title={user.email}>{user.email}</p>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="shrink-0 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-amber-100/80 hover:bg-white/10"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-amber-100/70">Save your charts to your account.</p>
+                <button
+                  onClick={onLogin}
+                  className="shrink-0 rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-400/20"
+                >
+                  Log in
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3 text-sm">
           <div>
@@ -658,7 +698,14 @@ export function ChartApp() {
         </div>
       </div>
 
-      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showAbout && (
+        <AboutModal
+          onClose={() => setShowAbout(false)}
+          user={user}
+          onLogin={() => { setShowAbout(false); setShowAuth(true); }}
+          onLogout={() => { signOut(); }}
+        />
+      )}
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
       {mode === "compat" ? (
