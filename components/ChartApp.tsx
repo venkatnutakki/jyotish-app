@@ -460,19 +460,11 @@ export function ChartApp() {
     runChart(form);
   }
 
-  // Load saved charts + any shared chart from the URL on mount.
+  // Load saved charts on mount.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SAVED_KEY);
       if (raw) setSaved(JSON.parse(raw));
-    } catch {}
-    try {
-      const param = new URLSearchParams(window.location.search).get("c");
-      if (param) {
-        const f = JSON.parse(decodeURIComponent(atob(param))) as FormState;
-        setForm(f);
-        runChart(f);
-      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -523,17 +515,6 @@ export function ChartApp() {
     persistSaved(saved.filter((s) => s.name !== name));
   }
 
-  function shareChart() {
-    const enc = btoa(encodeURIComponent(JSON.stringify(form)));
-    const url = `${window.location.origin}${window.location.pathname}?c=${enc}`;
-    navigator.clipboard?.writeText(url).then(
-      () => {
-        setShareMsg("Link copied ✓");
-        setTimeout(() => setShareMsg(""), 2000);
-      },
-      () => setShareMsg("Copy failed")
-    );
-  }
 
   async function generateReading() {
     if (!birthPayload) return;
@@ -823,19 +804,13 @@ export function ChartApp() {
               {error && <p className="text-xs text-rose-300">{error}</p>}
             </form>
 
-            {/* Save / Share / Print */}
+            {/* Save / Full Report */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <button
                 onClick={saveChart}
                 className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-amber-100/80 hover:bg-white/10"
               >
                 ★ Save
-              </button>
-              <button
-                onClick={shareChart}
-                className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-amber-100/80 hover:bg-white/10"
-              >
-                🔗 Share
               </button>
               <button
                 onClick={generateReport}
