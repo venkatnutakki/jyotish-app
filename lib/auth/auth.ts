@@ -107,7 +107,13 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
-  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/reset-password` : "";
+  // The reset link must land on a real, allow-listed web page. On the phone the
+  // WebView origin (capacitor://localhost) isn't reachable, so prefer the
+  // deployed site URL when set — the email then opens the web reset page.
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  const redirectTo = base ? `${base.replace(/\/$/, "")}/reset-password` : "";
   const q = redirectTo ? `?redirect_to=${encodeURIComponent(redirectTo)}` : "";
   await gotrue(`recover${q}`, { email });
 }

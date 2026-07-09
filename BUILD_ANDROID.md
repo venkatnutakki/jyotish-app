@@ -66,3 +66,11 @@ npm run mobile:build              # re-export + cap sync
   doesn't block them. No key → the classical reading, still fully offline.
 - The web (`WEB_BUILD`) and desktop (`desktop:build`) builds are unaffected —
   they keep their real `/api` routes; the shim is inert unless `NEXT_PUBLIC_OFFLINE=1`.
+- **Accounts / login on Android**: optional. If the `NEXT_PUBLIC_SUPABASE_*` vars
+  are in `.env.local` when you run `npm run mobile:build`, they're inlined and a
+  **Log in** button appears in the app. Login/signup then work **when the phone is
+  online** (they call Supabase; `CapacitorHttp` handles the network). The core
+  astrology still works fully offline with no account. Password-reset emails open
+  the web reset page (set `NEXT_PUBLIC_SITE_URL` to your deployed site). Add
+  `capacitor://localhost` and your site's `/reset-password` to Supabase → Auth →
+  URL Configuration if you want in-app redirects. See `AUTH_SETUP.md`.
