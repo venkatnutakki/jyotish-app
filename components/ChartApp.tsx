@@ -413,6 +413,15 @@ export function ChartApp() {
     refreshIfNeeded().then(() => setUser(currentUser()));
     return onAuthChange(setUser);
   }, []);
+  // On the WEB (accounts enabled, not the offline desktop/Android builds), saved
+  // charts are account-only: you must be logged in to save or see them. Offline
+  // builds keep saving locally with no login.
+  const requireLoginToSave =
+    authEnabled() && !isDesktop() && process.env.NEXT_PUBLIC_OFFLINE !== "1";
+  // Hide the local list whenever gated + logged out (e.g. after logout).
+  useEffect(() => {
+    if (requireLoginToSave && !user) setSaved([]);
+  }, [user, requireLoginToSave]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [birthPayload, setBirthPayload] = useState<BirthPayload | null>(null);
@@ -500,8 +509,10 @@ export function ChartApp() {
     runChart(form);
   }
 
-  // Load saved charts on mount.
+  // Load saved charts on mount. On the gated web build, only load them if the
+  // user is already logged in (otherwise the list stays hidden until login).
   useEffect(() => {
+    if (requireLoginToSave && !currentUser()) return;
     try {
       const raw = localStorage.getItem(SAVED_KEY);
       if (raw) setSaved(JSON.parse(raw));
@@ -541,6 +552,13 @@ export function ChartApp() {
   }, [user]);
 
   function saveChart() {
+    // On the gated web build, saving requires an account — prompt login instead.
+    if (requireLoginToSave && !user) {
+      setShowAuth(true);
+      setShareMsg("Log in to save charts");
+      setTimeout(() => setShareMsg(""), 2000);
+      return;
+    }
     const name = form.name || form.city || "Chart";
     const next = [
       { name, form },
@@ -869,7 +887,7 @@ export function ChartApp() {
               {shareMsg && <span className="text-emerald-300">{shareMsg}</span>}
             </div>
 
-            {saved.length > 0 && (
+            {saved.length > 0 && (!requireLoginToSave || user) && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <h3 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-200/70">
                   <span>Saved Charts</span>
