@@ -34,6 +34,7 @@ import { PLANET_SANSKRIT, SIGNS } from "@/lib/astro/constants";
 import { APP_VERSION, isDesktop } from "@/lib/desktop";
 import { getAiConfig, setAiConfig } from "@/lib/ai/ai-config";
 import { authEnabled, currentUser, onAuthChange, signOut, refreshIfNeeded, type AuthUser } from "@/lib/auth/auth";
+import { cloudEnabled, pullCharts, pushCharts } from "@/lib/auth/charts-cloud";
 import { AuthModal } from "./AuthModal";
 import { CityAutocomplete, type CityHit } from "./CityAutocomplete";
 import { zoneOffsetHours } from "@/lib/geo";
@@ -476,26 +477,50 @@ export function ChartApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Persist locally and, when logged in, sync the whole list to the cloud.
+  function persistSaved(next: SavedChart[]) {
+    setSaved(next);
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+    } catch {}
+    if (cloudEnabled()) pushCharts(next).catch(() => {});
+  }
+
+  // On login, merge cloud charts with local (union by name) so a user's saved
+  // charts follow them across devices.
+  useEffect(() => {
+    if (!user || !cloudEnabled()) return;
+    let cancelled = false;
+    pullCharts<SavedChart>()
+      .then((cloud) => {
+        if (cancelled) return;
+        setSaved((local) => {
+          const byName = new Map<string, SavedChart>();
+          for (const c of cloud) if (c?.name) byName.set(c.name, c);
+          for (const l of local) byName.set(l.name, l); // local wins on conflict
+          const merged = [...byName.values()].slice(0, 50);
+          try { localStorage.setItem(SAVED_KEY, JSON.stringify(merged)); } catch {}
+          pushCharts(merged).catch(() => {});
+          return merged;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
   function saveChart() {
     const name = form.name || form.city || "Chart";
     const next = [
       { name, form },
       ...saved.filter((s) => s.name !== name),
-    ].slice(0, 12);
-    setSaved(next);
-    try {
-      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-    } catch {}
-    setShareMsg("Saved ✓");
+    ].slice(0, 50);
+    persistSaved(next);
+    setShareMsg(cloudEnabled() ? "Saved to your account ✓" : "Saved ✓");
     setTimeout(() => setShareMsg(""), 1500);
   }
 
   function deleteSaved(name: string) {
-    const next = saved.filter((s) => s.name !== name);
-    setSaved(next);
-    try {
-      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-    } catch {}
+    persistSaved(saved.filter((s) => s.name !== name));
   }
 
   function shareChart() {

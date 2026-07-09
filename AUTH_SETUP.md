@@ -46,6 +46,29 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 That's it. A **Log in** button appears in the header; users can sign up, log in,
 log out, and reset a forgotten password.
 
+## 6. Enable "save charts to your account" (cloud sync)
+For a logged-in user's saved charts to sync across devices, create one table.
+Supabase → **SQL Editor** → **New query** → paste this → **Run**:
+
+```sql
+create table if not exists public.user_charts (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  charts     jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.user_charts enable row level security;
+create policy "own charts - select" on public.user_charts
+  for select using (auth.uid() = user_id);
+create policy "own charts - insert" on public.user_charts
+  for insert with check (auth.uid() = user_id);
+create policy "own charts - update" on public.user_charts
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+Row-Level Security means each user can only ever read/write **their own** row.
+After this, the ★ Save button writes to the cloud when logged in, and logging in
+on another device pulls the same saved charts. Not logged in → saves stay local.
+
 ## How it's built
 - `lib/auth/auth.ts` — GoTrue REST calls (signup / token / recover / user), session
   in localStorage, token refresh. `authEnabled()` gates everything on the env vars.
