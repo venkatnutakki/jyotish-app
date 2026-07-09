@@ -57,10 +57,15 @@ create table if not exists public.user_charts (
   updated_at timestamptz not null default now()
 );
 alter table public.user_charts enable row level security;
+
+-- idempotent: safe to run again (drop-then-create the policies)
+drop policy if exists "own charts - select" on public.user_charts;
 create policy "own charts - select" on public.user_charts
   for select using (auth.uid() = user_id);
+drop policy if exists "own charts - insert" on public.user_charts;
 create policy "own charts - insert" on public.user_charts
   for insert with check (auth.uid() = user_id);
+drop policy if exists "own charts - update" on public.user_charts;
 create policy "own charts - update" on public.user_charts
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
