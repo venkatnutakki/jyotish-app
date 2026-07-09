@@ -33,6 +33,8 @@ import { computeYogas } from "@/lib/astro/yogas";
 import { PLANET_SANSKRIT, SIGNS } from "@/lib/astro/constants";
 import { APP_VERSION, isDesktop } from "@/lib/desktop";
 import { getAiConfig, setAiConfig } from "@/lib/ai/ai-config";
+import { authEnabled, currentUser, onAuthChange, signOut, refreshIfNeeded, type AuthUser } from "@/lib/auth/auth";
+import { AuthModal } from "./AuthModal";
 import { CityAutocomplete, type CityHit } from "./CityAutocomplete";
 import { zoneOffsetHours } from "@/lib/geo";
 
@@ -363,6 +365,13 @@ export function ChartApp() {
   const [style, setStyle] = useState<"north" | "south">("north");
   const [varga, setVarga] = useState(1);
   const [tab, setTab] = useState<Tab>("chart");
+  const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  useEffect(() => {
+    if (!authEnabled()) return;
+    refreshIfNeeded().then(() => setUser(currentUser()));
+    return onAuthChange(setUser);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [birthPayload, setBirthPayload] = useState<BirthPayload | null>(null);
@@ -613,15 +622,38 @@ export function ChartApp() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setShowAbout(true)}
-          className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-amber-100/60 hover:bg-white/5"
-        >
-          ⓘ About
-        </button>
+        <div className="flex items-center gap-2">
+          {authEnabled() && (user ? (
+            <div className="flex items-center gap-2">
+              <span className="max-w-[140px] truncate text-xs text-amber-100/60" title={user.email}>
+                {user.email}
+              </span>
+              <button
+                onClick={() => { signOut(); }}
+                className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-amber-100/60 hover:bg-white/5"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-400/20"
+            >
+              Log in
+            </button>
+          ))}
+          <button
+            onClick={() => setShowAbout(true)}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-amber-100/60 hover:bg-white/5"
+          >
+            ⓘ About
+          </button>
+        </div>
       </div>
 
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
       {mode === "compat" ? (
         <CompatibilityView />
