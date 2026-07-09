@@ -320,19 +320,22 @@ export async function chatRoute(body: { birth: BirthData; messages: ChatMessage[
   const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
   const cfg = getAiConfig();
+  let aiNote: string | undefined;
   if (cfg) {
     try {
       const system = buildChatSystem(birth, lastUser);
       const { text, provider, model } = await chatClientMessages(system, messages.slice(-16), cfg);
       if (text?.trim()) return { source: "ai", provider, model, reply: text };
-    } catch (e) {
-      return { source: "classical", reply: "", note: `AI request failed (${e instanceof Error ? e.message : "error"}).` };
+      aiNote = "The AI returned an empty reply; showing a classical answer.";
+    } catch {
+      aiNote = "The AI service is busy right now, so here's a classical answer. Try again shortly.";
     }
   }
+  // Graceful fallback: always give a classical answer to the latest question.
   const a = await askRoute({ birth, question: lastUser });
   return {
     source: "classical",
-    reply: (a as { answer?: string }).answer ?? "",
-    note: cfg ? undefined : "Offline: one-shot classical answer. Add an AI key in About to enable full conversation.",
+    reply: (a as { answer?: string }).answer || "I couldn't reach the AI just now — please try again in a moment.",
+    note: aiNote ?? (cfg ? undefined : "Offline: one-shot classical answer. Add an AI key in About to enable full conversation."),
   };
 }

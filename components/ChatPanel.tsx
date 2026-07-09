@@ -45,11 +45,12 @@ export function ChatPanel({ birth }: { birth: BirthData }) {
         body: JSON.stringify({ birth, messages: next }),
       });
       const j = await r.json();
-      if (j.error) throw new Error(j.error);
-      setMessages((m) => [...m, { role: "assistant", content: j.reply || "(no answer)" }]);
+      if (j.error || !j.reply) throw new Error(j.error || "empty");
+      setMessages((m) => [...m, { role: "assistant", content: j.reply }]);
       setNote(j.note ?? null);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Chat failed");
+    } catch {
+      // Never surface raw server/JSON errors in the transcript.
+      setErr("Couldn't get a reply just now — please check your connection and try again.");
       // roll the failed user turn back so they can retry
       setMessages((m) => m.slice(0, -1));
       setInput(q);
