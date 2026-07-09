@@ -20,7 +20,11 @@ interface Session {
 }
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+// Accept either the legacy `anon` JWT or the newer `sb_publishable_…` key.
+const ANON =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  "";
 const KEY = "jyotish.auth.session";
 
 export function authEnabled(): boolean {
