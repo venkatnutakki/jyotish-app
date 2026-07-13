@@ -146,7 +146,7 @@ export function TransitsPanel({ birth }: { birth: BirthData }) {
             ))}
           </div>
           <p className="mt-2 text-xs text-amber-100/40">
-            Counting from your birth star to each transiting planet's star gives
+            Counting from your birth star to each transiting planet&rsquo;s star gives
             its tārā. Vipat, Pratyak &amp; Vadha (red) are inauspicious; the rest
             support. This is the nakṣatra-transit judgement read from the
             Sarvatobhadra / Tārā chakra.

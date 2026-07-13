@@ -241,7 +241,7 @@ function cheshtaBala(
 // Sri Pati aspect strength: sum of drishti from every other planet (benefics
 // positive, malefics negative), scaled to virupas.
 function sputaDrishti(fromLon: number, toLon: number): number {
-  let d = norm360(toLon - fromLon); // aspect angle 0..360
+  const d = norm360(toLon - fromLon); // aspect angle 0..360
   // Parashari virupa drishti as a function of angular separation.
   let v = 0;
   if (d >= 30 && d < 60) v = (d - 30) / 2;

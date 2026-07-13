@@ -418,10 +418,6 @@ export function ChartApp() {
   // builds keep saving locally with no login.
   const requireLoginToSave =
     authEnabled() && !isDesktop() && process.env.NEXT_PUBLIC_OFFLINE !== "1";
-  // Hide the local list whenever gated + logged out (e.g. after logout).
-  useEffect(() => {
-    if (requireLoginToSave && !user) setSaved([]);
-  }, [user, requireLoginToSave]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [birthPayload, setBirthPayload] = useState<BirthPayload | null>(null);
@@ -434,6 +430,11 @@ export function ChartApp() {
   } | null>(null);
   const [readingLoading, setReadingLoading] = useState(false);
   const [saved, setSaved] = useState<SavedChart[]>([]);
+  // Hide the local list whenever gated + logged out (e.g. after logout).
+  useEffect(() => {
+    if (requireLoginToSave && !user) setSaved((s) => (s.length ? [] : s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, requireLoginToSave]);
   const [shareMsg, setShareMsg] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [report, setReport] = useState<any>(null);

@@ -427,7 +427,7 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
           <p className="mt-2 text-xs text-amber-50/75">{d.kotaChakra.summary}</p>
           {d.kotaChakra.afflictions.map((a, i) => <p key={i} className="mt-0.5 text-xs text-rose-200/80">⚠ {a}</p>)}
           {d.kotaChakra.protections.map((a, i) => <p key={i} className="mt-0.5 text-xs text-emerald-200/75">✓ {a}</p>)}
-          <p className="mt-1 text-[10px] text-amber-100/40">Muhūrta/Praśna tradition: the janma-star sits at the fort's core; inner enclosures (Stambha, Madhya) are the vulnerable centre.</p>
+          <p className="mt-1 text-[10px] text-amber-100/40">Muhūrta/Praśna tradition: the janma-star sits at the fort&rsquo;s core; inner enclosures (Stambha, Madhya) are the vulnerable centre.</p>
         </div>
       )}
 
@@ -560,7 +560,7 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
           </div>
           <p className="mt-1 text-xs text-amber-100/40">
             Bālādi = life-stage vigour (Yuvā strongest, Mṛta weakest). Jāgradādi =
-            awake / dreaming / asleep by dignity. Combust &amp; war weaken a planet's
+            awake / dreaming / asleep by dignity. Combust &amp; war weaken a planet&rsquo;s
             results.
           </p>
         </div>

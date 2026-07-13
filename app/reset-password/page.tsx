@@ -3,6 +3,7 @@
 // and let the user set a new password.
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { updatePassword } from "@/lib/auth/auth";
 
 export default function ResetPasswordPage() {
@@ -48,12 +49,12 @@ export default function ResetPasswordPage() {
         {done ? (
           <div className="space-y-4">
             <p className="text-sm text-emerald-300">Your password has been updated. You can now log in.</p>
-            <a
+            <Link
               href="/"
               className="block w-full rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-2.5 text-center text-sm font-semibold text-black hover:opacity-90"
             >
               Back to the app
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">
@@ -84,9 +85,9 @@ export default function ResetPasswordPage() {
             >
               {busy ? "…" : "Update password"}
             </button>
-            <a href="/" className="block text-center text-xs text-amber-100/50 hover:text-amber-100">
+            <Link href="/" className="block text-center text-xs text-amber-100/50 hover:text-amber-100">
               ← Back to the app
-            </a>
+            </Link>
           </div>
         )}
       </div>
