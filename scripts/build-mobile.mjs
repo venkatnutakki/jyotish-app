@@ -20,6 +20,9 @@ run("node scripts/gen-cities.mjs");
 // 2. Move API routes aside, static-export, then always restore.
 const moved = fs.existsSync(API);
 if (moved) fs.renameSync(API, API_OFF);
+// Stale `next dev` type manifests (.next/dev/types/validator.ts) still
+// reference the moved app/api routes and fail the build's typecheck — clear them.
+fs.rmSync(path.join(root, ".next", "dev"), { recursive: true, force: true });
 try {
   run("next build");
 } finally {
