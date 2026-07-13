@@ -582,8 +582,39 @@ export function ChartApp() {
       const res = await fetch("/api/interpret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(birthPayload),
+        body: JSON.stringify({ ...birthPayload, stream: true }),
       });
+      const ct = res.headers.get("content-type") || "";
+      if (res.ok && ct.includes("x-ndjson") && res.body) {
+        // Streaming: line 1 is the metadata JSON (cards render immediately),
+        // then the reading prose arrives incrementally.
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        let meta: { source: string; note?: string; provider?: string; predictions?: LifePredictionView[] } | null = null;
+        let prose = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          if (!meta) {
+            const nl = buf.indexOf("\n");
+            if (nl < 0) continue;
+            meta = JSON.parse(buf.slice(0, nl));
+            buf = buf.slice(nl + 1);
+            setReadingLoading(false);
+          }
+          if (meta && buf) {
+            prose += buf;
+            buf = "";
+            const m = meta;
+            setReading({ text: prose, source: m.source, note: m.note, provider: m.provider, predictions: m.predictions });
+          }
+        }
+        if (!meta) throw new Error("Empty response");
+        return;
+      }
+      // Non-streaming path (offline build / classical fallback): original JSON.
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setReading({

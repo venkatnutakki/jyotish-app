@@ -42,8 +42,34 @@ export function ChatPanel({ birth }: { birth: BirthData }) {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ birth, messages: next }),
+        body: JSON.stringify({ birth, messages: next, stream: true }),
       });
+      const ct = r.headers.get("content-type") || "";
+      if (r.ok && ct.startsWith("text/plain") && r.body) {
+        // Streaming reply: grow the assistant bubble as chunks arrive.
+        setLoading(false);
+        setNote(null);
+        setMessages((m) => [...m, { role: "assistant", content: "" }]);
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let got = false;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = dec.decode(value, { stream: true });
+          if (chunk) {
+            got = true;
+            setMessages((m) => {
+              const copy = m.slice();
+              copy[copy.length - 1] = { role: "assistant", content: copy[copy.length - 1].content + chunk };
+              return copy;
+            });
+          }
+        }
+        if (!got) throw new Error("empty");
+        return;
+      }
+      // Non-streaming path (offline build / classical fallback): original JSON.
       const j = await r.json();
       if (j.error || !j.reply) throw new Error(j.error || "empty");
       setMessages((m) => [...m, { role: "assistant", content: j.reply }]);
@@ -51,8 +77,8 @@ export function ChatPanel({ birth }: { birth: BirthData }) {
     } catch {
       // Never surface raw server/JSON errors in the transcript.
       setErr("Couldn't get a reply just now — please check your connection and try again.");
-      // roll the failed user turn back so they can retry
-      setMessages((m) => m.slice(0, -1));
+      // roll the failed turn back so they can retry
+      setMessages(next.slice(0, -1));
       setInput(q);
     } finally {
       setLoading(false);

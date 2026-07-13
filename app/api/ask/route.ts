@@ -17,6 +17,9 @@ import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
 import { chat, detectProvider } from "@/lib/ai/llm";
 import type { BirthData } from "@/lib/astro/types";
 
+// AI answers can take ~10-30s — allow up to 60s (also the Vercel Hobby cap).
+export const maxDuration = 60;
+
 const SYSTEM = `You are a grounded Vedic (Jyotish) astrologer answering ONE specific
 question about ONE birth chart. You are given: the chart's key facts, the running
 daśā, the relevant bhāva (house) verdicts, and VERBATIM quotations from the

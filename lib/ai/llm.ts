@@ -403,6 +403,136 @@ async function chatMessagesWith(provider: Provider, system: string, messages: Ch
   }
 }
 
+// ── Streaming (SSE) — text arrives incrementally for the Reading/Chat UIs ────
+
+/** Resolve endpoint kind + credentials + model for one provider. */
+function providerConfig(p: Provider): { kind: "openai" | "gemini" | "anthropic" | "ollama"; base: string; key: string; model: string } {
+  switch (p) {
+    case "deepseek":
+      return { kind: "openai", base: "https://api.deepseek.com/v1", key: cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")!, model: process.env.DEEPSEEK_MODEL || fileConfig().deepseekModel || "deepseek-chat" };
+    case "groq":
+      return { kind: "openai", base: "https://api.groq.com/openai/v1", key: cfgKey("GROQ_API_KEY", "groqApiKey")!, model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile" };
+    case "cerebras":
+      return { kind: "openai", base: "https://api.cerebras.ai/v1", key: cfgKey("CEREBRAS_API_KEY", "cerebrasApiKey")!, model: process.env.CEREBRAS_MODEL || fileConfig().cerebrasModel || "llama-3.3-70b" };
+    case "openrouter":
+      return { kind: "openai", base: "https://openrouter.ai/api/v1", key: cfgKey("OPENROUTER_API_KEY", "openrouterApiKey")!, model: process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat-v3-0324:free" };
+    case "openai":
+      return { kind: "openai", base: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1", key: cfgKey("OPENAI_API_KEY", "openaiApiKey")!, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+    case "gemini":
+      return { kind: "gemini", base: "https://generativelanguage.googleapis.com/v1beta", key: cfgKey("GEMINI_API_KEY", "geminiApiKey")!, model: process.env.GEMINI_MODEL || fileConfig().geminiModel || "gemini-2.5-flash" };
+    case "anthropic":
+      return { kind: "anthropic", base: "https://api.anthropic.com/v1", key: cfgKey("ANTHROPIC_API_KEY", "anthropicApiKey")!, model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5" };
+    case "ollama":
+      return { kind: "ollama", base: process.env.OLLAMA_HOST || "http://localhost:11434", key: "", model: process.env.OLLAMA_MODEL || "llama3.1" };
+  }
+}
+
+/** Iterate "data: {...}" SSE lines from a fetch body. */
+async function* sseLines(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (line.startsWith("data:")) yield line.slice(5).trim();
+    }
+  }
+}
+
+/** Open a streaming completion on ONE provider; yields text deltas. */
+async function* streamWith(p: Provider, system: string, messages: ChatMessage[], maxTokens: number): AsyncGenerator<string> {
+  const cfg = providerConfig(p);
+  if (cfg.kind === "openai") {
+    const res = await fetch(`${cfg.base}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },
+      body: JSON.stringify({ model: cfg.model, max_tokens: maxTokens, stream: true, messages: [{ role: "system", content: system }, ...messages] }),
+    });
+    if (!res.ok || !res.body) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+    for await (const data of sseLines(res.body)) {
+      if (data === "[DONE]") return;
+      try {
+        const t = JSON.parse(data)?.choices?.[0]?.delta?.content;
+        if (t) yield t;
+      } catch { /* keep-alives */ }
+    }
+  } else if (cfg.kind === "gemini") {
+    const url = `${cfg.base}/models/${cfg.model}:streamGenerateContent?alt=sse&key=${cfg.key}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        generationConfig: { maxOutputTokens: Math.max(maxTokens, 8192), thinkingConfig: { thinkingBudget: 0 } },
+      }),
+    });
+    if (!res.ok || !res.body) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+    for await (const data of sseLines(res.body)) {
+      try {
+        const t = JSON.parse(data)?.candidates?.[0]?.content?.parts?.map((x: { text?: string }) => x.text ?? "").join("");
+        if (t) yield t;
+      } catch { /* ignore */ }
+    }
+  } else if (cfg.kind === "anthropic") {
+    const res = await fetch(`${cfg.base}/messages`, {
+      method: "POST",
+      headers: { "x-api-key": cfg.key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: cfg.model, max_tokens: maxTokens, stream: true, system, messages }),
+    });
+    if (!res.ok || !res.body) throw new Error(`${res.status}: ${(await res.text()).slice(0, 200)}`);
+    for await (const data of sseLines(res.body)) {
+      try {
+        const j = JSON.parse(data);
+        if (j.type === "content_block_delta" && j.delta?.text) yield j.delta.text;
+      } catch { /* ignore */ }
+    }
+  } else {
+    // Ollama: no SSE here — emit the whole reply as one chunk.
+    const { text } = await chatMessagesWith(p, system, messages);
+    if (text) yield text;
+  }
+}
+
+export interface StreamStart {
+  provider: Provider;
+  model: string;
+  stream: AsyncGenerator<string>;
+}
+
+/**
+ * Start a streaming completion, trying providers in order. Failover happens only
+ * BEFORE the first chunk (a provider that starts streaming owns the response).
+ * Throws if no provider can start.
+ */
+export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096): Promise<StreamStart> {
+  const providers = availableProviders();
+  if (!providers.length) throw new Error("No AI provider configured");
+  let lastErr: unknown;
+  for (const p of providers) {
+    try {
+      const gen = streamWith(p, system, messages, maxTokens);
+      const first = await gen.next(); // provider errors (429/503) surface here
+      if (first.done) continue; // empty stream → try next provider
+      const primed = (async function* () {
+        yield first.value as string;
+        yield* gen;
+      })();
+      return { provider: p, model: providerConfig(p).model, stream: primed };
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[llm] stream via ${p} failed, trying next:`, e instanceof Error ? e.message : e);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
+}
+
 /** Multi-turn version of chat(): tries each configured provider until one succeeds. */
 export async function chatMessages(system: string, messages: ChatMessage[]): Promise<ChatResult> {
   const providers = availableProviders();
