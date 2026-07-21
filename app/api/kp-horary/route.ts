@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeChart } from "@/lib/astro/chart";
 import { computeKpFull } from "@/lib/astro/kp";
 import { kpHoraryLagna } from "@/lib/astro/kp-horary";
+import { validateBirth } from "@/lib/astro/validate";
 import type { BirthData, Chart } from "@/lib/astro/types";
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,10 @@ export async function POST(req: NextRequest) {
       hour: local.getUTCHours(), minute: local.getUTCMinutes(), second: local.getUTCSeconds(),
       tzOffsetHours, latitude, longitude, ayanamsa: "kp",
     };
-    const base = computeChart(birth);
+    // The caller supplies place/timezone — reject non-numeric values with a 400.
+    const parsed = validateBirth(birth);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const base = computeChart(parsed.birth);
 
     // Override the ascendant with the horary number's division; re-house planets.
     const ascSign = Math.floor(lagna.ascendantSidereal / 30);

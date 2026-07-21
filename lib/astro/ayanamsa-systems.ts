@@ -29,8 +29,8 @@ function breakdown(longitude: number) {
 
 /** Re-base a Lahiri chart onto another ayanāṁśa (exact constant-offset shift). */
 export function rebaseAyanamsa(chart: Chart, system: AyanamsaSystem): Chart {
-  const delta = AYANAMSA_INFO[system].delta;
-  if (!delta) return chart;
+  const delta = AYANAMSA_INFO[system]?.delta;
+  if (!delta) return chart; // unknown or Lahiri → identity
   const ascendant = norm360(chart.ascendant + delta);
   const ascendantSignIndex = Math.floor(ascendant / SIGN_ARC);
   const planets = chart.planets.map((p) => {

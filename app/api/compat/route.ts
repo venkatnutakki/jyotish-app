@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeChart } from "@/lib/astro/chart";
 import { computeCompatibility, type Person } from "@/lib/astro/compatibility";
 import { computeMangalDosha, matchMangal } from "@/lib/astro/mangal-dosha";
-import type { BirthData, Chart } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
+import type { Chart } from "@/lib/astro/types";
 
 function toPerson(chart: Chart, name?: string): Person {
   const moon = chart.planets.find((p) => p.planet === "Moon")!;
@@ -11,16 +12,23 @@ function toPerson(chart: Chart, name?: string): Person {
 
 export async function POST(req: NextRequest) {
   try {
-    const { groom, bride } = (await req.json()) as {
-      groom: BirthData;
-      bride: BirthData;
+    const { groom: rawGroom, bride: rawBride } = (await req.json()) as {
+      groom: unknown;
+      bride: unknown;
     };
-    if (!groom || !bride) {
+    if (!rawGroom || !rawBride) {
       return NextResponse.json(
         { error: "Both groom and bride birth data required" },
         { status: 400 }
       );
     }
+    const g = validateBirth(rawGroom, "groom.");
+    if (!g.ok) return NextResponse.json({ error: g.error }, { status: 400 });
+    const b = validateBirth(rawBride, "bride.");
+    if (!b.ok) return NextResponse.json({ error: b.error }, { status: 400 });
+    const { birth: groom } = g;
+    const { birth: bride } = b;
+
     const gChart = computeChart(groom);
     const bChart = computeChart(bride);
     const result = computeCompatibility(toPerson(gChart, groom.name), toPerson(bChart, bride.name));

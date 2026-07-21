@@ -11,22 +11,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildChatSystem } from "@/lib/astro/chat";
 import { askRoute } from "@/lib/compute";
 import { chatMessages, chatMessagesStream, detectProvider, type ChatMessage } from "@/lib/ai/llm";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 // AI generation can take a while — allow up to 60s (also the Vercel Hobby cap).
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { birth, messages, stream } = (await req.json()) as {
-      birth: BirthData;
+    const { birth: rawBirth, messages, stream } = (await req.json()) as {
+      birth: unknown;
       messages: ChatMessage[];
       stream?: boolean;
     };
-    if (!birth) return NextResponse.json({ error: "Missing birth data." }, { status: 400 });
+    if (!rawBirth) return NextResponse.json({ error: "Missing birth data." }, { status: 400 });
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "No messages." }, { status: 400 });
     }
+    const parsed = validateBirth(rawBirth);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
     // Classical one-shot answer to the latest question (used with no provider, or

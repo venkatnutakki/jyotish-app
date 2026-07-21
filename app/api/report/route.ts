@@ -32,12 +32,15 @@ import {
 } from "@/lib/astro/bphs-complete";
 import { computeKotaChakra } from "@/lib/astro/kota-chakra";
 import { computeGrahaRasmi, computeSamudayaAV, computeAvLongevity } from "@/lib/astro/bphs-av-rasmi";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 // One aggregate computation for the full horoscope report.
 export async function POST(req: NextRequest) {
   try {
-    const birth = (await req.json()) as BirthData;
+    const parsed = validateBirth(await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
+
     const chart = computeChart(birth);
     const dasha = vimshottariDasha(chart);
 

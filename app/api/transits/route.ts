@@ -5,11 +5,14 @@ import { computeTaraBala } from "@/lib/astro/tarabala";
 import { computeGochara } from "@/lib/astro/gochara";
 import { computeGocharaStrength } from "@/lib/astro/gochara-strength";
 import { computeNakshatraVedha } from "@/lib/astro/nakshatra-vedha";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 export async function POST(req: NextRequest) {
   try {
-    const birth = (await req.json()) as BirthData;
+    const parsed = validateBirth(await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
+
     const natal = computeChart(birth);
     const transits = computeTransits(natal, new Date());
     const janmaNak = natal.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;

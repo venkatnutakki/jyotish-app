@@ -28,11 +28,14 @@ import { NAKSHATRA_ARC } from "@/lib/astro/constants";
 import { computeMuhurtaTimings } from "@/lib/astro/muhurta-timings";
 import { computeVarnada } from "@/lib/astro/varnada";
 import { computeNaraBodyMap, computeChandraKriya } from "@/lib/astro/prasna-nara";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 export async function POST(req: NextRequest) {
   try {
-    const birth = (await req.json()) as BirthData;
+    const parsed = validateBirth(await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
+
     const chart = computeChart(birth);
     const weekday = new Date(
       Date.UTC(birth.year, birth.month - 1, birth.day)

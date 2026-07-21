@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { computeChart } from "@/lib/astro/chart";
 import { computeVarshaphal } from "@/lib/astro/varshaphal";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 export async function POST(req: NextRequest) {
   try {
-    const { birth, year } = (await req.json()) as { birth: BirthData; year: number };
+    const { birth: rawBirth, year } = (await req.json()) as { birth: unknown; year: number };
+    const parsed = validateBirth(rawBirth);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
+
     const natal = computeChart(birth);
     const y = Number(year) || new Date().getUTCFullYear();
     if (y < birth.year) {

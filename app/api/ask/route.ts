@@ -10,12 +10,11 @@ import { computeChart } from "@/lib/astro/chart";
 import { vimshottariDasha } from "@/lib/astro/dasha";
 import { computeShadbala } from "@/lib/astro/shadbala";
 import { analyzeBhavas } from "@/lib/astro/bhava";
-import { computeYogas } from "@/lib/astro/yogas";
 import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/classical-evidence";
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
 import { chat, detectProvider } from "@/lib/ai/llm";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 // AI answers can take ~10-30s — allow up to 60s (also the Vercel Hobby cap).
 export const maxDuration = 60;
@@ -39,13 +38,16 @@ RULES:
 
 export async function POST(req: NextRequest) {
   try {
-    const { birth, question } = (await req.json()) as {
-      birth: BirthData;
+    const { birth: rawBirth, question } = (await req.json()) as {
+      birth: unknown;
       question: string;
     };
     if (!question || !question.trim()) {
       return NextResponse.json({ error: "Please enter a question." }, { status: 400 });
     }
+    const parsed = validateBirth(rawBirth);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
 
     const chart = computeChart(birth);
     const dasha = vimshottariDasha(chart);

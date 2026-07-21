@@ -3,17 +3,21 @@ import { computeChart } from "@/lib/astro/chart";
 import { vimshottariDasha } from "@/lib/astro/dasha";
 import { computeShadbala } from "@/lib/astro/shadbala";
 import { computeForecast } from "@/lib/astro/forecast";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as BirthData & { months?: number };
-    const chart = computeChart(body);
+    const body = (await req.json()) as { months?: number };
+    const parsed = validateBirth(body);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { birth } = parsed;
+
+    const chart = computeChart(birth);
     const dasha = vimshottariDasha(chart);
-    const shadbala = computeShadbala(chart, body);
+    const shadbala = computeShadbala(chart, birth);
     const forecast = computeForecast(
       chart,
-      body,
+      birth,
       dasha,
       shadbala,
       Date.now(),

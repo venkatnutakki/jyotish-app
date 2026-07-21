@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildReading, READING_SYSTEM } from "@/lib/astro/reading";
 import { chat, chatMessagesStream, detectProvider } from "@/lib/ai/llm";
-import type { BirthData } from "@/lib/astro/types";
+import { validateBirth } from "@/lib/astro/validate";
 
 // The full reading takes 20-40s to generate — allow up to 60s (Vercel Hobby cap).
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as BirthData & { stream?: boolean };
-    const { stream, ...birth } = body;
-    const { analysis, bhavas, predictions, headline, userContext } = buildReading(birth as BirthData);
+    const body = (await req.json()) as { stream?: boolean };
+    const { stream, ...rest } = body;
+    const parsed = validateBirth(rest);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
+    const { analysis, bhavas, predictions, headline, userContext } = buildReading(parsed.birth);
 
     // No AI provider configured → clean classical prose (the detailed prediction
     // cards below carry the full house-by-house classical breakdown).
