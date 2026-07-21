@@ -17,6 +17,7 @@ import type { DashaPeriod } from "./dasha";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-evidence";
 import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
+import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
 
 interface AreaDef {
   key: string;
@@ -139,6 +140,12 @@ export interface LifePrediction {
    * independent of the D1 house/lord/varga reading above.
    */
   kpConfirmation: CuspVerdict | null;
+  /**
+   * Jaimini confirmation — the Chara Kāraka (intrinsic karmic quality) and
+   * Arudha Pada (worldly manifestation / how the matter is perceived) frames,
+   * which reason quite differently from Parashari house-lords.
+   */
+  jaiminiConfirmation: JaiminiConfirmation | null;
 }
 
 function verdictFromScore(s: number): AreaVerdict {
@@ -258,6 +265,20 @@ export function computeLifePredictions(
       factors.push(kpConfirmation.note);
     }
 
+    // 8. Jaimini (kāraka + ārūḍha) — a fourth lens, reasoning from the soul's
+    //    karmic burden and from worldly manifestation rather than house-lords.
+    //    Weighted lowest of the confirmation layers: general practice treats
+    //    Jaimini as corroboration for a Parashari judgement, never an override.
+    const jaiminiConfirmation = confirmInJaimini(chart, area.key);
+    // A single Jaimini component only NUDGES the score; general practice asks
+    // for two independent Jaimini signals (kāraka + ārūḍha) before it carries
+    // full weight, and below it never counts as a confirmation layer at all.
+    const jaiminiCorroborates = (jaiminiConfirmation?.components ?? 0) >= 2;
+    if (jaiminiConfirmation && jaiminiConfirmation.signal !== 0) {
+      score += jaiminiConfirmation.signal * (jaiminiCorroborates ? 0.4 : 0.2);
+      factors.push(jaiminiConfirmation.note);
+    }
+
     const verdict = verdictFromScore(score);
     // Confidence reflects how many INDEPENDENT layers agree — house/lord,
     // kāraka strength, yoga support, varga confirmation, KP cuspal sub-lord,
@@ -270,11 +291,13 @@ export function computeLifePredictions(
       relevant.length > 0,
       vargaConfirmation?.signal === 1,
       kpConfirmation?.signal === 1,
+      jaiminiCorroborates && jaiminiConfirmation?.signal === 1,
       conc.agreement === "strong",
     ].filter(Boolean).length;
     const contradictingLayers = [
       vargaConfirmation?.signal === -1,
       kpConfirmation?.signal === -1,
+      jaiminiCorroborates && jaiminiConfirmation?.signal === -1,
       conc.agreement === "mixed",
     ].filter(Boolean).length;
     const confidence: LifePrediction["confidence"] =
@@ -316,11 +339,21 @@ export function computeLifePredictions(
       : kpConfirmation?.signal === 1 && vargaConfirmation?.signal === 1
         ? `Both the divisional chart and the KP cuspal sub-lord independently confirm this. `
         : "";
+    // A Jaimini/Parashari divergence is itself a classical reading — the Lagna
+    // frame shows what IS, the Ārūḍha frame shows what APPEARS — so surface it
+    // as that nuance rather than as a contradiction to be smoothed away.
+    const jaiminiNote =
+      jaiminiConfirmation?.signal === -1 && score >= 0.7
+        ? `In the Jaimini frame this is weaker than it looks from the houses alone — substance here outruns recognition, so the outcome may be real but under-acknowledged. `
+        : jaiminiConfirmation?.signal === 1 && score < 0.7
+          ? `The Jaimini frame is kinder here than the houses alone — the ārūḍha suggests this manifests and is seen more favourably than the bare house verdict implies. `
+          : "";
     const reading =
       `${basis}this chart shows ${tone}. ` +
       agree +
       vargaNote +
       kpNote +
+      jaiminiNote +
       (activated
         ? `The current planetary period brings this area into focus. `
         : "") +
@@ -339,6 +372,7 @@ export function computeLifePredictions(
       evidence,
       vargaConfirmation,
       kpConfirmation,
+      jaiminiConfirmation,
       sources,
       agreement: conc.agreement,
     };
