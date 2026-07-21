@@ -20,8 +20,8 @@ The `anon` key is safe to expose in the browser — that's its purpose.
 
 ## 3. Set the password-reset redirect URL
 Project → **Authentication → URL Configuration**:
-- **Site URL**: your app URL, e.g. `https://jyotish-app-r4qc.onrender.com`
-- **Redirect URLs**: add `https://jyotish-app-r4qc.onrender.com/reset-password`
+- **Site URL**: your app URL, e.g. `https://jyotish-app-mu.vercel.app`
+- **Redirect URLs**: add `https://jyotish-app-mu.vercel.app/reset-password`
   (and `http://localhost:3000/reset-password` for local testing)
 
 This is where the "forgot password" email link sends the user to set a new password.
@@ -41,7 +41,7 @@ Project → **Authentication → Providers → Email**:
 NEXT_PUBLIC_SUPABASE_URL=https://abcd.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
-**Render** — service → **Environment** → add both as new variables → Save (redeploys).
+**Vercel** — project → **Settings → Environment Variables** → add both → redeploy.
 
 That's it. A **Log in** button appears in the header; users can sign up, log in,
 log out, and reset a forgotten password.

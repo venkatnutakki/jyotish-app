@@ -1,11 +1,11 @@
 @echo off
 setlocal EnableDelayedExpansion
-REM Double-click to push the latest commits to GitHub (which redeploys Render).
+REM Double-click to push the latest commits to GitHub (which redeploys Vercel).
 REM Stages everything, commits any pending changes, then pushes main to origin.
 cd /d "%~dp0"
 
 echo ===============================================
-echo   Jyotish - push to GitHub (redeploys Render)
+echo   Jyotish - push to GitHub (redeploys Vercel)
 echo ===============================================
 echo.
 
@@ -29,7 +29,7 @@ echo.
 if errorlevel 1 (
   echo *** PUSH FAILED - see the message above. ***
 ) else (
-  echo *** Done. Render will redeploy automatically in a few minutes. ***
+  echo *** Done. Vercel will redeploy automatically in a minute or two. ***
 )
 echo.
 pause
