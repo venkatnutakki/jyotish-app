@@ -6,6 +6,11 @@ import type { TaraBala } from "@/lib/astro/tarabala";
 import type { BirthData } from "@/lib/astro/types";
 
 interface Gochara { planet: string; houseFromMoon: number; benefic: boolean; vedhaBy: string | null; verdict: string }
+interface GocharaStrength extends Gochara {
+  bavBindus: number; savBindus: number;
+  savTier: "weak" | "mildlyWeak" | "neutral" | "strong" | "exceptional";
+  combinedVerdict: string; netStrength: number;
+}
 interface Sbc {
   cells: { nakshatra: number; name: string; occupants: string[]; vedhaName: string | null; piercedBy: string[] }[];
   janmaNakshatra: number; janmaAfflicted: boolean; summary: string;
@@ -16,6 +21,7 @@ export function TransitsPanel({ birth }: { birth: BirthData }) {
   const [data, setData] = useState<Transits | null>(null);
   const [tara, setTara] = useState<TaraBala | null>(null);
   const [gochara, setGochara] = useState<Gochara[] | null>(null);
+  const [gocharaStrength, setGocharaStrength] = useState<GocharaStrength[] | null>(null);
   const [sbc, setSbc] = useState<Sbc | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +42,7 @@ export function TransitsPanel({ birth }: { birth: BirthData }) {
         setData(d.transits);
         setTara(d.taraBala ?? null);
         setGochara(d.gochara ?? null);
+        setGocharaStrength(d.gocharaStrength ?? null);
         setSbc(d.sarvatobhadra ?? null);
       })
       .catch((e) => !cancelled && setError(e.message))
@@ -185,6 +192,52 @@ export function TransitsPanel({ birth }: { birth: BirthData }) {
                 ) : (
                   <span className="text-amber-100/45">testing</span>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bindu strength — Ashtakavarga modulation of the Vedha verdict */}
+      {gocharaStrength && (
+        <div>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-amber-200/80">
+            Bindu Strength · Aṣṭakavarga transit intensity
+          </h4>
+          <p className="mb-2 text-xs text-amber-100/45">
+            Vedha sets the transit&rsquo;s direction; Aṣṭakavarga bindus (own bhinnāṣṭakavarga
+            + the sign&rsquo;s sarvāṣṭakavarga) show how strongly it actually delivers.
+          </p>
+          <div className="space-y-1.5">
+            {gocharaStrength.map((g) => (
+              <div
+                key={g.planet}
+                className={`rounded-lg border px-3 py-1.5 text-xs ${
+                  g.netStrength >= 1
+                    ? "border-emerald-300/20 bg-emerald-400/[0.06]"
+                    : g.netStrength <= -1
+                      ? "border-rose-300/20 bg-rose-400/[0.05]"
+                      : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+                <div className="mb-0.5 flex items-center gap-2">
+                  <span className="font-medium text-amber-50">{g.planet}</span>
+                  <span className="text-amber-100/50">
+                    {g.bavBindus}/8 own · {g.savBindus} SAV
+                  </span>
+                  <span
+                    className={`ml-auto rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${
+                      g.savTier === "strong" || g.savTier === "exceptional"
+                        ? "bg-emerald-400/15 text-emerald-200"
+                        : g.savTier === "weak" || g.savTier === "mildlyWeak"
+                          ? "bg-rose-400/15 text-rose-200"
+                          : "bg-white/10 text-amber-100/60"
+                    }`}
+                  >
+                    {g.savTier === "mildlyWeak" ? "mild-weak" : g.savTier}
+                  </span>
+                </div>
+                <p className="text-amber-100/60">{g.combinedVerdict}</p>
               </div>
             ))}
           </div>
