@@ -148,11 +148,37 @@ export interface LifePrediction {
   jaiminiConfirmation: JaiminiConfirmation | null;
 }
 
+/**
+ * Thresholds calibrated against the engine's own score distribution.
+ *
+ * The area score sums many largely-positive contributions — house verdicts,
+ * yogas, daśā activation, varga/KP/Jaimini confirmations, classical
+ * concordance — so it does not sit on a zero-centred scale. Measured across a
+ * 200-chart grid spanning both hemispheres, polar to equatorial latitudes, all
+ * months and all hours (2,400 area scores):
+ *
+ *     min -3.2   p10 0.4   p25 1.5   p50 2.8   p75 4.1   p90 5.3   max 10.2
+ *
+ * The previous thresholds (3 / 1.8 / 0.7 / -0.4) were set for a scale centred
+ * near zero, so "Excellent" began essentially AT THE MEDIAN chart: 47% of all
+ * areas came back Excellent and 72% were positive, while only 3.5% were ever
+ * Challenging. A reading that calls almost everything excellent has the
+ * structure of a Barnum statement — agreeable, and therefore uninformative,
+ * because it fails to distinguish this chart from any other.
+ *
+ * These thresholds change only WHERE THE LABELS FALL, never the ordering of
+ * charts by score — the ordering is the astrological content and is untouched.
+ * Target spread is roughly 13 / 24 / 30 / 22 / 11 percent.
+ *
+ * Caveat worth keeping in mind: the calibration grid is synthetic and uniform
+ * over time-of-day and date, whereas real births are not. Recalibrate against
+ * real birth data if a representative corpus ever becomes available.
+ */
 function verdictFromScore(s: number): AreaVerdict {
-  if (s >= 3) return "Excellent";
-  if (s >= 1.8) return "Strong";
-  if (s >= 0.7) return "Favourable";
-  if (s >= -0.4) return "Mixed";
+  if (s >= 5.0) return "Excellent";
+  if (s >= 3.5) return "Strong";
+  if (s >= 2.0) return "Favourable";
+  if (s >= 0.5) return "Mixed";
   return "Challenging";
 }
 

@@ -230,8 +230,21 @@ describe("verdict distribution", () => {
       console.log(`    ${k.padEnd(12)} ${((c / total) * 100).toFixed(1)}%`);
     }
     expect(total).toBe(N * 12);
-    // The engine must at least be capable of a non-positive verdict.
+
+    // Guards against sliding back into Barnum territory. A verdict scale is
+    // only informative if it actually discriminates between charts.
+    for (const [k, c] of rows) {
+      expect(c / total, `"${k}" should not dominate the scale`).toBeLessThan(0.4);
+    }
     const positive = (counts.get("Excellent") ?? 0) + (counts.get("Strong") ?? 0);
-    expect(positive, "engine should not rate every area positively").toBeLessThan(total);
+    expect(
+      positive / total,
+      "positive verdicts should not swamp the scale"
+    ).toBeLessThan(0.55);
+    // Every verdict on the scale must be reachable — an unused label is a
+    // scale that is narrower than it advertises.
+    for (const v of ["Excellent", "Strong", "Favourable", "Mixed", "Challenging"]) {
+      expect(counts.get(v) ?? 0, `"${v}" is never produced`).toBeGreaterThan(0);
+    }
   });
 });
