@@ -258,8 +258,24 @@ export function computeLifePredictions(
     const activators = [lordOfPrimary, ...area.karakas].filter((p) => activeLords.has(p));
     const activated = activators.length > 0;
     if (activated) {
+      // Daśā is the classical TIMING gate: a promise in the natal chart matures
+      // when a period ruled by its significators runs. Previously this only
+      // appended a sentence and left the score untouched, so an area scored
+      // identically whether or not its period was running — the verdict was
+      // effectively time-invariant. It now moves the score, in the direction
+      // the rest of the chart already points: an activated period intensifies
+      // whatever is promised rather than making a poor area good.
+      const direction = score >= 0 ? 1 : -1;
+      score += direction * Math.min(activators.length * 0.4, 0.8);
       factors.push(
-        `The current ${[...activeLords].join("/")} daśā period activates this area now.`
+        `The current ${[...activeLords].join("/")} daśā period activates this area now` +
+          (score >= 0
+            ? " — the supporting factors are live rather than dormant."
+            : " — the difficulties here are active rather than latent.")
+      );
+    } else {
+      factors.push(
+        "No current daśā period is run by this area's lord or kāraka, so it is comparatively dormant now."
       );
     }
 

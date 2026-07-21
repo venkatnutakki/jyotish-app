@@ -33,7 +33,52 @@ export const HOUSE_KARAKA: PlanetName[] = [
   "Venus", "Saturn", "Jupiter", "Sun", "Jupiter", "Saturn",
 ];
 
-const NAT_BENEFIC = new Set<PlanetName>(["Jupiter", "Venus", "Mercury", "Moon"]);
+/**
+ * Natural benefics, per BPHS ch. 3.
+ *
+ * Jupiter and Venus are benefic unconditionally. The other two are NOT:
+ *
+ *   • The Moon is benefic while WAXING and malefic while waning. A fixed
+ *     benefic Moon — which this code previously assumed — misjudges roughly
+ *     half of all charts on every house the Moon occupies.
+ *   • Mercury is benefic when alone or with benefics, and malefic when joined
+ *     by a malefic. It takes the character of its company.
+ *
+ * Sun, Mars, Saturn, Rāhu and Ketu are always natural malefics. (Functional
+ * status — which planets are benefic for a PARTICULAR ascendant by virtue of
+ * the houses they rule — is a separate question this does not yet model.)
+ *
+ * Where sources differ: some lineages call the Moon benefic only between the
+ * 8th tithi of the waxing fortnight and the 8th of the waning one (i.e. a
+ * bright Moon, elongation 90°–270°) rather than across the whole waxing half.
+ * The simpler waxing/waning split used here is the more widely stated rule.
+ */
+const ALWAYS_BENEFIC = new Set<PlanetName>(["Jupiter", "Venus"]);
+const ALWAYS_MALEFIC = new Set<PlanetName>(["Sun", "Mars", "Saturn", "Rahu", "Ketu"]);
+
+export function naturalBenefics(chart: Chart): Set<PlanetName> {
+  const out = new Set<PlanetName>(ALWAYS_BENEFIC);
+  const sun = chart.planets.find((p) => p.planet === "Sun");
+  const moon = chart.planets.find((p) => p.planet === "Moon");
+  const mercury = chart.planets.find((p) => p.planet === "Mercury");
+
+  // Waxing Moon: elongation from the Sun in (0°, 180°) — new Moon toward full.
+  if (sun && moon) {
+    const elong = (moon.longitude - sun.longitude + 360) % 360;
+    if (elong > 0 && elong < 180) out.add("Moon");
+  }
+
+  // Mercury takes the nature of its companions — malefic only if a natural
+  // malefic shares its sign.
+  if (mercury) {
+    const joinedByMalefic = chart.planets.some(
+      (p) => p.planet !== "Mercury" && p.signIndex === mercury.signIndex && ALWAYS_MALEFIC.has(p.planet)
+    );
+    if (!joinedByMalefic) out.add("Mercury");
+  }
+
+  return out;
+}
 const KENDRA = [1, 4, 7, 10];
 const TRIKONA = [1, 5, 9];
 const DUSTHANA = [6, 8, 12];
@@ -80,6 +125,9 @@ export function analyzeBhavas(
 ): BhavaResult[] {
   const asc = chart.ascendantSignIndex;
   const results: BhavaResult[] = [];
+  // Benefic status is chart-dependent (waxing Moon, Mercury's company), so it
+  // must be resolved per chart rather than read from a fixed set.
+  const benefics = naturalBenefics(chart);
 
   for (let house = 1; house <= 12; house++) {
     const houseSign = (asc + house - 1) % 12;
@@ -112,9 +160,9 @@ export function analyzeBhavas(
       notes.push(`Lord falls in the ${ordinal(lordHouse)} (a dusthāna) — a weakening placement.`);
     }
 
-    const benefOcc = occupants.filter((p) => NAT_BENEFIC.has(p));
+    const benefOcc = occupants.filter((p) => benefics.has(p));
     const malefOcc = occupants.filter(
-      (p) => !NAT_BENEFIC.has(p) && p !== lord
+      (p) => !benefics.has(p) && p !== lord
     );
     if (benefOcc.length) {
       score += 1;
