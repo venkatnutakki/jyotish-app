@@ -679,25 +679,42 @@ export function ChartApp() {
     VARGAS.find((v) => v.n === varga) ??
     { code: "BC", name: "Bhāva Chalit", meaning: "planets by house cusp (Placidus)" };
 
-  const TABS: { id: Tab; label: string }[] = [
-    { id: "chart", label: "Chart" },
-    { id: "chat", label: "✦ Chat" },
-    { id: "ask", label: "Ask" },
-    { id: "ashtakavarga", label: "Ashtakavarga" },
-    { id: "shadbala", label: "Strengths" },
-    { id: "jaimini", label: "Jaimini" },
-    { id: "kp", label: "KP" },
-    { id: "panchang", label: "Panchāṅga" },
-    { id: "upagraha", label: "Upagraha" },
-    { id: "special", label: "Special Pts" },
-    { id: "dasha", label: "Daśā" },
-    { id: "varsha", label: "Varṣa" },
-    { id: "muhurta", label: "Muhūrta" },
-    { id: "prashna", label: "Praśna" },
-    { id: "transits", label: "Transits" },
-    { id: "forecast", label: "Forecast" },
-    { id: "reading", label: "Reading" },
+  // Seventeen tabs in one flat row gave no indication of where to start or what
+  // related to what. Grouping them by the QUESTION each answers — what does the
+  // chart say, when do things happen, how strong is it — lets someone who isn't
+  // a Jyotiṣa navigate without knowing the vocabulary first. Every tab carries a
+  // plain-language hint for the same reason.
+  const TAB_META: Record<Tab, { label: string; hint: string }> = {
+    chart: { label: "Chart", hint: "The birth chart and its 16 divisional charts" },
+    reading: { label: "Reading", hint: "Plain-language interpretation of the whole chart" },
+    dasha: { label: "Daśā", hint: "Planetary periods — the timeline of life phases" },
+    transits: { label: "Transits", hint: "Where the planets are now, relative to your birth chart" },
+    forecast: { label: "Forecast", hint: "The next 12 months, period by period" },
+    varsha: { label: "Varṣa", hint: "Annual chart for a chosen year (Tājika)" },
+    shadbala: { label: "Strengths", hint: "Ṣaḍbala — the six-fold strength of each planet" },
+    ashtakavarga: { label: "Aṣṭakavarga", hint: "Point-score system rating each sign and transit" },
+    jaimini: { label: "Jaimini", hint: "A parallel system: chāra kārakas and ārūḍha padas" },
+    kp: { label: "KP", hint: "Krishnamurti Paddhati — nakṣatra sub-lord method" },
+    special: { label: "Special Pts", hint: "Special lagnas, Bhṛgu Bindu, Argala, Yogi" },
+    upagraha: { label: "Upagraha", hint: "Shadow planets and calculated sub-points" },
+    panchang: { label: "Panchāṅga", hint: "The five limbs of the day: tithi, vāra, nakṣatra, yoga, karaṇa" },
+    muhurta: { label: "Muhūrta", hint: "Choosing an auspicious time for something" },
+    chat: { label: "✦ Chat", hint: "Ask follow-up questions about this chart" },
+    ask: { label: "Ask", hint: "One question, answered from the classical rules" },
+    prashna: { label: "Praśna", hint: "Horary — cast a chart for the moment of a question" },
+  };
+
+  const TAB_GROUPS: { name: string; hint: string; tabs: Tab[] }[] = [
+    { name: "Overview", hint: "The chart itself and what it says", tabs: ["chart", "reading"] },
+    { name: "Timing", hint: "When things happen", tabs: ["dasha", "transits", "forecast", "varsha"] },
+    { name: "Strength", hint: "How strong the chart is", tabs: ["shadbala", "ashtakavarga"] },
+    { name: "Techniques", hint: "Other classical systems", tabs: ["jaimini", "kp", "special", "upagraha"] },
+    { name: "Calendar", hint: "Daily and electional timing", tabs: ["panchang", "muhurta"] },
+    { name: "Ask", hint: "Put a question to the chart", tabs: ["chat", "ask", "prashna"] },
   ];
+
+  const activeGroup =
+    TAB_GROUPS.find((g) => g.tabs.includes(tab)) ?? TAB_GROUPS[0];
 
   return (
     <div className="space-y-6">
@@ -978,21 +995,61 @@ export function ChartApp() {
                   </p>
                 </div>
 
-                {/* Tab bar */}
-                <div className="flex flex-wrap gap-1 border-b border-white/10 pb-px">
-                  {TABS.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTab(t.id)}
-                      className={`rounded-t-lg px-3 py-2 text-sm font-medium ${
-                        tab === t.id
-                          ? "bg-amber-400/15 text-amber-100"
-                          : "text-amber-100/50 hover:text-amber-100/80"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
+                {/* Tab bar — group row, then the tabs within the active group */}
+                <div className="space-y-2">
+                  <div
+                    className="flex flex-wrap gap-1"
+                    role="tablist"
+                    aria-label="Section"
+                  >
+                    {TAB_GROUPS.map((g) => {
+                      const active = g.name === activeGroup.name;
+                      return (
+                        <button
+                          key={g.name}
+                          role="tab"
+                          aria-selected={active}
+                          title={g.hint}
+                          onClick={() => {
+                            if (!g.tabs.includes(tab)) setTab(g.tabs[0]);
+                          }}
+                          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                            active
+                              ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/40"
+                              : "text-amber-100/45 hover:bg-white/5 hover:text-amber-100/75"
+                          }`}
+                        >
+                          {g.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    className="flex flex-wrap items-center gap-1 border-b border-white/10 pb-px"
+                    role="tablist"
+                    aria-label={`${activeGroup.name} views`}
+                  >
+                    {activeGroup.tabs.map((id) => (
+                      <button
+                        key={id}
+                        role="tab"
+                        aria-selected={tab === id}
+                        title={TAB_META[id].hint}
+                        onClick={() => setTab(id)}
+                        className={`rounded-t-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          tab === id
+                            ? "bg-amber-400/15 text-amber-100"
+                            : "text-amber-100/50 hover:text-amber-100/80"
+                        }`}
+                      >
+                        {TAB_META[id].label}
+                      </button>
+                    ))}
+                    <span className="ml-auto hidden pr-1 text-xs text-amber-100/35 sm:block">
+                      {TAB_META[tab].hint}
+                    </span>
+                  </div>
                 </div>
 
                 {tab === "chart" && (
