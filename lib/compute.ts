@@ -77,7 +77,7 @@ export function reportRoute(birth: BirthData) {
     chart, panchang: computePanchang(chart, weekday), dasha, ashtakavarga, shadbala,
     grahaRasmi: computeGrahaRasmi(chart), samudayaAV: computeSamudayaAV(chart, ashtakavarga), avLongevity: computeAvLongevity(ashtakavarga),
     jaimini: computeJaimini(chart), kp: computeKp(chart), kpFull: computeKpFull(chart, birth),
-    yogas, bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha),
+    yogas, bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
     forecast: computeForecast(chart, birth, dasha, shadbala, Date.now(), 12),
     yogini: yoginiDasha(chart), upagraha: computeUpagraha(chart, birth),
     remedies: computeRemedies(chart, shadbala, dasha), interpretation: interpretChart(chart, dasha),

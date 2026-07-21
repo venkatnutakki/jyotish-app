@@ -11,7 +11,7 @@ const dasha = vimshottariDasha(chart);
 const sb = computeShadbala(chart, b);
 const bhavas = analyzeBhavas(chart, sb);
 const yogas = computeYogas(chart);
-const preds = computeLifePredictions(chart, bhavas, sb, yogas, dasha);
+const preds = computeLifePredictions(chart, bhavas, sb, yogas, dasha, b);
 
 for (const p of preds) {
   console.log(`\n${p.icon} ${p.title} — ${p.verdict} (conf: ${p.confidence}, score ${p.score})`);

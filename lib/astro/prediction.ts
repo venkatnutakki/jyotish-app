@@ -9,13 +9,14 @@
 // a guarantee.
 
 import { SIGNS, type PlanetName } from "./constants";
-import type { Chart } from "./types";
+import type { Chart, BirthData } from "./types";
 import type { BhavaResult } from "./bhava";
 import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { DashaPeriod } from "./dasha";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-evidence";
 import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
+import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
 
 interface AreaDef {
   key: string;
@@ -132,6 +133,12 @@ export interface LifePrediction {
    * against the topic's varga before it's treated as confirmed, not read alone.
    */
   vargaConfirmation: VargaConfirmation | null;
+  /**
+   * KP cuspal sub-lord confirmation — the topic's house cusp's sub-lord is
+   * KP's decisive factor for whether the matter is promised or denied,
+   * independent of the D1 house/lord/varga reading above.
+   */
+  kpConfirmation: CuspVerdict | null;
 }
 
 function verdictFromScore(s: number): AreaVerdict {
@@ -147,8 +154,19 @@ export function computeLifePredictions(
   bhavas: BhavaResult[],
   shadbala: ShadbalaResult,
   yogas: Yoga[],
-  dasha: DashaPeriod[]
+  dasha: DashaPeriod[],
+  birth: BirthData
 ): LifePrediction[] {
+  // KP graded significators, computed once and reused for every area's cuspal
+  // sub-lord check. Defensive: an edge-case Placidus computation (e.g. extreme
+  // latitude) should degrade this ONE signal, not break the whole report.
+  let graded: ReturnType<typeof computeGradedSignificators> | null = null;
+  try {
+    graded = computeGradedSignificators(chart, birth);
+  } catch {
+    graded = null;
+  }
+
   const now = Date.now();
   const maha = dasha.find(
     (d) => new Date(d.start).getTime() <= now && now < new Date(d.end).getTime()
@@ -229,20 +247,34 @@ export function computeLifePredictions(
       factors.push(vargaConfirmation.note);
     }
 
+    // 7. KP cuspal sub-lord — a second, independent confirmation lens. KP holds
+    //    the sub-lord as the decisive factor for whether a matter is promised
+    //    or denied, reasoned entirely differently from the D1/varga approach
+    //    above, so agreement between the two is a genuinely stronger signal
+    //    than either alone.
+    const kpConfirmation = graded ? classifyCusp(graded, area.key) : null;
+    if (kpConfirmation) {
+      score += kpConfirmation.signal * 0.5;
+      factors.push(kpConfirmation.note);
+    }
+
     const verdict = verdictFromScore(score);
     // Confidence reflects how many INDEPENDENT layers agree — house/lord,
-    // kāraka strength, yoga support, varga confirmation, classical concordance —
-    // rather than any single strong signal. This mirrors how a careful reading
-    // only commits fully once multiple layers converge, and says so honestly
-    // when they don't (calibrated confidence over a forced flat verdict).
+    // kāraka strength, yoga support, varga confirmation, KP cuspal sub-lord,
+    // classical concordance — rather than any single strong signal. This
+    // mirrors how a careful reading only commits fully once multiple layers
+    // converge, and says so honestly when they don't (calibrated confidence
+    // over a forced flat verdict).
     const confirmingLayers = [
       strongKarakas.length > 0,
       relevant.length > 0,
       vargaConfirmation?.signal === 1,
+      kpConfirmation?.signal === 1,
       conc.agreement === "strong",
     ].filter(Boolean).length;
     const contradictingLayers = [
       vargaConfirmation?.signal === -1,
+      kpConfirmation?.signal === -1,
       conc.agreement === "mixed",
     ].filter(Boolean).length;
     const confidence: LifePrediction["confidence"] =
@@ -279,10 +311,16 @@ export function computeLifePredictions(
     const vargaNote = vargaConfirmation?.signal === -1
       ? `${vargaConfirmation.varga.code} tempers this promise, so treat it as conditional rather than assured. `
       : "";
+    const kpNote = kpConfirmation?.signal === -1
+      ? `In KP, the ${ordinal(kpConfirmation.cuspHouse)} cusp's sub-lord ${kpConfirmation.subLord} leans toward denying this, a genuine caveat worth naming rather than smoothing over. `
+      : kpConfirmation?.signal === 1 && vargaConfirmation?.signal === 1
+        ? `Both the divisional chart and the KP cuspal sub-lord independently confirm this. `
+        : "";
     const reading =
       `${basis}this chart shows ${tone}. ` +
       agree +
       vargaNote +
+      kpNote +
       (activated
         ? `The current planetary period brings this area into focus. `
         : "") +
@@ -300,6 +338,7 @@ export function computeLifePredictions(
       houses: area.houses,
       evidence,
       vargaConfirmation,
+      kpConfirmation,
       sources,
       agreement: conc.agreement,
     };

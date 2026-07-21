@@ -109,7 +109,7 @@ export function buildReading(birth: BirthData): BuiltReading {
   const yogas = computeYogas(chart);
   const bhavas = analyzeBhavas(chart, shadbala);
   const analysis = interpretChart(chart, dasha);
-  const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha);
+  const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth);
 
   // --- Houses ---
   const bhavaText = bhavas

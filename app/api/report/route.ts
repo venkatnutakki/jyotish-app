@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       kpFull: computeKpFull(chart, birth),
       yogas,
       bhavas,
-      predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha),
+      predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
       forecast: computeForecast(chart, birth, dasha, shadbala, Date.now(), 12),
       yogini: yoginiDasha(chart),
       upagraha: computeUpagraha(chart, birth),
