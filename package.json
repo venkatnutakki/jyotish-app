@@ -17,7 +17,9 @@
     "gen:icons": "node scripts/gen-icons.mjs",
     "mobile:assets": "npm run gen:icons && capacitor-assets generate --android",
     "mobile:build": "node scripts/build-mobile.mjs",
-    "mobile:open": "cap open android"
+    "mobile:open": "cap open android",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "build": {
     "appId": "com.jyotish.app",
@@ -72,6 +74,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
