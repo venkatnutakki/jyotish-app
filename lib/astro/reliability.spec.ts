@@ -212,6 +212,60 @@ describe("reliability — ayanāṃśa choice", () => {
   });
 });
 
+describe("promise gate", () => {
+  // Telling someone a matter is closed to them is the strongest claim this
+  // engine can make, so it must be rare and hard to trigger. These bounds
+  // guard against the gate quietly becoming a second, harsher verdict scale.
+  it("keeps outright denial rare, and never denies most of a chart", () => {
+    const counts = new Map<string, number>();
+    let deniedPerChart = 0;
+    for (const b of SUBJECTS) {
+      const chart = computeChart(b);
+      const dasha = vimshottariDasha(chart);
+      const shadbala = computeShadbala(chart, b);
+      const yogas = computeYogas(chart);
+      const bhavas = analyzeBhavas(chart, shadbala);
+      const preds = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, b);
+      const denied = preds.filter((p) => p.promise === "notPromised").length;
+      deniedPerChart = Math.max(deniedPerChart, denied);
+      for (const p of preds) counts.set(p.promise, (counts.get(p.promise) ?? 0) + 1);
+    }
+    const total = [...counts.values()].reduce((a, c) => a + c, 0);
+    console.log("  promise distribution:");
+    for (const [k, c] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${k.padEnd(12)} ${((c / total) * 100).toFixed(1)}%`);
+    }
+    console.log(`    worst single chart: ${deniedPerChart} of 12 areas denied`);
+
+    // "promised" must remain the overwhelming default.
+    expect((counts.get("promised") ?? 0) / total).toBeGreaterThan(0.6);
+    // Outright denial is the rarest outcome by construction — it needs KP to
+    // deny AND an independent lens to agree.
+    expect((counts.get("notPromised") ?? 0) / total).toBeLessThan(0.1);
+    // No chart should read as mostly-denied; that would be a broken gate, not
+    // a difficult life.
+    expect(deniedPerChart).toBeLessThanOrEqual(4);
+  });
+
+  it("only ever denies when KP denies", () => {
+    // The gate's precondition: denial requires KP's cuspal sub-lord to deny.
+    // Nothing else may reach `notPromised` on its own.
+    for (const b of SUBJECTS.slice(0, 20)) {
+      const chart = computeChart(b);
+      const dasha = vimshottariDasha(chart);
+      const shadbala = computeShadbala(chart, b);
+      const yogas = computeYogas(chart);
+      const bhavas = analyzeBhavas(chart, shadbala);
+      for (const p of computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, b)) {
+        if (p.promise === "notPromised") {
+          expect(p.kpConfirmation?.signal, `${b.name}/${p.key} denied without KP`).toBe(-1);
+          expect(p.promiseNote.length, "denial must be explained").toBeGreaterThan(40);
+        }
+      }
+    }
+  });
+});
+
 describe("verdict distribution", () => {
   it("reports how positively skewed the verdicts are", () => {
     // A system that says "Excellent" to almost everyone is exhibiting the

@@ -111,11 +111,40 @@ const VERDICT_SCORE: Record<BhavaResult["verdict"], number> = {
 
 export type AreaVerdict = "Excellent" | "Strong" | "Favourable" | "Mixed" | "Challenging";
 
+/**
+ * Whether a matter is PROMISED at all — an axis the quality scale cannot express.
+ *
+ * The classical texts do not judge every topic on one good-to-bad continuum.
+ * They ask first whether the matter is promised, and only then how well it goes.
+ * KP puts this most sharply: the cusp's sub-lord decides promise or denial, and
+ * timing is never attempted against a denying sub-lord. Being able to say "this
+ * is not promised" — as distinct from "this goes badly" — is repeatedly
+ * described as the clearest difference between a novice and an experienced
+ * reader.
+ *
+ *   promised   — the matter is available; the quality scale then applies
+ *   delayed    — promised, but obstructed; it arrives late or after effort
+ *   spoiled    — it arrives but is damaged in the having
+ *   notPromised— the chart does not support it; quality is beside the point
+ *
+ * This engine only ever returns `notPromised` on a genuine denial signal, never
+ * as a synonym for a low score. A weak area is weak; it is not denied.
+ */
+export type PromiseStatus = "promised" | "delayed" | "spoiled" | "notPromised";
+
 export interface LifePrediction {
   key: string;
   title: string;
   icon: string;
   verdict: AreaVerdict;
+  /**
+   * Whether the matter is promised, independent of how well it goes. Read this
+   * BEFORE the verdict — a `notPromised` area's verdict describes the strength
+   * of a matter the chart does not clearly grant.
+   */
+  promise: PromiseStatus;
+  /** Why the promise was judged that way, in plain language. */
+  promiseNote: string;
   confidence: "Very High" | "High" | "Moderate" | "Low";
   score: number;
   factors: string[]; // plain-language supporting points
@@ -303,7 +332,13 @@ export function computeLifePredictions(
     //    than either alone.
     const kpConfirmation = graded ? classifyCusp(graded, area.key) : null;
     if (kpConfirmation) {
-      score += kpConfirmation.signal * 0.5;
+      // KP treats the sub-lord as DECIDING promise, not as one vote among many —
+      // in that system timing is never even attempted against a denying
+      // sub-lord. Averaging it into a score, as this previously did, discards
+      // the only denial signal the engine has. It is therefore applied as a
+      // gate below (see `promise`), and its score contribution reduced to a
+      // nudge so the same evidence is not counted twice.
+      score += kpConfirmation.signal * 0.2;
       factors.push(kpConfirmation.note);
     }
 
@@ -322,6 +357,48 @@ export function computeLifePredictions(
     }
 
     const verdict = verdictFromScore(score);
+
+    // --- Promise gate -----------------------------------------------------
+    // Judged BEFORE and separately from quality. The classical sequence asks
+    // whether a matter is promised at all, and only then how well it goes; a
+    // weighted score cannot express "not promised" no matter how low it runs.
+    //
+    // Denial is deliberately hard to trigger. It requires KP's cuspal sub-lord
+    // — the tradition's own decisive test — to deny, AND at least one other
+    // independent lens to agree. One lens alone downgrades to "delayed" or
+    // "spoiled" instead, because a single contested signal is not grounds for
+    // telling somebody a matter is closed to them.
+    let promise: PromiseStatus = "promised";
+    let promiseNote = "";
+
+    const kpDenies = kpConfirmation?.signal === -1;
+    const vargaDenies = vargaConfirmation?.signal === -1;
+    const jaiminiDenies = jaiminiConfirmation?.signal === -1 && jaiminiCorroborates;
+    const corroboratingDenials = [vargaDenies, jaiminiDenies].filter(Boolean).length;
+
+    if (kpDenies && corroboratingDenials >= 1) {
+      promise = "notPromised";
+      promiseNote =
+        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} denies this in KP, ` +
+        `and ${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} independently agrees. ` +
+        `Read this as a matter the chart does not clearly grant, rather than one that merely goes badly — ` +
+        `the two are different, and effort spent here is better redirected.`;
+    } else if (kpDenies) {
+      promise = "delayed";
+      promiseNote =
+        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} withholds this in KP, ` +
+        `but no other method agrees, so read it as obstructed rather than closed — ` +
+        `it tends to arrive late, or only after real effort.`;
+    } else if (corroboratingDenials >= 1 && score < 2.0) {
+      promise = "spoiled";
+      promiseNote =
+        `${vargaDenies ? "The topic's divisional chart" : "The Jaimini reading"} undercuts this while the ` +
+        `main chart supports it — the classical picture of a matter that arrives but is damaged in the having, ` +
+        `rather than one that never comes.`;
+    } else {
+      promiseNote =
+        "Nothing in the chart denies this matter; the reading below describes how well it goes, not whether it is available.";
+    }
     // Confidence reflects how many INDEPENDENT layers agree — house/lord,
     // kāraka strength, yoga support, varga confirmation, KP cuspal sub-lord,
     // classical concordance — rather than any single strong signal. This
@@ -406,6 +483,8 @@ export function computeLifePredictions(
       title: area.title,
       icon: area.icon,
       verdict,
+      promise,
+      promiseNote,
       confidence,
       score: Math.round(score * 10) / 10,
       factors,

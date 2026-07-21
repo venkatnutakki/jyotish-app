@@ -32,7 +32,28 @@ export interface LifePredictionView {
    * null when the verdict holds across the whole tested window.
    */
   fragileAtMinutes?: number | null;
+  /** Whether the matter is promised at all — a separate axis from quality. */
+  promise?: "promised" | "delayed" | "spoiled" | "notPromised";
+  promiseNote?: string;
 }
+
+// Promise is not a point on the quality scale — it answers a different question
+// ("is this available?" vs "how well does it go?"), so it gets its own visual
+// treatment rather than being folded into the verdict pill.
+const PROMISE_STYLE: Record<string, { label: string; cls: string }> = {
+  delayed: {
+    label: "Delayed",
+    cls: "border-amber-300/25 bg-amber-400/5 text-amber-200/80",
+  },
+  spoiled: {
+    label: "Spoiled",
+    cls: "border-orange-300/25 bg-orange-400/5 text-orange-200/80",
+  },
+  notPromised: {
+    label: "Not promised",
+    cls: "border-rose-300/30 bg-rose-400/10 text-rose-200/85",
+  },
+};
 
 const VERDICT_COLOR: Record<string, string> = {
   Excellent: "bg-emerald-400/20 text-emerald-200 border-emerald-300/30",
@@ -199,6 +220,16 @@ export function PredictionCards({
               )}
             </div>
           </div>
+          {p.promise && p.promise !== "promised" && PROMISE_STYLE[p.promise] && (
+            <div
+              className={`mb-2 rounded-md border px-2 py-1.5 text-[11px] ${PROMISE_STYLE[p.promise].cls}`}
+            >
+              <span className="font-semibold uppercase tracking-wide">
+                {PROMISE_STYLE[p.promise].label}
+              </span>
+              {p.promiseNote && <p className="mt-0.5 leading-relaxed">{p.promiseNote}</p>}
+            </div>
+          )}
           <p className="text-sm text-amber-50/85">{p.reading}</p>
           {p.confidence === "Low" && (
             <p className="mt-1.5 rounded-md border border-rose-300/20 bg-rose-400/5 px-2 py-1 text-[11px] text-rose-200/70">

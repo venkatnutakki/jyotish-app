@@ -51,6 +51,8 @@ interface ReportData {
     confidence: string;
     reading: string;
     factors: string[];
+    promise?: "promised" | "delayed" | "spoiled" | "notPromised";
+    promiseNote?: string;
   }[];
   timeSensitivity?: {
     windowMinutes: number;
