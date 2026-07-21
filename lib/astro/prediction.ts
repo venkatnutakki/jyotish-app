@@ -15,6 +15,7 @@ import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { DashaPeriod } from "./dasha";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-evidence";
+import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 
 interface AreaDef {
   key: string;
@@ -113,7 +114,7 @@ export interface LifePrediction {
   title: string;
   icon: string;
   verdict: AreaVerdict;
-  confidence: "High" | "Moderate";
+  confidence: "Very High" | "High" | "Moderate" | "Low";
   score: number;
   factors: string[]; // plain-language supporting points
   reading: string; // 2-3 sentence plain-English synthesis
@@ -124,6 +125,13 @@ export interface LifePrediction {
   sources: string[];
   /** How much the cited classics agree. */
   agreement: "strong" | "mixed" | "sparse";
+  /**
+   * Multi-factor confirmation check — the house lord's placement in this
+   * topic's classical divisional chart (D9 for marriage, D10 for career, …).
+   * Standard astrological practice: a D1 verdict should be cross-checked
+   * against the topic's varga before it's treated as confirmed, not read alone.
+   */
+  vargaConfirmation: VargaConfirmation | null;
 }
 
 function verdictFromScore(s: number): AreaVerdict {
@@ -153,14 +161,12 @@ export function computeLifePredictions(
   return AREAS.map((area) => {
     const factors: string[] = [];
     let score = 0;
-    let signals = 0;
 
     // 1. House verdict(s) + lord placement.
     area.houses.forEach((h, idx) => {
       const b = bhavas[h - 1];
       const weight = idx === 0 ? 1 : 0.5;
       score += VERDICT_SCORE[b.verdict] * weight;
-      signals++;
       if (idx === 0) {
         factors.push(
           `The ${ordinal(h)} house (${b.significations.split(",")[0]}) is ${b.verdict.toLowerCase()}; its lord ${b.lord} is ${b.lordDignity} in ${SIGNS[b.lordSign]}.`
@@ -214,13 +220,41 @@ export function computeLifePredictions(
     score += conc.net * 0.4; // each net agreeing/disagreeing classic shifts the verdict
     const sources = [...new Set(evidence.map((e) => e.source))];
 
+    // 6. Divisional-chart (varga) cross-check — standard multi-factor-confirmation
+    //    practice: don't call this from D1 alone, verify the topic's dedicated
+    //    varga agrees (or note honestly when it doesn't).
+    const vargaConfirmation = confirmInVarga(chart, area.key, lordOfPrimary);
+    if (vargaConfirmation) {
+      score += vargaConfirmation.signal * 0.6;
+      factors.push(vargaConfirmation.note);
+    }
+
     const verdict = verdictFromScore(score);
-    const confidence =
-      conc.agreement === "strong" && signals >= 1
-        ? "High"
-        : signals >= 1 && (strongKarakas.length || relevant.length)
-          ? "High"
-          : "Moderate";
+    // Confidence reflects how many INDEPENDENT layers agree — house/lord,
+    // kāraka strength, yoga support, varga confirmation, classical concordance —
+    // rather than any single strong signal. This mirrors how a careful reading
+    // only commits fully once multiple layers converge, and says so honestly
+    // when they don't (calibrated confidence over a forced flat verdict).
+    const confirmingLayers = [
+      strongKarakas.length > 0,
+      relevant.length > 0,
+      vargaConfirmation?.signal === 1,
+      conc.agreement === "strong",
+    ].filter(Boolean).length;
+    const contradictingLayers = [
+      vargaConfirmation?.signal === -1,
+      conc.agreement === "mixed",
+    ].filter(Boolean).length;
+    const confidence: LifePrediction["confidence"] =
+      contradictingLayers >= 2
+        ? "Low"
+        : confirmingLayers >= 3
+          ? "Very High"
+          : confirmingLayers >= 2
+            ? "High"
+            : confirmingLayers >= 1
+              ? "Moderate"
+              : "Low";
 
     // Plain-language reading, explicitly anchored to the classical sources.
     const tone =
@@ -242,9 +276,13 @@ export function computeLifePredictions(
             ? `The classical sources are mixed on this area, so the outcome is conditional. `
             : ""
         : "";
+    const vargaNote = vargaConfirmation?.signal === -1
+      ? `${vargaConfirmation.varga.code} tempers this promise, so treat it as conditional rather than assured. `
+      : "";
     const reading =
       `${basis}this chart shows ${tone}. ` +
       agree +
+      vargaNote +
       (activated
         ? `The current planetary period brings this area into focus. `
         : "") +
@@ -261,6 +299,7 @@ export function computeLifePredictions(
       reading,
       houses: area.houses,
       evidence,
+      vargaConfirmation,
       sources,
       agreement: conc.agreement,
     };

@@ -13,6 +13,7 @@ import { computeYogas } from "./yogas";
 import { computeJaimini } from "./jaimini";
 import { matchTopics, TOPICS } from "./question";
 import { areaEvidence, type ClassicalEvidence } from "./classical-evidence";
+import { confirmInVarga } from "./varga-confirm";
 import { SIGNS, NAKSHATRAS } from "./constants";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import type { BirthData } from "./types";
@@ -32,9 +33,13 @@ HOW TO ANSWER:
 - Ground your reasoning in the classics. When you rely on a specific dictum, cite
   it briefly, e.g. "(Bhṛgu Sūtras — Venus in the 7th)" — but keep it conversational.
 - For TIMING questions, use the daśā/antardaśā dates in the dossier and give
-  concrete windows.
-- If the classics or chart factors conflict, say so honestly rather than forcing
-  false certainty.
+  concrete windows — the daśā is what a promise needs to activate; a transit only
+  matters within a supportive running daśā, so weave them together, not separately.
+- Don't call an outcome from one isolated factor. Weigh the house/lord, kāraka
+  strength, any yogas, and the "[Varga check]" line if one is supplied — when
+  several agree, answer with real confidence; when they conflict, resolve by which
+  factor is classically stronger (better dignity/strength) and say plainly that the
+  weaker factor tempers the promise, rather than glossing over the conflict.
 - You may ask a brief clarifying question back if it would genuinely sharpen the
   answer. Never invent placements, dates or rules not in the dossier.
 - Plain, kind language. Use the native's name occasionally. No preamble.`;
@@ -112,8 +117,21 @@ export function evidenceForQuestion(birth: BirthData, question: string): string 
       if (!seen.has(k)) { seen.add(k); ev.push(e); }
     }
   }
-  if (!ev.length) return "";
-  return ev.slice(0, 10).map((e) => `· [${e.source} — ${e.subject}] ${e.text}`).join("\n");
+  const citeText = ev.length
+    ? ev.slice(0, 10).map((e) => `· [${e.source} — ${e.subject}] ${e.text}`).join("\n")
+    : "";
+
+  // Multi-factor confirmation: cross-check the topic's classical divisional
+  // chart before the model treats the D1 verdict as settled (standard practice
+  // — a promise should be confirmed in its topic varga, not read from D1 alone).
+  const bhavas = analyzeBhavas(chart);
+  const vargaLines = topics
+    .map((t) => confirmInVarga(chart, t.key, bhavas[t.houses[0] - 1].lord))
+    .filter((v): v is NonNullable<typeof v> => v != null)
+    .map((v) => `· [Varga check] ${v.note}`)
+    .join("\n");
+
+  return [citeText, vargaLines].filter(Boolean).join("\n");
 }
 
 /** Assemble the full system prompt for a chat turn (dossier + latest-question citations). */
