@@ -283,30 +283,16 @@ export function computeLifePredictions(
     }
 
     // 4. Daśā activation — is the current period run by this area's lord/kāraka?
+    //    Daśā is the classical TIMING gate: a promise matures when a period
+    //    ruled by its significators runs. Crucially it INTENSIFIES whatever the
+    //    chart already promises rather than creating a promise — so its
+    //    direction must follow the FINAL polarity of the reading, not the
+    //    partial score at this point in the loop. The numeric nudge is therefore
+    //    deferred to after every other factor is summed (see below); only the
+    //    plain-language note is recorded here.
     const lordOfPrimary = bhavas[area.houses[0] - 1].lord;
     const activators = [lordOfPrimary, ...area.karakas].filter((p) => activeLords.has(p));
     const activated = activators.length > 0;
-    if (activated) {
-      // Daśā is the classical TIMING gate: a promise in the natal chart matures
-      // when a period ruled by its significators runs. Previously this only
-      // appended a sentence and left the score untouched, so an area scored
-      // identically whether or not its period was running — the verdict was
-      // effectively time-invariant. It now moves the score, in the direction
-      // the rest of the chart already points: an activated period intensifies
-      // whatever is promised rather than making a poor area good.
-      const direction = score >= 0 ? 1 : -1;
-      score += direction * Math.min(activators.length * 0.4, 0.8);
-      factors.push(
-        `The current ${[...activeLords].join("/")} daśā period activates this area now` +
-          (score >= 0
-            ? " — the supporting factors are live rather than dormant."
-            : " — the difficulties here are active rather than latent.")
-      );
-    } else {
-      factors.push(
-        "No current daśā period is run by this area's lord or kāraka, so it is comparatively dormant now."
-      );
-    }
 
     // 5. Classical evidence — the verbatim rules this area rests on. The verdict
     //    is nudged by how much the cited classics agree, so the conclusion tracks
@@ -356,7 +342,24 @@ export function computeLifePredictions(
       factors.push(jaiminiConfirmation.note);
     }
 
-    const verdict = verdictFromScore(score);
+    // 4 (deferred). Apply the daśā timing nudge now that every other factor is
+    // in, so it follows the reading's FINAL polarity rather than a mid-loop
+    // partial. An active period amplifies whatever the chart promises; it never
+    // turns a poor area good or a good area poor.
+    if (activated) {
+      const positive = score >= 0;
+      score += (positive ? 1 : -1) * Math.min(activators.length * 0.4, 0.8);
+      factors.push(
+        `The current ${[...activeLords].join("/")} daśā period activates this area now` +
+          (positive
+            ? " — the supporting factors are live rather than dormant."
+            : " — the difficulties here are active rather than latent.")
+      );
+    } else {
+      factors.push(
+        "No current daśā period is run by this area's lord or kāraka, so it is comparatively dormant now."
+      );
+    }
 
     // --- Promise gate -----------------------------------------------------
     // Judged BEFORE and separately from quality. The classical sequence asks
@@ -399,6 +402,24 @@ export function computeLifePredictions(
       promiseNote =
         "Nothing in the chart denies this matter; the reading below describes how well it goes, not whether it is available.";
     }
+
+    // The promise gate CONSTRAINS the quality verdict — that is what makes it a
+    // gate rather than a second opinion sitting beside it. Without this, a chart
+    // with strong Parashari house/lord/yoga support but a KP-plus-varga denial
+    // would read "Excellent / not promised", which is self-contradictory to
+    // anyone reading it. A denied matter cannot be rated a strong outcome; its
+    // Parashari strength is real but moot once the decisive test denies it, so
+    // the score is pulled below the favourable line and the verdict follows.
+    // `delayed` is deliberately NOT capped — it concerns timing, not quality, so
+    // "Excellent but late" is a coherent and useful thing to say.
+    if (promise === "notPromised") {
+      score = Math.min(score, 0.4); // → Challenging: not granted, whatever its natal strength
+    } else if (promise === "spoiled") {
+      score = Math.min(score, 1.4); // → at most Mixed: it comes, but damaged
+    }
+
+    const verdict = verdictFromScore(score);
+
     // Confidence reflects how many INDEPENDENT layers agree — house/lord,
     // kāraka strength, yoga support, varga confirmation, KP cuspal sub-lord,
     // classical concordance — rather than any single strong signal. This

@@ -247,6 +247,29 @@ describe("promise gate", () => {
     expect(deniedPerChart).toBeLessThanOrEqual(4);
   });
 
+  it("never pairs a positive verdict with a denied or spoiled matter", () => {
+    // A gate must CONSTRAIN the verdict, not sit beside it. "Excellent / not
+    // promised" is self-contradictory; if it appears, the gate is decorative.
+    // delayed is exempt — it is about timing, not quality, so "Excellent but
+    // late" is coherent and allowed.
+    const positive = new Set(["Excellent", "Strong", "Favourable"]);
+    for (const b of SUBJECTS) {
+      const chart = computeChart(b);
+      const dasha = vimshottariDasha(chart);
+      const shadbala = computeShadbala(chart, b);
+      const yogas = computeYogas(chart);
+      const bhavas = analyzeBhavas(chart, shadbala);
+      for (const p of computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, b)) {
+        if (p.promise === "notPromised" || p.promise === "spoiled") {
+          expect(
+            positive.has(p.verdict),
+            `${b.name}/${p.key}: ${p.verdict} paired with ${p.promise}`
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
   it("only ever denies when KP denies", () => {
     // The gate's precondition: denial requires KP's cuspal sub-lord to deny.
     // Nothing else may reach `notPromised` on its own.
