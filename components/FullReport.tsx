@@ -52,6 +52,13 @@ interface ReportData {
     reading: string;
     factors: string[];
   }[];
+  timeSensitivity?: {
+    windowMinutes: number;
+    summary: string;
+    stableCount: number;
+    total: number;
+    areas: { key: string; title: string; stable: boolean; firstChangeMinutes: number | null }[];
+  };
   forecast?: {
     summary: string;
     current: { maha: string; antar: string; pratyantar: string };
@@ -210,7 +217,21 @@ export function FullReport({ data }: { data: ReportData }) {
             significator&apos;s Ṣaḍbala, supporting yogas and the current daśā.
             Astrology offers guidance and tendencies, not guarantees.
           </p>
-          <PredictionCards predictions={data.predictions} showEvidence={false} />
+          {data.timeSensitivity && (
+            <p className="rounded-lg border border-amber-300/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-200/75">
+              <span className="font-semibold">⏱ Birth-time sensitivity — </span>
+              {data.timeSensitivity.summary}
+            </p>
+          )}
+          <PredictionCards
+            predictions={data.predictions.map((p) => ({
+              ...p,
+              fragileAtMinutes:
+                data.timeSensitivity?.areas.find((a) => a.key === p.key)
+                  ?.firstChangeMinutes ?? null,
+            }))}
+            showEvidence={false}
+          />
         </Section>
       )}
 

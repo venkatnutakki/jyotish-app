@@ -27,6 +27,11 @@ export interface LifePredictionView {
   vargaConfirmation?: { note?: string; signal?: number } | null;
   kpConfirmation?: { note?: string } | null;
   jaiminiConfirmation?: { note?: string; components?: number } | null;
+  /**
+   * Smallest birth-time error, in minutes, that would change this verdict.
+   * null when the verdict holds across the whole tested window.
+   */
+  fragileAtMinutes?: number | null;
 }
 
 const VERDICT_COLOR: Record<string, string> = {
@@ -199,6 +204,15 @@ export function PredictionCards({
             <p className="mt-1.5 rounded-md border border-rose-300/20 bg-rose-400/5 px-2 py-1 text-[11px] text-rose-200/70">
               The independent checks disagree here, so treat this as an open
               question rather than a settled reading.
+            </p>
+          )}
+          {p.fragileAtMinutes != null && (
+            <p
+              className="mt-1.5 rounded-md border border-amber-300/20 bg-amber-400/5 px-2 py-1 text-[11px] text-amber-200/70"
+              title="Recomputed at offsets around your stated birth time — this area's verdict is not the same at all of them."
+            >
+              ⏱ Time-sensitive — this reading changes if the birth time is off by{" "}
+              {p.fragileAtMinutes} minute{p.fragileAtMinutes === 1 ? "" : "s"}.
             </p>
           )}
           <CrossChecks p={p} />

@@ -33,6 +33,7 @@ import {
 import { computeKotaChakra } from "@/lib/astro/kota-chakra";
 import { computeGrahaRasmi, computeSamudayaAV, computeAvLongevity } from "@/lib/astro/bphs-av-rasmi";
 import { validateBirth } from "@/lib/astro/validate";
+import { computeTimeSensitivity } from "@/lib/astro/time-sensitivity";
 
 // One aggregate computation for the full horoscope report.
 export async function POST(req: NextRequest) {
@@ -68,6 +69,9 @@ export async function POST(req: NextRequest) {
       yogas,
       bhavas,
       predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
+      // Which of those verdicts survive the birth time being a few minutes off.
+      // Cheap (~50ms) and it lets the reader weight each reading honestly.
+      timeSensitivity: computeTimeSensitivity(birth, 30),
       forecast: computeForecast(chart, birth, dasha, shadbala, Date.now(), 12),
       yogini: yoginiDasha(chart),
       upagraha: computeUpagraha(chart, birth),

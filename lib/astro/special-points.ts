@@ -84,6 +84,28 @@ export function computeSpecialPoints(chart: Chart, birth: BirthData): SpecialPoi
     points.push(mk("Horā Lagna", "HL", base + (ghatis / 2.5) * 30, "Advances 1 sign per hour from the Sun — prosperity and financial flow."));
     // Ghaṭi (Ghaṭikā) Lagna: 1 rāśi per ghaṭikā — power and status.
     points.push(mk("Ghaṭi Lagna", "GL", base + ghatis * 30, "Advances 1 sign per ghaṭikā (24 min) — power, authority and rank."));
+
+    // --- Prāṇapada Lagna ---
+    // Iṣṭa kāla measured in vighaṭikās (1 ghaṭikā = 60 vighaṭikās = 24 min), one
+    // sign per 15 vighaṭikās — i.e. 30° per 6 minutes of clock time, or 5°/min.
+    // That is ~20× the ascendant's mean speed, and unlike the ascendant the rate
+    // is exactly constant regardless of latitude or rising sign, which is what
+    // makes Prāṇapada an unusually clean fine-grained marker.
+    //
+    // The arc is then shifted by the MODALITY of the Sun's sign: movable +0°,
+    // dual +120° (the 5th), fixed +240° (the 9th).
+    const vighatis = ghatis * 60;
+    const sunSign = Math.floor(norm360(base) / 30);
+    const modality = sunSign % 3; // 0 movable, 1 fixed, 2 dual
+    const shift = modality === 0 ? 0 : modality === 1 ? 240 : 120;
+    points.push(
+      mk(
+        "Prāṇapada",
+        "PP",
+        base + (vighatis / 15) * 30 + shift,
+        "Sun advanced 1 sign per 15 vighaṭikās (6 min), shifted by the Sun's sign modality — the breath of life. Classically the birth is well-formed when it falls in the 2nd, 4th, 5th, 9th, 10th or 11th from the lagna."
+      )
+    );
   }
 
   // --- Śrī Lagna: lagna advanced by the Moon's progress through its nakṣatra ---
