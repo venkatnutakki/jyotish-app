@@ -14,6 +14,7 @@ import { interpretChart } from "./interpret";
 import { computeShadbala } from "./shadbala";
 import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
+import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions } from "./prediction";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import { SIGNS, NAKSHATRAS } from "./constants";
@@ -74,7 +75,9 @@ PREDICTION METHOD — reason like a careful, experienced astrologer, not a looku
   sounds better: the more dignified/stronger planet's signification generally
   prevails, and note the weaker factor as a real caveat, not something to smooth over.
   A technically-present yoga with a weak or afflicted planet manifests less than
-  the same yoga with a well-placed, strong one — say so.
+  the same yoga with a well-placed, strong one — the material below tags each
+  gradeable yoga's actual strength (STRONG/MODERATE/WEAK, from its participants'
+  Ṣaḍbala); use that real grading, don't just assume from the yoga's name.
 - For TIMING, the promise (D1 + varga) is what a daśā period ACTIVATES, and a
   transit is the trigger within an active daśā — don't read a transit as if it
   operates independently of the running period. Where the daśā, sub-daśā and
@@ -107,6 +110,7 @@ export function buildReading(birth: BirthData): BuiltReading {
   const dasha = vimshottariDasha(chart);
   const shadbala = computeShadbala(chart, birth);
   const yogas = computeYogas(chart);
+  const gradedYogas = gradeYogas(yogas, shadbala);
   const bhavas = analyzeBhavas(chart, shadbala);
   const analysis = interpretChart(chart, dasha);
   const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth);
@@ -119,9 +123,11 @@ export function buildReading(birth: BirthData): BuiltReading {
     )
     .join("\n");
 
-  // --- Yogas ---
-  const yogaText = yogas.length
-    ? yogas.map((y) => `• ${y.name} [${y.category}] — ${y.description}`).join("\n")
+  // --- Yogas, with Ṣaḍbala strength grading where the participants are known ---
+  const yogaText = gradedYogas.length
+    ? gradedYogas
+        .map((y) => `• ${y.name} [${y.category}] — ${y.description}${y.strengthTier ? `\n    Strength: ${y.strengthTier.toUpperCase()} — ${y.strengthNote}` : ""}`)
+        .join("\n")
     : "(no major yogas detected)";
 
   // --- Ṣaḍbala ranking (strongest → weakest) ---

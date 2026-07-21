@@ -69,11 +69,14 @@ interface ReportData {
   remedies?: {
     planet: string;
     reason: string;
-    gemstone: string;
+    priority?: number;
+    type?: "strengthen" | "pacify";
+    gemstone: string | null;
     mantra: string;
     deity: string;
     day: string;
     charity: string;
+    note?: string | null;
   }[];
   narayana?: { signName: string; years: number; cycle: number; start: string; end: string }[];
   kalachakra?: { signName: string; years: number; start: string; end: string; role?: string }[];
@@ -790,18 +793,41 @@ export function FullReport({ data }: { data: ReportData }) {
       {data.remedies && data.remedies.length > 0 && (
         <Section title="Remedial Measures (Upāya)">
           <div className="grid gap-3 md:grid-cols-2">
-            {data.remedies.map((r) => (
-              <div key={r.planet} className="break-inside-avoid rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <h3 className="font-semibold text-amber-50">{r.planet}</h3>
-                <p className="mb-2 text-xs text-amber-100/50">{r.reason}</p>
-                <div className="space-y-0.5 text-xs text-amber-50/80">
-                  <div><span className="text-amber-100/50">Mantra:</span> {r.mantra}</div>
-                  <div><span className="text-amber-100/50">Deity:</span> {r.deity} · <span className="text-amber-100/50">Day:</span> {r.day}</div>
-                  <div><span className="text-amber-100/50">Charity:</span> {r.charity}</div>
-                  <div><span className="text-amber-100/50">Gemstone:</span> {r.gemstone} <span className="text-amber-100/30">(consult an astrologer first)</span></div>
+            {[...data.remedies]
+              .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+              .map((r) => (
+                <div key={r.planet} className="break-inside-avoid rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="mb-1 flex items-center gap-2">
+                    <h3 className="font-semibold text-amber-50">{r.planet}</h3>
+                    {r.priority != null && (
+                      <span className="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-amber-100/40">
+                        Priority {r.priority}
+                      </span>
+                    )}
+                    {r.type && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${
+                          r.type === "pacify" ? "bg-rose-400/15 text-rose-200" : "bg-emerald-400/15 text-emerald-200"
+                        }`}
+                      >
+                        {r.type}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mb-2 text-xs text-amber-100/50">{r.reason}</p>
+                  <div className="space-y-0.5 text-xs text-amber-50/80">
+                    <div><span className="text-amber-100/50">Mantra:</span> {r.mantra}</div>
+                    <div><span className="text-amber-100/50">Deity:</span> {r.deity} · <span className="text-amber-100/50">Day:</span> {r.day}</div>
+                    <div><span className="text-amber-100/50">Charity:</span> {r.charity}</div>
+                    {r.gemstone ? (
+                      <div><span className="text-amber-100/50">Gemstone:</span> {r.gemstone} <span className="text-amber-100/30">(consult an astrologer first)</span></div>
+                    ) : (
+                      <div className="text-amber-100/40">No gemstone recommended for this planet.</div>
+                    )}
+                    {r.note && <p className="mt-1 text-[11px] italic text-amber-100/40">{r.note}</p>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </Section>
       )}

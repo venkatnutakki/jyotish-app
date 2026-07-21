@@ -15,6 +15,14 @@ export interface Yoga {
     | "Dhana"
     | "Other";
   description: string;
+  /**
+   * Constituent planets, when readily identifiable — enables strength grading
+   * (yoga-strength.ts) via their Ṣaḍbala. Optional: populated for the yogas
+   * whose participants are unambiguous (Mahāpuruṣa, Rāja, Dhana, Nīcha Bhaṅga,
+   * Parivartana, …); left undefined for compound Nābhasa/pattern yogas that
+   * don't reduce to a small planet set.
+   */
+  planets?: PlanetName[];
 }
 
 const OWN: Record<string, number[]> = {
@@ -57,11 +65,11 @@ export function computeYogas(chart: Chart): Yoga[] {
 
   // Gaja Kesari: Jupiter in a kendra from the Moon.
   if (KENDRA.includes(rel(moonSign, P.Jupiter.signIndex)))
-    yogas.push({ name: "Gaja Kesari Yoga", category: "Lunar", description: "Jupiter angular to the Moon — intelligence, virtue, lasting reputation and influence." });
+    yogas.push({ name: "Gaja Kesari Yoga", category: "Lunar", description: "Jupiter angular to the Moon — intelligence, virtue, lasting reputation and influence.", planets: ["Jupiter", "Moon"] });
 
   // Chandra-Mangala: Moon with Mars.
   if (P.Moon.signIndex === P.Mars.signIndex)
-    yogas.push({ name: "Chandra-Maṅgala Yoga", category: "Dhana", description: "Moon conjunct Mars — drive, enterprise and the capacity to acquire wealth." });
+    yogas.push({ name: "Chandra-Maṅgala Yoga", category: "Dhana", description: "Moon conjunct Mars — drive, enterprise and the capacity to acquire wealth.", planets: ["Moon", "Mars"] });
 
   // Adhi Yoga: benefics in the 6th, 7th, 8th from the Moon.
   const adhi = ["Jupiter", "Venus", "Mercury"].filter((n) =>
@@ -82,7 +90,7 @@ export function computeYogas(chart: Chart): Yoga[] {
 
   // Budha-Aditya: Sun with Mercury.
   if (P.Sun.signIndex === P.Mercury.signIndex)
-    yogas.push({ name: "Budha-Āditya Yoga", category: "Other", description: "Sun conjunct Mercury — sharp intellect, learning and skill in expression." });
+    yogas.push({ name: "Budha-Āditya Yoga", category: "Other", description: "Sun conjunct Mercury — sharp intellect, learning and skill in expression.", planets: ["Sun", "Mercury"] });
 
   // ---- Pancha Mahapurusha yogas ----
   const mahapurusha: [PlanetName, string][] = [
@@ -97,6 +105,7 @@ export function computeYogas(chart: Chart): Yoga[] {
         name: `${name} Yoga`,
         category: "Mahapurusha",
         description: `${planet} dignified in a kendra — a Pancha-Mahāpuruṣa yoga conferring the noble ${name} qualities (strength of character, status and distinction).`,
+        planets: [planet],
       });
   }
 
@@ -120,31 +129,51 @@ export function computeYogas(chart: Chart): Yoga[] {
   const kendraLords = new Set(KENDRA.map((h) => SIGN_LORDS[(asc + h - 1) % 12]));
   const trikonaLords = new Set(TRIKONA.map((h) => SIGN_LORDS[(asc + h - 1) % 12]));
   const rajaPairs: string[] = [];
+  const rajaPairPlanets: [PlanetName, PlanetName][] = [];
   for (const kl of kendraLords) {
     for (const tl of trikonaLords) {
       if (kl === tl) continue;
-      if (P[kl].signIndex === P[tl].signIndex) rajaPairs.push(`${kl}+${tl}`);
+      if (P[kl].signIndex === P[tl].signIndex) {
+        rajaPairs.push(`${kl}+${tl}`);
+        rajaPairPlanets.push([kl, tl]);
+      }
     }
   }
   if (rajaPairs.length)
-    yogas.push({ name: "Rāja Yoga", category: "Raja", description: `Kendra and trikoṇa lords conjoin (${rajaPairs[0]}) — power, status and success through one's own efforts.` });
+    yogas.push({ name: "Rāja Yoga", category: "Raja", description: `Kendra and trikoṇa lords conjoin (${rajaPairs[0]}) — power, status and success through one's own efforts.`, planets: rajaPairPlanets[0] });
 
   // ---- Dhana Yoga: 2nd and 11th lords conjoin ----
   const l2 = SIGN_LORDS[(asc + 1) % 12];
   const l11 = SIGN_LORDS[(asc + 10) % 12];
   if (l2 !== l11 && P[l2].signIndex === P[l11].signIndex)
-    yogas.push({ name: "Dhana Yoga", category: "Dhana", description: "Lords of the 2nd and 11th conjoin — strong potential for accumulated wealth and income." });
+    yogas.push({ name: "Dhana Yoga", category: "Dhana", description: "Lords of the 2nd and 11th conjoin — strong potential for accumulated wealth and income.", planets: [l2, l11] });
 
-  // ---- Neecha Bhanga: a debilitated planet whose dispositor is angular ----
+  // ---- Neecha Bhanga: a debilitated planet whose debilitation is classically
+  // cancelled. BPHS lists several independent cancellation conditions; meeting
+  // more of them yields a genuinely stronger ("robust") cancellation, while
+  // meeting just one is a weaker, more attenuated rise — not automatically as
+  // strong as an ordinary good placement (widely-taught general practice).
   for (const p of chart.planets) {
     if (EXALT[p.planet] === undefined) continue;
     const debil = (EXALT[p.planet] + 6) % 12;
-    if (p.signIndex === debil) {
-      const dispositor = SIGN_LORDS[p.signIndex];
-      if (KENDRA.includes(P[dispositor].house)) {
-        yogas.push({ name: `Nīcha Bhaṅga (${p.planet})`, category: "Raja", description: `${p.planet} is debilitated but its dispositor is angular — the debilitation is cancelled, often turning early hardship into later rise.` });
-      }
-    }
+    if (p.signIndex !== debil) continue;
+    const dispositor = SIGN_LORDS[p.signIndex];
+    const exaltLord = SIGN_LORDS[EXALT[p.planet]];
+
+    const dispositorAngularFromLagna = KENDRA.includes(P[dispositor].house);
+    const dispositorAngularFromMoon = KENDRA.includes(rel(moonSign, P[dispositor].signIndex));
+    const exaltLordAngularFromLagna = exaltLord !== dispositor && KENDRA.includes(P[exaltLord].house);
+    const exaltLordAngularFromMoon = exaltLord !== dispositor && KENDRA.includes(rel(moonSign, P[exaltLord].signIndex));
+    const conditionsMet = [dispositorAngularFromLagna, dispositorAngularFromMoon, exaltLordAngularFromLagna, exaltLordAngularFromMoon, p.retrograde].filter(Boolean).length;
+    if (conditionsMet === 0) continue;
+
+    const robust = conditionsMet >= 2;
+    yogas.push({
+      name: `Nīcha Bhaṅga (${p.planet})`,
+      category: "Raja",
+      description: `${p.planet} is debilitated, and ${robust ? "a robust" : "a partial"} cancellation applies (${conditionsMet} classical condition${conditionsMet > 1 ? "s" : ""} met) — ${robust ? "the debilitation is substantially cancelled, often turning early hardship into later rise" : "the debilitation is only partially eased, so expect a genuine but delayed/attenuated rise rather than full strength, typically manifesting in this planet's own daśā"}.`,
+      planets: [p.planet, dispositor],
+    });
   }
 
   // ---- Nabhasa & related yogas (7 grahas: Sun..Saturn) ----
@@ -229,6 +258,7 @@ export function computeYogas(chart: Chart): Yoga[] {
               : type === "Dainya"
                 ? `A ${i}th/${j}th lord exchange involving a dusthāna — results come with obstacles and effort before they mature.`
                 : `Lords of the ${i}th and ${j}th (a 3rd-house exchange) — gains through boldness, initiative and some struggle.`,
+          planets: [li, lj],
         });
       }
     }
