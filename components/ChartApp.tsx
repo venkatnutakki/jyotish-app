@@ -22,6 +22,7 @@ import { bhavaChalitChart } from "@/lib/astro/charts-extra";
 import { FullReport } from "./FullReport";
 import { PredictionCards, type LifePredictionView } from "./PredictionCards";
 import { VerifyPanel } from "./VerifyPanel";
+import { TimingPanel } from "./TimingPanel";
 import { CompatibilityView } from "./CompatibilityView";
 import { AskPanel } from "./AskPanel";
 import { ChatPanel } from "./ChatPanel";
@@ -174,7 +175,7 @@ type FormState = {
   /** Birth-time accuracy in minutes; empty = unspecified. Gates daśā depth. */
   timeAccuracy?: string;
 };
-type Tab = "chart" | "chat" | "ask" | "verify" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
+type Tab = "chart" | "chat" | "ask" | "verify" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "timing" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
 
 const SAVED_KEY = "jyotish.saved";
 
@@ -692,6 +693,7 @@ export function ChartApp() {
     chart: { label: "Chart", hint: "The birth chart and its 16 divisional charts" },
     reading: { label: "Reading", hint: "Plain-language interpretation of the whole chart" },
     dasha: { label: "Daśā", hint: "Planetary periods — the timeline of life phases" },
+    timing: { label: "When", hint: "Search ahead for the windows when a matter is most supported" },
     transits: { label: "Transits", hint: "Where the planets are now, relative to your birth chart" },
     forecast: { label: "Forecast", hint: "The next 12 months, period by period" },
     varsha: { label: "Varṣa", hint: "Annual chart for a chosen year (Tājika)" },
@@ -711,7 +713,7 @@ export function ChartApp() {
 
   const TAB_GROUPS: { name: string; hint: string; tabs: Tab[] }[] = [
     { name: "Overview", hint: "The chart itself and what it says", tabs: ["chart", "reading"] },
-    { name: "Timing", hint: "When things happen", tabs: ["dasha", "transits", "forecast", "varsha"] },
+    { name: "Timing", hint: "When things happen", tabs: ["dasha", "timing", "transits", "forecast", "varsha"] },
     { name: "Strength", hint: "How strong the chart is", tabs: ["shadbala", "ashtakavarga"] },
     { name: "Techniques", hint: "Other classical systems", tabs: ["jaimini", "kp", "special", "upagraha"] },
     { name: "Calendar", hint: "Daily and electional timing", tabs: ["panchang", "muhurta"] },
@@ -1204,6 +1206,10 @@ export function ChartApp() {
 
                 {tab === "special" && birthPayload && (
                   <SpecialPanel birth={birthPayload} />
+                )}
+
+                {tab === "timing" && birthPayload && (
+                  <TimingPanel birth={birthPayload} />
                 )}
 
                 {tab === "varsha" && birthPayload && (
