@@ -7,6 +7,7 @@
 
 import { type PlanetName } from "./constants";
 import type { Chart } from "./types";
+import { eclipticLatitude } from "./ephemeris";
 
 const norm360 = (x: number) => ((x % 360) + 360) % 360;
 const sep = (a: number, b: number) => {
@@ -62,7 +63,14 @@ export interface PlanetState {
 }
 
 const BALADI = ["Bāla (infant)", "Kumāra (youth)", "Yuvā (adult)", "Vṛddha (old)", "Mṛta (dead)"];
-const BALADI_STRENGTH = ["weak", "growing", "full", "waning", "negligible"];
+// BPHS 45:4 states the yields explicitly — "one fourth, half, full, negligible
+// and nil" — so the last two labels were previously shifted one step (Vṛddha
+// was called "waning" and Mṛta "negligible", leaving nothing to mean nil).
+// These are the fractions any multiplier must use, so the wording is not
+// cosmetic once avasthā feeds a score.
+const BALADI_STRENGTH = ["a quarter", "half", "full", "negligible", "nil"];
+/** Deliverable fraction per Bālādi avasthā, BPHS 45:4, index-aligned. */
+export const BALADI_MULTIPLIER = [0.25, 0.5, 1.0, 0.125, 0.0];
 
 function baladiIndex(signIndex: number, degree: number): number {
   const band = Math.min(4, Math.floor(degree / 6)); // 0..4 across 30°
@@ -71,6 +79,21 @@ function baladiIndex(signIndex: number, degree: number): number {
 }
 
 // Deeptādi avasthā — the nine "moods" from dignity, combustion and affliction.
+/**
+ * Deeptādi state.
+ *
+ * LINEAGE NOTE — the nine names come from two different transmissions and this
+ * function blends them, which is worth stating rather than hiding:
+ *   • BPHS 45:8–10 assigns Vikala = "with a malefic", Duḥkhita = enemy sign,
+ *     Khala = great enemy, Dīna = neutral, Kopa = eclipsed by the Sun.
+ *   • Sāravalī gives a different nine, in which Vikala = combust and
+ *     Nipīḍita = defeated in planetary war.
+ * Here Vikala is used for combustion (the Sāravalī sense) and Kopa for a lost
+ * graha-yuddha (which matches neither — BPHS reserves Kopa for combustion).
+ * The states are descriptive prose only and nothing scores off them, so this is
+ * left as-is deliberately rather than renamed mid-flight; if these ever feed a
+ * verdict, settle on one lineage first.
+ */
 function deeptadi(
   planet: PlanetName,
   signIndex: number,
@@ -103,18 +126,58 @@ export function computePlanetStates(chart: Chart): PlanetState[] {
   const sun = chart.planets.find((p) => p.planet === "Sun")!;
   const byName = Object.fromEntries(chart.planets.map((p) => [p.planet, p])) as Record<PlanetName, (typeof chart.planets)[number]>;
 
+  // Ecliptic latitude, for the graha-yuddha victor rule below. Derived from the
+  // chart's own Julian Day so no extra input is needed; memoised because the
+  // pairwise loop would otherwise recompute the same planet repeatedly.
+  const birthDate = new Date((chart.julianDay - 2440587.5) * 86400000);
+  const latCache = new Map<PlanetName, number>();
+  const latOf = (p: PlanetName): number => {
+    const hit = latCache.get(p);
+    if (hit !== undefined) return hit;
+    const v = eclipticLatitude(p as Exclude<PlanetName, "Rahu" | "Ketu">, birthDate);
+    latCache.set(p, v);
+    return v;
+  };
+
   // Resolve planetary wars first (pairwise among star-planets within 1°).
+  //
+  // Graha yuddha is PAIRWISE, but three planets can pile up inside one degree,
+  // giving a planet more than one simultaneous war. This record holds one entry
+  // per planet, so a naive assignment lets a later pair overwrite an earlier one
+  // — which previously allowed a planet that LOST a war to be recorded as having
+  // won a different one. A defeat is one of BPHS 11:16's bhāva-annihilating
+  // conditions, so a masked loss is the dangerous direction. `record` therefore
+  // keeps a defeat in preference to a victory; among equals, the first stands.
   const wars: Partial<Record<PlanetName, { with: PlanetName; won: boolean }>> = {};
+  const record = (self: PlanetName, foe: PlanetName, won: boolean) => {
+    const prev = wars[self];
+    if (prev && !prev.won && won) return; // never let a win mask an existing loss
+    wars[self] = { with: foe, won };
+  };
   for (let i = 0; i < WAR_PLANETS.length; i++) {
     for (let j = i + 1; j < WAR_PLANETS.length; j++) {
       const a = byName[WAR_PLANETS[i]];
       const b = byName[WAR_PLANETS[j]];
       if (!a || !b) continue;
       if (sep(a.longitude, b.longitude) <= 1) {
-        // The planet with the lower longitude is taken as the victor.
-        const aWon = a.longitude <= b.longitude;
-        wars[a.planet] = { with: b.planet, won: aWon };
-        wars[b.planet] = { with: a.planet, won: !aWon };
+        // BPHS: "Śukra is the conqueror, whether he is in North or South, but
+        // amongst the other four only one who is in the North is the conqueror,
+        // and that in the South is considered defeated." So the victor is
+        // decided by celestial LATITUDE (northern wins), with Venus winning
+        // unconditionally — not by longitude, which was the previous rule and
+        // is a different rule entirely. This matters because a war defeat is
+        // one of BPHS 11:16's bhāva-annihilating conditions.
+        //
+        // Lineages differ: Uttara Kālāmṛta agrees on the northern rule but
+        // gives Venus no exemption, and Sūrya Siddhānta lets apparent
+        // brightness/disc size override latitude. BPHS is used here because the
+        // engine is Parāśarī; the note records who won and why.
+        let aWon: boolean;
+        if (a.planet === "Venus") aWon = true;
+        else if (b.planet === "Venus") aWon = false;
+        else aWon = latOf(a.planet) >= latOf(b.planet); // northern is the victor
+        record(a.planet, b.planet, aWon);
+        record(b.planet, a.planet, !aWon);
       }
     }
   }

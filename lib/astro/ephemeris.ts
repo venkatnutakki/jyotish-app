@@ -153,3 +153,19 @@ export function declination(
   const eq = Astronomy.EquatorFromVector(gv);
   return eq.dec;
 }
+
+/**
+ * Apparent geocentric ECLIPTIC latitude (degrees, north positive).
+ *
+ * Needed for graha yuddha (planetary war): BPHS decides the victor by which
+ * planet stands to the NORTH, not by longitude. Latitude is unaffected by the
+ * ayanāṁśa (it is a shift in longitude only), so this is the same number in
+ * every sidereal system.
+ */
+export function eclipticLatitude(
+  planet: Exclude<PlanetName, "Rahu" | "Ketu">,
+  date: Date
+): number {
+  const gv = Astronomy.GeoVector(BODY[planet], date, true);
+  return Astronomy.Ecliptic(gv).elat;
+}
