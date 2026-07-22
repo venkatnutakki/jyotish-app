@@ -14,6 +14,7 @@ import type { BhavaResult } from "./bhava";
 import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { DashaPeriod } from "./dasha";
+import { activation, concurrence } from "./dasha-depth";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-evidence";
 import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
@@ -230,13 +231,12 @@ export function computeLifePredictions(
   }
 
   const now = Date.now();
-  const maha = dasha.find(
-    (d) => new Date(d.start).getTime() <= now && now < new Date(d.end).getTime()
-  );
-  const antar = maha?.sub?.find(
-    (s) => new Date(s.start).getTime() <= now && now < new Date(s.end).getTime()
-  );
-  const activeLords = new Set([maha?.lord, antar?.lord].filter(Boolean) as string[]);
+  // The active daśā chain, read only as deep as the birth-time accuracy honestly
+  // allows. With accuracy unstated (the common case) this reads to antardaśā —
+  // exactly the mahā+antar set used before — so the default reading is
+  // unchanged; a birth time known to the minute unlocks pratyantar/sūkṣma.
+  const act = activation(dasha, birth.timeAccuracyMinutes, new Date(now));
+  const activeLords = act.lords;
 
   return AREAS.map((area) => {
     const factors: string[] = [];
@@ -348,12 +348,25 @@ export function computeLifePredictions(
     // turns a poor area good or a good area poor.
     if (activated) {
       const positive = score >= 0;
-      score += (positive ? 1 : -1) * Math.min(activators.length * 0.4, 0.8);
+      // Concurrence: how many levels of the trusted chain (mahā/antar/…) this
+      // area's significators run. The classical rule is that a matter fires at
+      // the INTERSECTION of the levels, not at any one — so a significator
+      // recurring across levels is a markedly stronger timing signal than the
+      // same lord at a single level. This only strengthens beyond the old
+      // behaviour when the birth time is accurate enough to read past antardaśā;
+      // otherwise the chain is just {mahā, antar} and this matches before.
+      const areaSignificators = new Set<string>([lordOfPrimary, ...area.karakas]);
+      const conc = concurrence(act.chain, areaSignificators);
+      const base = Math.min(activators.length * 0.4, 0.8);
+      const concBonus = conc >= 2 ? Math.min((conc - 1) * 0.3, 0.6) : 0;
+      score += (positive ? 1 : -1) * (base + concBonus);
       factors.push(
-        `The current ${[...activeLords].join("/")} daśā period activates this area now` +
-          (positive
-            ? " — the supporting factors are live rather than dormant."
-            : " — the difficulties here are active rather than latent.")
+        `The current ${act.chain.map((c) => c.lord).join("→")} daśā chain activates this area now` +
+          (conc >= 2
+            ? ` — its significator recurs across ${conc} levels, a strong ${positive ? "supportive" : "difficult"} timing convergence.`
+            : positive
+              ? " — the supporting factors are live rather than dormant."
+              : " — the difficulties here are active rather than latent.")
       );
     } else {
       factors.push(

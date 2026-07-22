@@ -19,6 +19,14 @@ export interface BirthData {
   ayanamsa?: "lahiri" | "raman" | "kp";
   /** Lunar node type; defaults to mean. */
   nodeType?: "mean" | "true";
+  /**
+   * How accurately the birth TIME is known, in minutes (± that many).
+   * Governs how deep the daśā chain may honestly be read: mahā/antar are safe
+   * to ±30 min, pratyantar needs ±5, sūkṣma ±1 — because 1 minute of birth-time
+   * error shifts the daśā timeline by roughly a month. Undefined = unknown,
+   * treated conservatively (antar depth only). See dasha-depth.ts.
+   */
+  timeAccuracyMinutes?: number;
 }
 
 export interface PlanetPosition {
