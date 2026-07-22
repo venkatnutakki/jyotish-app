@@ -19,6 +19,7 @@ import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-e
 import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
 import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
+import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
 
 interface AreaDef {
   key: string;
@@ -176,6 +177,13 @@ export interface LifePrediction {
    * which reason quite differently from Parashari house-lords.
    */
   jaiminiConfirmation: JaiminiConfirmation | null;
+  /**
+   * Cross-varga verification — whether the native's OWN divisional charts (the
+   * Ṣaḍvarga) confirm the D1 reading, with the Vaiśeṣikāṃśa dignity count and
+   * vargottama. Answers "do the person's other charts agree", not "what is the
+   * verdict"; it verifies, it never generates.
+   */
+  crossVarga: CrossVargaCheck | null;
 }
 
 /**
@@ -342,6 +350,19 @@ export function computeLifePredictions(
       factors.push(jaiminiConfirmation.note);
     }
 
+    // 9. Cross-varga verification — do the native's OWN divisional charts back
+    //    the D1 reading? Reads the primary significator across the Ṣaḍvarga and
+    //    reports confirmed / partly / contested / weak. It VERIFIES the reading
+    //    rather than generating one, so its score effect is modest — a bounded
+    //    ±0.3 that can shade a borderline verdict but never override the chart.
+    const primaryBhava = bhavas[area.houses[0] - 1];
+    const d1Positive = primaryBhava.verdict === "Strong" || primaryBhava.verdict === "Favourable";
+    const crossVarga = crossVargaVerify(chart, area.key, lordOfPrimary as PlanetName, d1Positive);
+    if (crossVarga.verification === "confirmed") score += 0.3;
+    else if (crossVarga.verification === "contested") score -= 0.3;
+    else if (crossVarga.verification === "weak") score -= 0.15;
+    factors.push(crossVarga.note);
+
     // 4 (deferred). Apply the daśā timing nudge now that every other factor is
     // in, so it follows the reading's FINAL polarity rather than a mid-loop
     // partial. An active period amplifies whatever the chart promises; it never
@@ -446,12 +467,14 @@ export function computeLifePredictions(
       kpConfirmation?.signal === 1,
       jaiminiCorroborates && jaiminiConfirmation?.signal === 1,
       conc.agreement === "strong",
+      crossVarga.verification === "confirmed",
     ].filter(Boolean).length;
     const contradictingLayers = [
       vargaConfirmation?.signal === -1,
       kpConfirmation?.signal === -1,
       jaiminiCorroborates && jaiminiConfirmation?.signal === -1,
       conc.agreement === "mixed",
+      crossVarga.verification === "contested",
     ].filter(Boolean).length;
     const confidence: LifePrediction["confidence"] =
       contradictingLayers >= 2
@@ -528,6 +551,7 @@ export function computeLifePredictions(
       vargaConfirmation,
       kpConfirmation,
       jaiminiConfirmation,
+      crossVarga,
       sources,
       agreement: conc.agreement,
     };

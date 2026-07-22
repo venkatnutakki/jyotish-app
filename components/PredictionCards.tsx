@@ -29,6 +29,12 @@ export interface LifePredictionView {
   vargaConfirmation?: { note?: string; signal?: number } | null;
   kpConfirmation?: { note?: string } | null;
   jaiminiConfirmation?: { note?: string; components?: number } | null;
+  crossVarga?: {
+    note?: string;
+    verification?: "confirmed" | "partly confirmed" | "contested" | "weak";
+    dignifiedCount?: number;
+    vargottama?: boolean;
+  } | null;
   /**
    * Smallest birth-time error, in minutes, that would change this verdict.
    * null when the verdict holds across the whole tested window.
@@ -177,6 +183,7 @@ function CrossChecks({ p }: { p: LifePredictionView }) {
     { name: "Divisional chart", note: p.vargaConfirmation?.note },
     { name: "KP sub-lord", note: p.kpConfirmation?.note },
     { name: "Jaimini", note: p.jaiminiConfirmation?.note },
+    { name: "Across your charts", note: p.crossVarga?.note },
   ].filter((c) => !!c.note);
   if (!checks.length) return null;
   return (
@@ -244,6 +251,28 @@ export function PredictionCards({
                   }`}
                 >
                   {p.confidence} confidence
+                </span>
+              )}
+              {p.crossVarga?.verification && (
+                <span
+                  title={p.crossVarga.note}
+                  className={`text-[9px] font-medium uppercase tracking-wide ${
+                    p.crossVarga.verification === "confirmed"
+                      ? "text-emerald-300/70"
+                      : p.crossVarga.verification === "contested"
+                        ? "text-rose-300/60"
+                        : p.crossVarga.verification === "weak"
+                          ? "text-amber-100/40"
+                          : "text-amber-100/50"
+                  }`}
+                >
+                  {p.crossVarga.verification === "confirmed"
+                    ? `✓ verified across ${p.crossVarga.dignifiedCount}/6 charts`
+                    : p.crossVarga.verification === "contested"
+                      ? "⚠ charts contest this"
+                      : p.crossVarga.verification === "weak"
+                        ? "rests on D1 only"
+                        : "partly cross-confirmed"}
                 </span>
               )}
             </div>
