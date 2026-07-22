@@ -20,6 +20,8 @@ import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
 import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
 import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
+import { computePlanetStates } from "./avastha";
+import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
 
 interface AreaDef {
   key: string;
@@ -246,6 +248,18 @@ export function computeLifePredictions(
   const act = activation(dasha, birth.timeAccuracyMinutes, new Date(now));
   const activeLords = act.lords;
 
+  // Yoga DELIVERY, computed once for the chart. BPHS 39:3–5 grades a yoga's
+  // results "full, half or a quarter according to their strengths", and
+  // Sāravalī cancels a yoga outright when its planets are combust or lose a
+  // planetary war. Previously yogas were scored by raw COUNT, so a technically
+  // present yoga formed by a combust planet weighed the same as a strong one.
+  const planetStates = computePlanetStates(chart);
+  const gradedYogas = gradeYogas(yogas, shadbala);
+  const bhanga = computeYogaBhanga(chart, planetStates);
+  const deliveryOf = new Map(
+    gradedYogas.map((y) => [y.name, yogaDelivery(y, bhanga, planetStates)])
+  );
+
   return AREAS.map((area) => {
     const factors: string[] = [];
     let score = 0;
@@ -284,10 +298,32 @@ export function computeLifePredictions(
     // 3. Yogas that touch this area.
     const relevant = yogas.filter((y) => area.yogaCategories.includes(y.category));
     if (relevant.length) {
-      score += Math.min(relevant.length * 0.5, 1.5);
-      factors.push(
-        `Supporting yoga${relevant.length > 1 ? "s" : ""}: ${relevant.map((y) => y.name).join(", ")}.`
+      // Each yoga contributes 0.5 × the share of its promise that actually
+      // delivers, rather than a flat 0.5 per yoga. The 1.5 cap is unchanged, so
+      // no area can gain MORE yoga credit than before — only lose it, and only
+      // where the classics say it should be lost.
+      const delivered = relevant.map((y) => ({
+        y,
+        d: deliveryOf.get(y.name) ?? { multiplier: 1, note: null },
+      }));
+      score += Math.min(
+        delivered.reduce((s, x) => s + 0.5 * x.d.multiplier, 0),
+        1.5
       );
+      const live = delivered.filter((x) => x.d.multiplier > 0);
+      const dead = delivered.filter((x) => x.d.multiplier === 0);
+      if (live.length) {
+        factors.push(
+          `Supporting yoga${live.length > 1 ? "s" : ""}: ${live.map((x) => x.y.name).join(", ")}.`
+        );
+      }
+      if (dead.length) {
+        // Naming a cancelled yoga is more informative than silently dropping it —
+        // the reader may know they "have" it from elsewhere.
+        factors.push(
+          `${dead.map((x) => x.y.name).join(", ")} ${dead.length > 1 ? "are" : "is"} technically present but classically cancelled here — ${dead[0].d.note ?? "its planets lack the strength to deliver"}`
+        );
+      }
     }
 
     // 4. Daśā activation — is the current period run by this area's lord/kāraka?
