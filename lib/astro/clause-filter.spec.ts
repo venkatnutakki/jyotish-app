@@ -86,6 +86,72 @@ describe("clause-filter — safety invariants", () => {
     }
   });
 
+  it("does not mistake 'his own men/people/house' for the own-sign dignity", () => {
+    // Regression: Sārāvalī's Saturn-in-2nd base statement — "If Saturn occupies
+    // the 2nd … be devoid of his own men …" — was wrongly struck through because
+    // "his own men" matched the own-SIGN test. Saturn there is in Sagittarius,
+    // not its own sign, so the clause must NOT be tagged contradicts.
+    for (const b of corpus(80)) {
+      const chart = computeChart(b);
+      for (const p of SEVEN) {
+        const sign = chart.planets.find((x) => x.planet === p)!.signIndex;
+        const ownSign = (OWN[p]?.includes(sign) ?? false) || SIGN_LORDS[sign] === p;
+        for (const phrase of ["his own men", "his own people", "his own house", "his own wife", "his own relatives"]) {
+          const clause = `If the ${p} occupies the 2nd, the native will be devoid of ${phrase}.`;
+          const [c] = annotateClauses(clause, p, chart);
+          // No own-SIGN condition is present, so this must be neutral regardless
+          // of whether the planet happens to be in its own sign.
+          expect(c.status, `${p}: "${phrase}" (ownSign=${ownSign})`).toBe("neutral");
+        }
+      }
+    }
+  });
+
+  it("never tags a base 'occupies/posited in the Nth house' statement", () => {
+    // Such a statement is the reason the evidence entry exists (the planet IS
+    // there); it must never be struck through.
+    for (const b of corpus(60)) {
+      const chart = computeChart(b);
+      for (const p of SEVEN) {
+        for (let h = 1; h <= 12; h++) {
+          const text = BHRIGU[p]?.[h];
+          if (!text) continue;
+          for (const c of annotateClauses(text, p, chart)) {
+            const lower = c.text.toLowerCase();
+            const isBaseHouseStatement =
+              /\b(occupies|posited in|placed in|is in) the \d+(st|nd|rd|th)\b/.test(lower) &&
+              signInSentence(c.text) === null &&
+              !/exalt|debilitat|own signs?|full moon|waning moon/.test(lower);
+            if (isBaseHouseStatement) {
+              expect(c.status, `base house statement tagged: "${c.text.slice(0, 60)}"`).toBe("neutral");
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("does not claim 'contradicts' when a disjunct is unevaluable", () => {
+    // "full, or powerful, or in own sign" — if the planet is neither full nor
+    // in its own sign, the clause is NOT contradicted, because "powerful" (which
+    // this parser cannot evaluate) might hold. Must be neutral, never struck.
+    for (const b of corpus(120)) {
+      const chart = computeChart(b);
+      for (const p of SEVEN) {
+        const sign = chart.planets.find((x) => x.planet === p)!.signIndex;
+        const own = (OWN[p]?.includes(sign) ?? false) || SIGN_LORDS[sign] === p;
+        const exalted = EXALT[p] === sign;
+        const clause = `If the ${p} is powerful or in his own sign or exalted, the native prospers.`;
+        const [c] = annotateClauses(clause, p, chart);
+        if (own || exalted) {
+          expect(c.status, `${p} own/exalt`).toBe("applies"); // a true disjunct → still fine
+        } else {
+          expect(c.status, `${p} neither, but 'powerful' unevaluable`).toBe("neutral");
+        }
+      }
+    }
+  });
+
   it("never changes, drops, or reorders the sentence text itself", () => {
     // annotateClauses only classifies; concatenating its output must reproduce
     // the original sentences (modulo the whitespace normalisation of the split).
@@ -145,9 +211,12 @@ describe("clause-filter — correctness of every judgement", () => {
           for (const c of annotateClauses(text, p, chart)) {
             if (c.status === "neutral" || signInSentence(c.text) !== null) continue;
             const lower = c.text.toLowerCase();
-            const wExalt = /exalt|sign of exaltation/.test(lower);
-            const wDebil = /debilitat/.test(lower);
-            const wOwn = /own sign|his own|her own/.test(lower);
+            const afterIf = lower.slice(lower.indexOf("if"));
+            const wExalt = /exalt|sign of exaltation/.test(afterIf);
+            const wDebil = /debilitat/.test(afterIf);
+            const wOwn = /\bown signs?\b/.test(afterIf);
+            // A bare "own" that isn't "own sign" is left neutral by the module.
+            if (/\bown\b/.test(afterIf) && !wOwn) continue;
             const hasPositive = wExalt || wOwn;
             if (hasPositive && wDebil) continue; // module leaves this neutral
             let expected: boolean;

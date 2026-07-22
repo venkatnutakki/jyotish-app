@@ -16,7 +16,7 @@ import { SARAVALI_HOUSE } from "./saravali-house";
 import { SIGNIFICATIONS } from "./significations";
 import { BPHS_LORD_IN_HOUSE } from "./bphs-lords";
 import { HORASARA_HOUSE } from "./horasara-house";
-import { textForSentiment } from "./clause-filter";
+import { textForSentiment, annotateClauses, type Clause } from "./clause-filter";
 
 export interface ClassicalEvidence {
   /** Citation — which classic this sentence comes from. */
@@ -29,6 +29,14 @@ export interface ClassicalEvidence {
   text: string;
   /** Rough sentiment of the quote for concordance, -1 / 0 / +1. */
   tone: -1 | 0 | 1;
+  /**
+   * The quote broken into clauses, each tagged applies / contradicts / neutral
+   * for THIS chart — present only for planet-in-house paragraphs, where the
+   * placed planet's sign resolves its own conditional clauses. Lets the UI show
+   * which of the many "If …" outcomes are actually live. The verbatim `text`
+   * above is unchanged; this is purely an overlay.
+   */
+  clauses?: Clause[];
 }
 
 function ord(n: number): string {
@@ -83,7 +91,15 @@ export function areaEvidence(
     if (seen.has(key)) return;
     seen.add(key);
     const toneText = planetForClauses ? textForSentiment(text, planetForClauses, chart) : text;
-    ev.push({ source, subject, role, text: text.trim(), tone: toneOf(toneText) });
+    // Only attach a clause overlay when it actually adds signal — i.e. some
+    // clause resolves for this chart. A paragraph with no evaluable sign clause
+    // gets none, so the card renders it plainly.
+    let clauses: Clause[] | undefined;
+    if (planetForClauses) {
+      const annotated = annotateClauses(text, planetForClauses, chart);
+      if (annotated.some((c) => c.status !== "neutral")) clauses = annotated;
+    }
+    ev.push({ source, subject, role, text: text.trim(), tone: toneOf(toneText), clauses });
   };
 
   const primary = houses[0];

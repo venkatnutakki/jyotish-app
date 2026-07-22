@@ -10,6 +10,8 @@ export interface EvidenceView {
   subject: string;
   role: string;
   text: string;
+  /** Per-clause applicability for this chart, when the source resolves it. */
+  clauses?: { text: string; status: "applies" | "contradicts" | "neutral" }[];
 }
 
 export interface LifePredictionView {
@@ -125,7 +127,33 @@ function EvidenceBlock({ evidence }: { evidence: EvidenceView[] }) {
                   {e.role}
                 </span>
               </div>
-              <p className="text-xs leading-relaxed text-amber-50/70">{e.text}</p>
+              {e.clauses && e.clauses.some((c) => c.status !== "neutral") ? (
+                <>
+                  <p className="text-xs leading-relaxed">
+                    {e.clauses.map((c, j) => (
+                      <span
+                        key={j}
+                        className={
+                          c.status === "applies"
+                            ? "rounded bg-emerald-400/15 px-0.5 text-emerald-100/90"
+                            : c.status === "contradicts"
+                              ? "text-amber-50/30 line-through decoration-amber-100/20"
+                              : "text-amber-50/70"
+                        }
+                      >
+                        {c.text}{" "}
+                      </span>
+                    ))}
+                  </p>
+                  <p className="mt-1 text-[10px] text-amber-100/40">
+                    <span className="text-emerald-300/70">Highlighted</span> clauses
+                    apply to this chart; <span className="line-through">struck-through</span>{" "}
+                    ones name a placement the native does not have.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs leading-relaxed text-amber-50/70">{e.text}</p>
+              )}
             </li>
           ))}
         </ul>

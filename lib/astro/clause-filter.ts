@@ -105,20 +105,38 @@ function evaluatePlacedPlanetCondition(
   //     planet that met the second alternative but not the first. ---
   const isExaltWord = /exalt|sign of exaltation/.test(afterIf);
   const isDebilWord = /debilitat/.test(afterIf);
-  const isOwnWord = /own sign|his own|her own/.test(afterIf);
+  // "own sign(s)" only — NOT bare "his own", which the classical prose uses for
+  // "his own men/people/house/wife" (a false positive that struck through a
+  // base statement). "own house" is house-lordship, a different claim.
+  const isOwnWord = /\bown signs?\b/.test(afterIf);
+  // Any OTHER "own" — "his own men", or the elided "in his own or exalted" —
+  // is an own-reference this parser does not fully resolve. Evaluating only the
+  // rest of such a clause gives wrong answers (an "own or exalted" disjunction
+  // wrongly read as exalt-only). Bail to neutral instead: a safe miss.
+  if (/\bown\b/.test(afterIf) && !isOwnWord) return null;
   const hasPositive = isExaltWord || isOwnWord;
 
   // A positive dignity and debilitation named together is contradictory — leave
   // it neutral rather than guess.
   if (hasPositive && isDebilWord) return null;
 
-  if (isDebilWord) return DEBIL[planet] === pos.signIndex;
+  // A DISJUNCTION with an unevaluable alternative ("full, or powerful, or in own
+  // sign") cannot be judged FALSE from the evaluable parts alone — the
+  // unevaluable disjunct ("powerful", "aspected by a benefic") might be the one
+  // that holds. So a would-be "contradicts" here must downgrade to neutral. A
+  // would-be "applies" stays valid: one proven-true disjunct suffices.
+  const undecidableDisjunct =
+    /\bor\b/.test(afterIf) &&
+    /powerful|\bstrong\b|endowed with strength|aspect|associated|conjunct|yuti|receives a drishti|benefic|malefic/.test(afterIf);
+  const guard = (r: boolean): boolean | null => (!r && undecidableDisjunct ? null : r);
+
+  if (isDebilWord) return guard(DEBIL[planet] === pos.signIndex);
 
   if (hasPositive) {
     const own = (OWN[planet]?.includes(pos.signIndex) ?? false) || SIGN_LORDS[pos.signIndex] === planet;
     const exalted = EXALT[planet] === pos.signIndex;
     // OR across whichever alternatives the clause actually names.
-    return (isExaltWord && exalted) || (isOwnWord && own);
+    return guard((isExaltWord && exalted) || (isOwnWord && own));
   }
 
   // --- Moon phase: "if the Moon is full / waning" ---
@@ -127,8 +145,8 @@ function evaluatePlacedPlanetCondition(
     if (sun) {
       const elong = (pos.longitude - sun.longitude + 360) % 360;
       const waxing = elong > 0 && elong < 180;
-      if (/\bfull moon\b|moon is full|moon be full/.test(lower)) return waxing;
-      if (/\bwaning moon\b|moon is waning|moon be waning/.test(lower)) return !waxing;
+      if (/\bfull moon\b|moon is full|moon be full/.test(lower)) return guard(waxing);
+      if (/\bwaning moon\b|moon is waning|moon be waning/.test(lower)) return guard(!waxing);
     }
   }
 
