@@ -22,6 +22,9 @@ export interface LifePredictionView {
   confidence: string;
   reading: string;
   factors: string[];
+  /** The engine's numeric score — present at runtime; used by the Check tab. */
+  score: number;
+  houses?: number[];
   evidence?: EvidenceView[];
   sources?: string[];
   agreement?: string;

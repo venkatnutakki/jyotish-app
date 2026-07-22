@@ -21,6 +21,7 @@ import { UpagrahaPanel } from "./UpagrahaPanel";
 import { bhavaChalitChart } from "@/lib/astro/charts-extra";
 import { FullReport } from "./FullReport";
 import { PredictionCards, type LifePredictionView } from "./PredictionCards";
+import { VerifyPanel } from "./VerifyPanel";
 import { CompatibilityView } from "./CompatibilityView";
 import { AskPanel } from "./AskPanel";
 import { ChatPanel } from "./ChatPanel";
@@ -173,7 +174,7 @@ type FormState = {
   /** Birth-time accuracy in minutes; empty = unspecified. Gates daśā depth. */
   timeAccuracy?: string;
 };
-type Tab = "chart" | "chat" | "ask" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
+type Tab = "chart" | "chat" | "ask" | "verify" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
 
 const SAVED_KEY = "jyotish.saved";
 
@@ -704,6 +705,7 @@ export function ChartApp() {
     muhurta: { label: "Muhūrta", hint: "Choosing an auspicious time for something" },
     chat: { label: "✦ Chat", hint: "Ask follow-up questions about this chart" },
     ask: { label: "Ask", hint: "One question, answered from the classical rules" },
+    verify: { label: "Check", hint: "Answer a few questions and score the reading against your real life" },
     prashna: { label: "Praśna", hint: "Horary — cast a chart for the moment of a question" },
   };
 
@@ -713,7 +715,7 @@ export function ChartApp() {
     { name: "Strength", hint: "How strong the chart is", tabs: ["shadbala", "ashtakavarga"] },
     { name: "Techniques", hint: "Other classical systems", tabs: ["jaimini", "kp", "special", "upagraha"] },
     { name: "Calendar", hint: "Daily and electional timing", tabs: ["panchang", "muhurta"] },
-    { name: "Ask", hint: "Put a question to the chart", tabs: ["chat", "ask", "prashna"] },
+    { name: "Ask", hint: "Put a question to the chart", tabs: ["chat", "ask", "prashna", "verify"] },
   ];
 
   const activeGroup =
@@ -1183,6 +1185,21 @@ export function ChartApp() {
                 )}
                 {tab === "ask" && birthPayload && (
                   <AskPanel birth={birthPayload} />
+                )}
+
+                {tab === "verify" && (
+                  reading?.predictions?.length ? (
+                    <VerifyPanel
+                      predictions={reading.predictions}
+                      dasha={dasha}
+                      chartKey={`${form.date}T${form.time}@${form.lat},${form.lon}`}
+                    />
+                  ) : (
+                    <p className="text-xs text-amber-100/50">
+                      Generate a reading first (Overview → Reading) — the checks
+                      are built from it, and are sealed before you see them.
+                    </p>
+                  )
                 )}
 
                 {tab === "special" && birthPayload && (
