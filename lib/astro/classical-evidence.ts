@@ -16,6 +16,7 @@ import { SARAVALI_HOUSE } from "./saravali-house";
 import { SIGNIFICATIONS } from "./significations";
 import { BPHS_LORD_IN_HOUSE } from "./bphs-lords";
 import { HORASARA_HOUSE } from "./horasara-house";
+import { textForSentiment } from "./clause-filter";
 
 export interface ClassicalEvidence {
   /** Citation — which classic this sentence comes from. */
@@ -69,13 +70,20 @@ export function areaEvidence(
     source: string,
     subject: string,
     role: string,
-    text: string | undefined
+    text: string | undefined,
+    // When given, the CONCORDANCE tone is scored over only the clauses that
+    // apply to this chart (sign clauses proven not to apply are dropped) — the
+    // displayed text stays verbatim. This stops a planet-in-house paragraph's
+    // hypothetical sign clauses ("if in Pisces …") from tinting the agreement
+    // signal for a native who has that planet elsewhere.
+    planetForClauses?: PlanetName
   ) => {
     if (!text) return;
     const key = source + "|" + subject;
     if (seen.has(key)) return;
     seen.add(key);
-    ev.push({ source, subject, role, text: text.trim(), tone: toneOf(text) });
+    const toneText = planetForClauses ? textForSentiment(text, planetForClauses, chart) : text;
+    ev.push({ source, subject, role, text: text.trim(), tone: toneOf(toneText) });
   };
 
   const primary = houses[0];
@@ -87,19 +95,22 @@ export function areaEvidence(
       "Bhṛgu Sūtras",
       `${p.planet} in the ${ord(p.house)} house`,
       `occupies the ${ord(p.house)} house of this area`,
-      BHRIGU[p.planet]?.[p.house]
+      BHRIGU[p.planet]?.[p.house],
+      p.planet
     );
     push(
       "Sārāvalī",
       `${p.planet} in the ${ord(p.house)} house`,
       `occupies the ${ord(p.house)} house of this area`,
-      SARAVALI_HOUSE[p.planet]?.[p.house]
+      SARAVALI_HOUSE[p.planet]?.[p.house],
+      p.planet
     );
     push(
       "Horā Sāra",
       `${p.planet} in the ${ord(p.house)} house`,
       `occupies the ${ord(p.house)} house of this area`,
-      HORASARA_HOUSE[p.planet]?.[p.house]
+      HORASARA_HOUSE[p.planet]?.[p.house],
+      p.planet
     );
     push(
       "Sārāvalī",
