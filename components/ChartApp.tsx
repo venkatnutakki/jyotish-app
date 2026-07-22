@@ -170,6 +170,8 @@ type FormState = {
   ianaTz?: string; // IANA zone from the city, for date-aware offset
   ayanamsa?: "lahiri" | "raman" | "kp";
   nodeType?: "mean" | "true";
+  /** Birth-time accuracy in minutes; empty = unspecified. Gates daśā depth. */
+  timeAccuracy?: string;
 };
 type Tab = "chart" | "chat" | "ask" | "ashtakavarga" | "shadbala" | "jaimini" | "kp" | "panchang" | "upagraha" | "special" | "dasha" | "varsha" | "muhurta" | "prashna" | "transits" | "forecast" | "reading";
 
@@ -479,6 +481,7 @@ export function ChartApp() {
       longitude: Number(f.lon),
       ayanamsa: f.ayanamsa ?? "lahiri",
       nodeType: f.nodeType ?? "mean",
+      ...(f.timeAccuracy ? { timeAccuracyMinutes: Number(f.timeAccuracy) } : {}),
     };
   }
 
@@ -907,6 +910,23 @@ export function ChartApp() {
               <option value="true" className="bg-[#1a1426]">True (osculating) node</option>
             </select>
           </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-amber-100/60">
+            Birth-time accuracy{" "}
+            <span className="text-amber-100/35">— how deep timing can be read</span>
+          </label>
+          <select
+            className={field}
+            value={form.timeAccuracy ?? ""}
+            onChange={(e) => setForm({ ...form, timeAccuracy: e.target.value })}
+          >
+            <option value="" className="bg-[#1a1426]">Not specified — timing read to antardaśā</option>
+            <option value="1" className="bg-[#1a1426]">Exact, to the minute — allows sūkṣma</option>
+            <option value="5" className="bg-[#1a1426]">Within ±5 min — allows pratyantar</option>
+            <option value="30" className="bg-[#1a1426]">Within ±30 min — antardaśā</option>
+            <option value="120" className="bg-[#1a1426]">Rough (±2 hr) — mahādaśā only</option>
+          </select>
         </div>
         <button
           type="submit"

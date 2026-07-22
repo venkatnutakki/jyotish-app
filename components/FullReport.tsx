@@ -61,6 +61,7 @@ interface ReportData {
     total: number;
     areas: { key: string; title: string; stable: boolean; firstChangeMinutes: number | null }[];
   };
+  dashaDepthNote?: string;
   forecast?: {
     summary: string;
     current: { maha: string; antar: string; pratyantar: string };
@@ -223,6 +224,12 @@ export function FullReport({ data }: { data: ReportData }) {
             <p className="rounded-lg border border-amber-300/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-200/75">
               <span className="font-semibold">⏱ Birth-time sensitivity — </span>
               {data.timeSensitivity.summary}
+            </p>
+          )}
+          {data.dashaDepthNote && (
+            <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-amber-100/60">
+              <span className="font-semibold text-amber-200/70">Daśā timing depth — </span>
+              {data.dashaDepthNote}
             </p>
           )}
           <PredictionCards
