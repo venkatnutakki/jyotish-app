@@ -22,6 +22,7 @@ import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
 import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
 import { computePlanetStates, bhavaVitality } from "./avastha";
 import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
+import { sudarshanaVote, type SudarshanaVote } from "./sudarshana-vote";
 
 interface AreaDef {
   key: string;
@@ -186,6 +187,8 @@ export interface LifePrediction {
    * verdict"; it verifies, it never generates.
    */
   crossVarga: CrossVargaCheck | null;
+  /** Three-ring Sudarśana vote — independent corroboration, or inapplicable. */
+  sudarshana: SudarshanaVote | null;
 }
 
 /**
@@ -397,6 +400,15 @@ export function computeLifePredictions(
     const crossVarga = crossVargaVerify(chart, area.key, lordOfPrimary as PlanetName, d1Positive);
     // BPHS 11:14–16 vitality of the primary house, for the promise gate below.
     const vitality = bhavaVitality(chart, planetStates, area.houses[0], benefics);
+    // Sudarśana three-ring vote — an independent lens (no house-lord dignity,
+    // no Ṣaḍbala, no KP, no varga), so its agreement is real corroboration
+    // rather than the same evidence recounted. Value is in CONFIDENCE; the
+    // score effect is deliberately small.
+    const sudarshana = sudarshanaVote(chart, area.houses[0], benefics);
+    if (sudarshana.applicable && sudarshana.agreement !== "split") {
+      score += sudarshana.direction * (sudarshana.agreement === "unanimous" ? 0.4 : 0.15);
+      factors.push(sudarshana.note);
+    }
     if (crossVarga.verification === "confirmed") score += 0.3;
     else if (crossVarga.verification === "contested") score -= 0.3;
     else if (crossVarga.verification === "weak") score -= 0.15;
@@ -516,6 +528,7 @@ export function computeLifePredictions(
       jaiminiCorroborates && jaiminiConfirmation?.signal === 1,
       conc.agreement === "strong",
       crossVarga.verification === "confirmed",
+      sudarshana.applicable && sudarshana.agreement === "unanimous" && sudarshana.direction === 1,
     ].filter(Boolean).length;
     const contradictingLayers = [
       vargaConfirmation?.signal === -1,
@@ -523,6 +536,7 @@ export function computeLifePredictions(
       jaiminiCorroborates && jaiminiConfirmation?.signal === -1,
       conc.agreement === "mixed",
       crossVarga.verification === "contested",
+      sudarshana.applicable && sudarshana.agreement === "unanimous" && sudarshana.direction === -1,
     ].filter(Boolean).length;
     const confidence: LifePrediction["confidence"] =
       contradictingLayers >= 2
@@ -600,6 +614,7 @@ export function computeLifePredictions(
       kpConfirmation,
       jaiminiConfirmation,
       crossVarga,
+      sudarshana,
       sources,
       agreement: conc.agreement,
     };

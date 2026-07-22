@@ -29,6 +29,7 @@ export interface LifePredictionView {
   vargaConfirmation?: { note?: string; signal?: number } | null;
   kpConfirmation?: { note?: string } | null;
   jaiminiConfirmation?: { note?: string; components?: number } | null;
+  sudarshana?: { note?: string; applicable?: boolean; agreement?: string } | null;
   crossVarga?: {
     note?: string;
     verification?: "confirmed" | "partly confirmed" | "contested" | "weak";
@@ -184,6 +185,7 @@ function CrossChecks({ p }: { p: LifePredictionView }) {
     { name: "KP sub-lord", note: p.kpConfirmation?.note },
     { name: "Jaimini", note: p.jaiminiConfirmation?.note },
     { name: "Across your charts", note: p.crossVarga?.note },
+    { name: "Sudarśana (3 rings)", note: p.sudarshana?.applicable ? p.sudarshana?.note : undefined },
   ].filter((c) => !!c.note);
   if (!checks.length) return null;
   return (
