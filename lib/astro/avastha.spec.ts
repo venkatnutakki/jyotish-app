@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { computePlanetStates, BALADI_MULTIPLIER } from "./avastha";
+import { computePlanetStates, BALADI_MULTIPLIER, bhavaVitality } from "./avastha";
+import { naturalBenefics, analyzeBhavas } from "./bhava";
+import { computeShadbala } from "./shadbala";
 import { computeChart } from "./chart";
 import { eclipticLatitude } from "./ephemeris";
 import type { BirthData } from "./types";
@@ -113,6 +115,48 @@ describe("graha yuddha — BPHS victor rule", () => {
           expect(s.war, `${s.planet} lost a war but has no war record`).toBeTruthy();
           expect(s.war!.won, `${s.planet} lost a war but is recorded as winning`).toBe(false);
         }
+      }
+    }
+  });
+});
+
+describe("bhāva vitality — BPHS 11:14–16", () => {
+  it("requires three annihilators and no relief, and stays rare", () => {
+    // The verse lists conditions of very different rarity — Bālādi Vṛddha/Mṛta
+    // covers 2 of 5 degree-bands, and "lord with a 3/6/8/11/12 lord" covers 5 of
+    // 12 houses — so a two-condition threshold marked 28.5% of all areas
+    // spoiled. Three-with-no-relief keeps the claim meaningful.
+    let annihilated = 0;
+    let total = 0;
+    for (const b of corpus(200)) {
+      const chart = computeChart(b);
+      const states = computePlanetStates(chart);
+      const shadbala = computeShadbala(chart, b);
+      const benefics = naturalBenefics(chart);
+      analyzeBhavas(chart, shadbala); // parity with the prediction path
+      for (let h = 1; h <= 12; h++) {
+        const v = bhavaVitality(chart, states, h, benefics);
+        total++;
+        if (v.annihilated) {
+          annihilated++;
+          expect(v.annihilators.length, `house ${h}`).toBeGreaterThanOrEqual(3);
+          expect(v.prosperers.length, `house ${h} had relief`).toBe(0);
+        }
+      }
+    }
+    console.log(`  bhāva annihilation fires on ${((100 * annihilated) / total).toFixed(1)}% of houses`);
+    expect(annihilated / total, "must stay a meaningful minority").toBeLessThan(0.2);
+  });
+
+  it("always explains itself", () => {
+    for (const b of corpus(60)) {
+      const chart = computeChart(b);
+      const states = computePlanetStates(chart);
+      const benefics = naturalBenefics(chart);
+      for (let h = 1; h <= 12; h++) {
+        const v = bhavaVitality(chart, states, h, benefics);
+        for (const a of v.annihilators) expect(a.length).toBeGreaterThan(10);
+        for (const p of v.prosperers) expect(p.length).toBeGreaterThan(10);
       }
     }
   });

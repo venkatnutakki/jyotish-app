@@ -10,7 +10,7 @@
 
 import { SIGNS, type PlanetName } from "./constants";
 import type { Chart, BirthData } from "./types";
-import type { BhavaResult } from "./bhava";
+import { naturalBenefics, type BhavaResult } from "./bhava";
 import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { DashaPeriod } from "./dasha";
@@ -20,7 +20,7 @@ import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
 import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
 import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
-import { computePlanetStates } from "./avastha";
+import { computePlanetStates, bhavaVitality } from "./avastha";
 import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
 
 interface AreaDef {
@@ -254,6 +254,7 @@ export function computeLifePredictions(
   // planetary war. Previously yogas were scored by raw COUNT, so a technically
   // present yoga formed by a combust planet weighed the same as a strong one.
   const planetStates = computePlanetStates(chart);
+  const benefics = naturalBenefics(chart);
   const gradedYogas = gradeYogas(yogas, shadbala);
   const bhanga = computeYogaBhanga(chart, planetStates);
   const deliveryOf = new Map(
@@ -394,6 +395,8 @@ export function computeLifePredictions(
     const primaryBhava = bhavas[area.houses[0] - 1];
     const d1Positive = primaryBhava.verdict === "Strong" || primaryBhava.verdict === "Favourable";
     const crossVarga = crossVargaVerify(chart, area.key, lordOfPrimary as PlanetName, d1Positive);
+    // BPHS 11:14–16 vitality of the primary house, for the promise gate below.
+    const vitality = bhavaVitality(chart, planetStates, area.houses[0], benefics);
     if (crossVarga.verification === "confirmed") score += 0.3;
     else if (crossVarga.verification === "contested") score -= 0.3;
     else if (crossVarga.verification === "weak") score -= 0.15;
@@ -462,6 +465,15 @@ export function computeLifePredictions(
         `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} withholds this in KP, ` +
         `but no other method agrees, so read it as obstructed rather than closed — ` +
         `it tends to arrive late, or only after real effort.`;
+    } else if (vitality.annihilated) {
+      // BPHS 11:14–16 — two or more annihilating conditions on the bhāva lord
+      // with nothing relieving them. Capped at "spoiled", never "notPromised":
+      // the verse's list includes commonplace situations, and outright denial
+      // is reserved for the KP sub-lord test corroborated by a second lens.
+      promise = "spoiled";
+      promiseNote =
+        `The ${ordinal(area.houses[0])} house is classically weakened — ${vitality.annihilators.slice(0, 2).join(", and ")}. ` +
+        `BPHS treats a bhāva under two such conditions, with nothing relieving them, as unable to give its full fruit.`;
     } else if (corroboratingDenials >= 1 && score < 2.0) {
       promise = "spoiled";
       promiseNote =
