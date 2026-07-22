@@ -7,6 +7,7 @@ import { planetSidereal } from "./ephemeris";
 import { NAKSHATRAS, SIGNS, NAKSHATRA_ARC, SIGN_ARC } from "./constants";
 import { utcFromLocal } from "./time";
 import { taraOf } from "./tarabala";
+import { muhurtaDoshas, type Dosha } from "./muhurta-doshas";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 // Auspiciousness weight per weekday (Mon/Wed/Thu/Fri favoured; Tue/Sat harsh).
@@ -27,6 +28,10 @@ export interface MuhurtaDay {
   score: number; // 0-10
   verdict: "Excellent" | "Good" | "Average" | "Avoid";
   notes: string[];
+  /** Classical bars found on this day (Riktā, Viṣṭi, Amāvāsyā, Gaṇḍa Mūla…). */
+  doshas: Dosha[];
+  /** True when a hard bar applies — the day is unfit regardless of its score. */
+  barred: boolean;
 }
 
 /** Score a single day (local noon used for the Moon's daily nakṣatra). */
@@ -56,9 +61,34 @@ export function muhurtaForDay(
   // small bonus for benefic tārā types
   if (t.tara === "Sampat" || t.tara === "Mitra" || t.tara === "Ati-Mitra") score += 1;
 
-  score = Math.min(10, score);
-  const verdict = score >= 8 ? "Excellent" : score >= 6 ? "Good" : score >= 4 ? "Average" : "Avoid";
-  if (verdict === "Excellent") notes.unshift("A strong day — favourable star, Moon and weekday align.");
+  // --- Classical doṣa bars ------------------------------------------------
+  // Muhūrta is properly REJECT-then-rank, not a sum of favourable factors.
+  // Scoring alone rated 54.6% of days "Good or better" and 28.3% "Excellent",
+  // which is close to information-free. A hard bar (Riktā tithi, Viṣṭi karaṇa,
+  // Amāvāsyā) now disqualifies the day whatever its Tārā/Chandra/vāra score,
+  // and a caution costs a point.
+  const sunLon = planetSidereal("Sun", noonUtc).longitude;
+  const { doshas, barred } = muhurtaDoshas(sunLon, moonLon, moonNak);
+  for (const d of doshas) notes.push(d.note);
+  score -= doshas.filter((d) => d.severity === "caution").length;
+
+  score = Math.max(0, Math.min(10, score));
+  // The bars are absolute: a barred day cannot rank above "Avoid" no matter how
+  // well the Moon is placed. "Excellent" additionally requires a clean day.
+  const verdict: MuhurtaDay["verdict"] = barred
+    ? "Avoid"
+    : score >= 8 && doshas.length === 0
+      ? "Excellent"
+      : score >= 6
+        ? "Good"
+        : score >= 4
+          ? "Average"
+          : "Avoid";
+  if (verdict === "Excellent") {
+    notes.unshift("A strong day — favourable star, Moon and weekday, with no classical bar.");
+  } else if (barred) {
+    notes.unshift("Barred for an auspicious beginning by a classical doṣa, regardless of the Moon's strength.");
+  }
 
   return {
     date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
@@ -72,6 +102,8 @@ export function muhurtaForDay(
     score,
     verdict,
     notes,
+    doshas,
+    barred,
   };
 }
 
