@@ -5,6 +5,7 @@
 // and the key Sahams (sensitive points). Computed from first principles here.
 
 import { computeChart } from "./chart";
+import { judgeTajika, judgeMuntha, type TajikaJudgment } from "./tajika";
 import { planetSidereal } from "./ephemeris";
 import { computeVarga } from "./varga";
 import {
@@ -106,6 +107,13 @@ export interface Varshaphal {
   yearLord: { planet: PlanetName; strength: number; candidates: PanchavargeeyaRow[] };
   muddaDasha: MuddaPeriod[];
   sahams: Saham[];
+  /**
+   * Tajika verdicts per life area — whether the matter PERFECTS this year.
+   * In Tajika the aspects are the judgment; without them the annual chart is a
+   * calculator rather than a reading.
+   */
+  judgments: { area: string; house: number; karyesha: PlanetName; judgment: TajikaJudgment }[];
+  munthaVerdict: { favourable: boolean; note: string };
 }
 
 const DAY_MS = 86400000;
@@ -194,6 +202,27 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
     saham("Yaśas (fame)", jup - punya + asc, punya - jup + asc),
   ];
 
+  // --- Tajika judgment: does each matter perfect this year? ---------------
+  const praveshAsc = pravesh.ascendantSignIndex;
+  const lagnesha = SIGN_LORDS[praveshAsc];
+  const AREAS: { area: string; house: number }[] = [
+    { area: "Self & vitality", house: 1 },
+    { area: "Wealth", house: 2 },
+    { area: "Home & property", house: 4 },
+    { area: "Children & creativity", house: 5 },
+    { area: "Marriage & partnership", house: 7 },
+    { area: "Career", house: 10 },
+    { area: "Gains", house: 11 },
+  ];
+  const judgments = AREAS.map(({ area, house }) => {
+    const karyesha = SIGN_LORDS[(praveshAsc + house - 1) % 12];
+    return { area, house, karyesha, judgment: judgeTajika(pravesh, lagnesha, karyesha) };
+  });
+  const munthaLordPos = pravesh.planets.find((p) => p.planet === munthaLord);
+  const munthaLordAfflicted =
+    !!munthaLordPos && ([6, 8, 12].includes(munthaLordPos.house) || munthaLordPos.retrograde);
+  const munthaVerdict = judgeMuntha(munthaHouse, munthaLordAfflicted);
+
   return {
     year,
     ageAtYear: age,
@@ -203,5 +232,7 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
     yearLord,
     muddaDasha,
     sahams,
+    judgments,
+    munthaVerdict,
   };
 }

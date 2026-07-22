@@ -10,6 +10,8 @@ interface Panch { planet: string; kshetra: number; uchcha: number; hadda: number
 interface Varshaphal {
   year: number; ageAtYear: number; praveshISO: string; pravesh: Chart;
   muntha: { sign: string; house: number; lord: string };
+  munthaVerdict?: { favourable: boolean; note: string };
+  judgments?: { area: string; house: number; karyesha: string; judgment: { yoga: string; variety: string | null; strength: number; perfects: boolean; note: string } }[];
   yearLord: { planet: string; strength: number; candidates: Panch[] };
   muddaDasha: { lord: string; days: number; start: string; end: string }[];
   sahams: { name: string; sign: string; degree: number }[];
@@ -88,6 +90,59 @@ export function VarshaphalPanel({ birth }: { birth: BirthData }) {
                 <Fact label="Muntha" value={`${vp.muntha.sign} · H${vp.muntha.house}`} sub={`lord ${vp.muntha.lord}`} />
                 <Fact label="Year Lord (Varṣeśa)" value={vp.yearLord.planet} sub={`strength ${vp.yearLord.strength}/20`} highlight />
               </div>
+
+              {vp.munthaVerdict && (
+                <p
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    vp.munthaVerdict.favourable
+                      ? "border-emerald-300/25 bg-emerald-400/5 text-emerald-100/80"
+                      : "border-amber-300/20 bg-amber-400/5 text-amber-200/75"
+                  }`}
+                >
+                  {vp.munthaVerdict.note}
+                </p>
+              )}
+
+              {/* Tājika judgment — does each matter perfect this year? */}
+              {vp.judgments && vp.judgments.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-200/70">
+                    Does it perfect this year? · Tājika
+                  </p>
+                  {vp.judgments.map((j) => (
+                    <div
+                      key={j.area}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs ${
+                        j.judgment.perfects
+                          ? "border-emerald-300/25 bg-emerald-400/5"
+                          : j.judgment.yoga === "Maṇaū" || j.judgment.yoga === "Raddā"
+                            ? "border-rose-300/20 bg-rose-400/5"
+                            : "border-white/10 bg-white/[0.03]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                        <span className="font-medium text-amber-50/90">{j.area}</span>
+                        <span
+                          className={`text-[10px] uppercase tracking-wide ${
+                            j.judgment.perfects ? "text-emerald-300/80" : "text-amber-100/45"
+                          }`}
+                        >
+                          {j.judgment.yoga === "none" ? "no mechanism" : j.judgment.yoga}
+                          {j.judgment.variety ? ` · ${j.judgment.variety}` : ""}
+                          {j.judgment.strength > 0 ? ` · ${j.judgment.strength.toFixed(1)}/20` : ""}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 leading-relaxed text-amber-100/55">{j.judgment.note}</p>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-amber-100/35">
+                    In Tājika the aspects are the judgment: an applying aspect
+                    (Itthaśāla) between the lagna lord and the lord of the matter
+                    means it completes; a separating one (Īsarāpha) means the
+                    moment has passed.
+                  </p>
+                </div>
+              )}
 
               {/* Panchavargeeya candidates */}
               <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
