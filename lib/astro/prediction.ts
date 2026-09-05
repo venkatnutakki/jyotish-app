@@ -29,6 +29,7 @@ import { detectCourageYogas } from "./sibling-yogas";
 import { detectEducationYogas } from "./education-yogas";
 import { afflictionModifiers, afflictionForArea } from "./afflictions";
 import { computeVimsopaka } from "./strengths";
+import { spouseIndications } from "./spouse-indications";
 
 interface AreaDef {
   key: string;
@@ -555,6 +556,10 @@ export function computeLifePredictions(
         score += rel.bonus;
         if (rel.note) factors.push(rel.note);
       }
+      // Bhāvat-bhāvam portrait of the spouse (descriptive; no score effect).
+      const sp = spouseIndications(chart);
+      factors.push(sp.portrait);
+      factors.push(sp.harmonyNote);
     }
 
     // 9d. Courage/co-born (parākrama) yogas — the same idea for the 3rd house,
