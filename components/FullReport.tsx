@@ -108,6 +108,7 @@ interface ReportData {
     affliction: { papakartariMoon: boolean; note: string } | null;
     note: string;
   };
+  vargaReadings?: { code: string; name: string; domain: string; lagnaSign: string; lord: string; strength: string; reading: string }[];
   ishtaKashta?: { planet: string; ishta: number; kashta: number; net: number }[];
   vimsopaka?: { planet: string; shadvarga: number; shodashavarga: number; grade: string }[];
   shoola?: { signName: string; years: number; start: string }[];
@@ -350,6 +351,21 @@ export function FullReport({ data }: { data: ReportData }) {
             );
           })}
         </div>
+        {data.vargaReadings && data.vargaReadings.length > 0 && (
+          <div className="mt-3 space-y-1.5 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+            <p className="text-xs font-medium text-amber-200/80">
+              Reading each division from its own ascendant
+            </p>
+            <ul className="space-y-0.5">
+              {data.vargaReadings.map((vr) => (
+                <li key={vr.code} className="flex gap-1.5 text-xs text-amber-100/70">
+                  <span className={vr.strength === "strong" ? "text-emerald-300/70" : vr.strength === "weak" ? "text-rose-300/70" : "text-amber-400/60"}>•</span>
+                  <span>{vr.reading}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Section>
 
       {/* Sudarshana Chakra + Bhava Chalit */}
