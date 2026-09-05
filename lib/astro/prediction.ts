@@ -878,6 +878,36 @@ export function computeLifePredictions(
   });
 }
 
+// Render the engine's per-area synthesis into the text block the AI surfaces
+// (Reading, Ask, Chat) reason over. This is the one place the full analysis —
+// verdict, calibrated confidence, the plain reading, and EVERY supporting
+// factor (functional nature, afflictions, three-witness concurrence, mind
+// temperament, spouse/family indications, graded yogas, varga cross-checks,
+// janma-nakṣatra) — becomes prompt material. Keeping it shared means Ask and
+// Chat see exactly what the full Reading sees, instead of a thinner dossier.
+export function formatPredictionDossier(
+  predictions: LifePrediction[],
+  opts?: { keys?: string[]; withCitations?: boolean }
+): string {
+  const list = opts?.keys?.length
+    ? predictions.filter((p) => opts.keys!.includes(p.key))
+    : predictions;
+  if (!list.length) return "";
+  return list
+    .map((p) => {
+      const head =
+        `▸ ${p.title} — verdict: ${p.verdict} (${p.confidence} confidence; classical sources ${p.agreement}).\n` +
+        `  ${p.reading}\n` +
+        `  Reasoning factors: ${p.factors.join(" ")}`;
+      if (opts?.withCitations === false) return head;
+      const cites = p.evidence
+        .map((e) => `      · [${e.source} — ${e.subject}] ${e.text}`)
+        .join("\n");
+      return `${head}\n  Classical basis:\n${cites || "      · (no direct quote)"}`;
+    })
+    .join("\n\n");
+}
+
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;

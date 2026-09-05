@@ -15,7 +15,7 @@ import { computeShadbala } from "./shadbala";
 import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
-import { computeLifePredictions } from "./prediction";
+import { computeLifePredictions, formatPredictionDossier } from "./prediction";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import { SIGNS, NAKSHATRAS } from "./constants";
 import type { BirthData } from "./types";
@@ -168,18 +168,7 @@ export function buildReading(birth: BirthData): BuiltReading {
   const nakLine = `Janma Nakṣatra (Moon): ${NAKSHATRAS[moon.nakshatraIndex].name} — deity ${jn.deity}, symbol ${jn.symbol}, śakti ${jn.shakti}, ${jn.gana} gaṇa. Archetype: ${jn.archetype}`;
 
   // --- Life-area predictions with their verbatim classical citations ---
-  const predictionText = predictions
-    .map((p) => {
-      const cites = p.evidence
-        .map((e) => `      · [${e.source} — ${e.subject}] ${e.text}`)
-        .join("\n");
-      return (
-        `▸ ${p.title} — verdict: ${p.verdict} (${p.confidence} confidence; classical sources ${p.agreement}).\n` +
-        `  ${p.reading} Factors: ${p.factors.join(" ")}\n` +
-        `  Classical basis:\n${cites || "      · (no direct quote)"}`
-      );
-    })
-    .join("\n\n");
+  const predictionText = formatPredictionDossier(predictions);
 
   const userContext =
     `NATIVE: ${birth.name || "(unnamed)"} — born ${birth.day}/${birth.month}/${birth.year} at ${birth.place || "given coordinates"}.\n` +

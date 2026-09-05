@@ -10,6 +10,8 @@ import { computeChart } from "@/lib/astro/chart";
 import { vimshottariDasha } from "@/lib/astro/dasha";
 import { computeShadbala } from "@/lib/astro/shadbala";
 import { analyzeBhavas } from "@/lib/astro/bhava";
+import { computeYogas } from "@/lib/astro/yogas";
+import { computeLifePredictions, formatPredictionDossier } from "@/lib/astro/prediction";
 import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/classical-evidence";
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
@@ -25,15 +27,27 @@ daśā, the relevant bhāva (house) verdicts, and VERBATIM quotations from the
 classical texts (Bhṛgu Sūtras, Sārāvalī, Significations of the Planets) that the
 sages apply to this exact matter.
 
+You are ALSO given the app's own ENGINE SYNTHESIS for the matched area(s): a
+verdict, a calibrated confidence tier, and the reasoning factors that already
+combine the house/lord, the kāraka's Ṣaḍbala strength, the yogas present (graded),
+the divisional-chart (varga) cross-check, functional nature, afflictions, the
+three-witness concurrence and family/spouse indications. This is the multi-factor
+view a careful astrologer would form — lead with it.
+
 RULES:
 - Answer ONLY the question asked, directly, in the first paragraph.
-- Reason STRICTLY from the supplied classical quotes and computed facts. Do NOT
-  invent placements, yogas, or rules not given to you.
-- Cite the source for each astrological claim in parentheses, e.g.
+- Base your answer on the ENGINE SYNTHESIS for the area, then justify it with the
+  classical quotes and computed facts. Do NOT invent placements, yogas, or rules
+  not given to you.
+- Reflect the engine's verdict and confidence tier: a "Very High"/"High" area reads
+  confident; "Moderate"/"Low" reads measured and conditional. Don't overstate a
+  mixed signal — say plainly when the factors conflict and why.
+- Weave in the specific reasoning factors (name the actual planet, yoga, or varga
+  that drives the verdict) rather than speaking generically.
+- Cite the source for each classical claim in parentheses, e.g.
   "(Bhṛgu Sūtras — Venus in the 7th)" or "(Sārāvalī — Moon in Cancer)".
 - If the question is about TIMING, use the daśā/antardaśā periods given to indicate
   when the matter is most likely to activate; be clear these are indicative windows.
-- If the classics supplied are mixed, say so honestly instead of overstating.
 - Warm, plain language for an ordinary person. 150–300 words. No preamble.`;
 
 export async function POST(req: NextRequest) {
@@ -53,6 +67,8 @@ export async function POST(req: NextRequest) {
     const dasha = vimshottariDasha(chart);
     const shadbala = computeShadbala(chart, birth);
     const bhavas = analyzeBhavas(chart, shadbala);
+    const yogas = computeYogas(chart);
+    const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth);
 
     // Which classical factors answer this question?
     let topics = matchTopics(question);
@@ -111,10 +127,23 @@ export async function POST(req: NextRequest) {
       .map((e) => `· [${e.source} — ${e.subject}] ${e.text}`)
       .join("\n");
 
+    // The engine's own multi-factor synthesis for the matched life areas — the
+    // verdict, calibrated confidence, and every reasoning factor (functional
+    // nature, afflictions, three-witness concurrence, graded yogas, varga
+    // cross-checks, family/spouse indications). This is what makes the answer
+    // reflect the full analysis rather than a bare house verdict + a quote.
+    const synthesis = formatPredictionDossier(predictions, {
+      keys: topics.map((t) => t.key),
+      withCitations: false,
+    });
+
     const context =
       `QUESTION: ${question}\n\n` +
       `Topics: ${topics.map((t) => t.label).join("; ")}\n` +
       `${chartFacts}\n\n` +
+      (synthesis
+        ? `ENGINE SYNTHESIS for the matched area(s) — verdict · confidence · reasoning factors (weigh these; they already combine house, kāraka strength, yogas, varga and daśā):\n${synthesis}\n\n`
+        : "") +
       `Relevant house verdicts:\n${houseLines}\n\n` +
       (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
       `Classical rules that apply to this question (cite these):\n${evidenceText}`;
@@ -123,7 +152,13 @@ export async function POST(req: NextRequest) {
     if (!detectProvider()) {
       const primary = topics[0];
       const pv = bhavas[primary.houses[0] - 1];
-      const lead = `On ${primary.label.toLowerCase()}: the ${ordinal(primary.houses[0])} house is ${pv.verdict.toLowerCase()} (lord ${pv.lord} in ${SIGNS[pv.lordSign]}, ${pv.lordDignity}).`;
+      const pred = predictions.find((p) => p.key === primary.key);
+      // Lead with the engine's own multi-factor verdict when we have one for the
+      // area (so the no-AI answer still reflects the full analysis, not just the
+      // bare house verdict); otherwise fall back to the house verdict.
+      const lead = pred
+        ? `On ${primary.label.toLowerCase()}: ${pred.verdict.toLowerCase()} (${pred.confidence.toLowerCase()} confidence). ${pred.reading} ${pred.factors.slice(0, 3).join(" ")}`
+        : `On ${primary.label.toLowerCase()}: the ${ordinal(primary.houses[0])} house is ${pv.verdict.toLowerCase()} (lord ${pv.lord} in ${SIGNS[pv.lordSign]}, ${pv.lordDignity}).`;
       const cited = evidence
         .slice(0, 3)
         .map((e) => `According to the ${e.source} (${e.subject}): ${trimSentence(e.text)}`)

@@ -10,6 +10,8 @@ import { vimshottariDasha } from "./dasha";
 import { computeShadbala } from "./shadbala";
 import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
+import { gradeYogas } from "./yoga-strength";
+import { computeLifePredictions, formatPredictionDossier } from "./prediction";
 import { computeJaimini } from "./jaimini";
 import { matchTopics, TOPICS } from "./question";
 import { areaEvidence, type ClassicalEvidence } from "./classical-evidence";
@@ -53,6 +55,8 @@ export function buildChatDossier(birth: BirthData): string {
   const shadbala = computeShadbala(chart, birth);
   const yogas = computeYogas(chart);
   const bhavas = analyzeBhavas(chart, shadbala);
+  const gradedYogas = gradeYogas(yogas, shadbala);
+  const predictions = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth);
 
   const asc = SIGNS[chart.ascendantSignIndex];
   const positions = chart.planets
@@ -63,7 +67,17 @@ export function buildChatDossier(birth: BirthData): string {
     .map((b) => `H${b.house} (${b.significations.split(",")[0]}): ${b.verdict}. Lord ${b.lord} in ${SIGNS[b.lordSign]} — ${b.lordDignity}${b.lordRupas != null ? `, ${b.lordRupas.toFixed(1)} rūpas` : ""}; kāraka ${b.karaka}.`)
     .join("\n");
 
-  const yogaText = yogas.length ? yogas.map((y) => `• ${y.name} — ${y.description}`).join("\n") : "(none notable)";
+  const yogaText = gradedYogas.length
+    ? gradedYogas
+        .map((y) => `• ${y.name} — ${y.description}${y.strengthTier ? ` [${y.strengthTier.toUpperCase()}: ${y.strengthNote}]` : ""}`)
+        .join("\n")
+    : "(none notable)";
+
+  // Engine's per-area synthesis — the verdict, calibrated confidence and every
+  // reasoning factor (functional nature, afflictions, three-witness, mind
+  // temperament, family indications, varga cross-checks). Citations are added
+  // per-question by evidenceForQuestion, so omit them here to keep this stable.
+  const synthesis = formatPredictionDossier(predictions, { withCitations: false });
   const sb = shadbala.ranking.map((r, i) => `${i + 1}. ${r.planet} ${r.rupas.toFixed(2)}`).join("  ·  ");
 
   const now = Date.now();
@@ -97,6 +111,7 @@ export function buildChatDossier(birth: BirthData): string {
     `PLANETARY POSITIONS:\n${positions}\n\n` +
     `HOUSES (bhāva verdicts, Raman's method):\n${houses}\n\n` +
     `YOGAS:\n${yogaText}\n\n` +
+    `LIFE-AREA SYNTHESIS (engine verdict · confidence · reasoning factors):\n${synthesis}\n\n` +
     `ṢAḌBALA (rūpas, strong→weak): ${sb}\n` +
     (karakas ? `JAIMINI CHĀRA KĀRAKAS: ${karakas}\n` : "") +
     `\nDAŚĀ TIMELINE (Vimśottarī): ${timeline}\n` +
