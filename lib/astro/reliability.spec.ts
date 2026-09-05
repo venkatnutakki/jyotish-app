@@ -326,6 +326,48 @@ describe("verdict distribution", () => {
   });
 });
 
+describe("per-area verdict distribution — the guard the aggregate one hides", () => {
+  it("no area collapses to one verdict, and success areas do not inflate", () => {
+    // The aggregate verdict guard passed all along while the career area alone
+    // sat at ~48% Excellent (the eminence bug) — because career is 1/12 of the
+    // total, per-area skew averages out of the aggregate. This measures EACH
+    // area, prints it for visibility, and hard-fails on the two failure modes
+    // seen in practice: a single verdict dominating an area (Barnum
+    // non-discrimination) and the worldly-success areas inflating toward
+    // "Excellent" for everyone.
+    const per = new Map<string, Map<string, number>>();
+    for (const b of SUBJECTS) {
+      for (const p of computeLifePredictions(
+        computeChart(b), analyzeBhavas(computeChart(b), computeShadbala(computeChart(b), b)),
+        computeShadbala(computeChart(b), b), computeYogas(computeChart(b)),
+        vimshottariDasha(computeChart(b)), b
+      )) {
+        const m = per.get(p.key) ?? new Map<string, number>();
+        m.set(p.verdict, (m.get(p.verdict) ?? 0) + 1);
+        per.set(p.key, m);
+      }
+    }
+    console.log("  per-area verdict distribution:");
+    const SUCCESS = new Set(["career", "wealth"]);
+    for (const [key, m] of per) {
+      const tot = [...m.values()].reduce((a, c) => a + c, 0);
+      const rows = [...m.entries()].sort((a, b) => b[1] - a[1]);
+      const top = rows[0];
+      const exc = (m.get("Excellent") ?? 0) / tot;
+      console.log(`    ${key.padEnd(12)} top ${top[0]} ${((top[1] / tot) * 100).toFixed(0)}% · Exc ${(exc * 100).toFixed(0)}% · ${m.size} verdicts`);
+      // No single verdict may dominate an area (non-discrimination / Barnum).
+      expect(top[1] / tot, `${key}: "${top[0]}" dominates the area`).toBeLessThan(0.6);
+      // Every area must actually use a range of the scale.
+      expect(m.size, `${key} collapsed to ${m.size} verdict(s)`).toBeGreaterThanOrEqual(3);
+      // Worldly-success areas must not read "Excellent" for a large share — the
+      // signature of the eminence inflation (career hit ~48% before the fixes).
+      if (SUCCESS.has(key)) {
+        expect(exc, `${key}: Excellent share inflated`).toBeLessThan(0.4);
+      }
+    }
+  });
+});
+
 describe("career eminence — must stay rare, not Barnum", () => {
   it("fires for only a small minority of charts", () => {
     // A first cut with loose lenses fired for 85% of charts and pushed career to

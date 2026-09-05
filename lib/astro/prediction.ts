@@ -331,13 +331,20 @@ export function computeLifePredictions(
       .filter((x) => x.s);
     const strongKarakas = karakaStrengths.filter((x) => x.s!.rupas >= x.s!.required);
     if (karakaStrengths.length) {
+      // Score the SHARE of significators that are strong, not the mere presence
+      // of one. The old "any strong → +0.8 / none → −0.5" was count-biased: an
+      // area with four kārakas (career) almost always had one strong and banked
+      // the full bonus, while a single-kāraka area (marriage) took the −0.5
+      // penalty whenever its one kāraka was weak. That structural skew — not any
+      // real signal — inflated career and deflated marriage across the corpus.
+      // Fraction-based scoring is count-neutral: full only when most are strong.
+      const frac = strongKarakas.length / karakaStrengths.length;
+      score += (frac - 0.5) * 1.3; // +0.65 all strong · 0 half · −0.65 none
       if (strongKarakas.length) {
-        score += 0.8;
         factors.push(
-          `Significator${strongKarakas.length > 1 ? "s" : ""} ${strongKarakas.map((x) => x.k).join(", ")} ${strongKarakas.length > 1 ? "are" : "is"} strong (${strongKarakas.map((x) => x.s!.rupas.toFixed(1)).join(", ")} rūpas).`
+          `Significator${strongKarakas.length > 1 ? "s" : ""} ${strongKarakas.map((x) => x.k).join(", ")} ${strongKarakas.length > 1 ? "are" : "is"} strong (${strongKarakas.map((x) => x.s!.rupas.toFixed(1)).join(", ")} rūpas)${karakaStrengths.length > 1 ? ` — ${strongKarakas.length} of ${karakaStrengths.length} significators` : ""}.`
         );
       } else {
-        score -= 0.5;
         factors.push(
           `Significator ${karakaStrengths[0].k} is not strong (${karakaStrengths[0].s!.rupas.toFixed(1)} rūpas), so results need effort.`
         );
