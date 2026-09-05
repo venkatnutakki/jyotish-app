@@ -5,6 +5,7 @@ import { ashtottariDasha, charaDasha, narayanaDasha, kalachakraDasha, shoolaDash
 import { conditionalDashas } from "@/lib/astro/dashas-conditional";
 import { yoginiDasha, type DashaPeriod } from "@/lib/astro/dasha";
 import { DASHA_ANTAR } from "@/lib/astro/dasha-phala";
+import { dashaOnset } from "@/lib/astro/dasha-onset";
 import { checkAntarConditions } from "@/lib/astro/dasha-condition";
 import type { PlanetName } from "@/lib/astro/constants";
 import type { Chart } from "@/lib/astro/types";
@@ -73,6 +74,16 @@ export function DashaPanel({
           <div className="text-xs uppercase tracking-wider text-amber-200/70">
             Current period · {maha.lord} mahādaśā / {antar.lord} antardaśā
           </div>
+          {(() => {
+            const onset = dashaOnset(chart, maha.lord);
+            if (!onset) return null;
+            return (
+              <p className="mt-1.5 text-xs leading-relaxed text-amber-100/70">
+                <span className="font-medium text-amber-200/80">How this {maha.lord} period unfolds (BPHS Ch. 47):</span>{" "}
+                {onset.note}
+              </p>
+            );
+          })()}
           {citation ? (
             <>
               <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-200/50">
