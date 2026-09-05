@@ -172,19 +172,33 @@ export function mindTemperament(chart: Chart, shadbala: ShadbalaResult): MindTem
       : "The Moon is waxing/bright, the classically favourable state for a steady mind (BPHS Ch.3).") +
     (strongPhase ? " It is also 120–240° ahead of the Sun — an especially strong phase." : "");
 
-  // ── Guṇa leaning of the mind (Moon + dispositor + co-tenants, by strength)
+  // ── Guṇa leaning of the mind ────────────────────────────────────────────
+  // Sāravalī Ch.4: whichever graha DOMINATES the mind-significators imparts its
+  // nature. The dominators are the Moon's dispositor, its co-tenants and the
+  // planets aspecting it — NOT the Moon itself: the Moon is constant Sāttvika,
+  // so counting its own vote makes every chart read Sāttvika (a Barnum result;
+  // measured 20/20 before this fix). The Moon's Sāttvika is the BASELINE the
+  // dominant influence then colours, which is what the reading states.
+  const dispositorPos = chart.planets.find((p) => p.planet === dispositor);
+  const aspectors = chart.planets.filter(
+    (p) => p.planet !== "Moon" && p.planet !== dispositor && !companyPlanets.includes(p.planet as PlanetName) && planetAspectsHouse(p, moon.house)
+  );
   const contribList: { planet: PlanetName; guna: Guna; weight: number }[] = [];
   const add = (planet: PlanetName, base: number) => {
     const g = GUNA_OF[planet];
-    if (!g) return;
+    if (!g) return; // nodes carry no guṇa
     contribList.push({ planet, guna: g, weight: Math.round((base + rupasOf(planet)) * 100) / 100 });
   };
-  add("Moon", 2);
-  if (dispositor !== "Moon") add(dispositor, 1);
-  for (const p of companyPlanets) if (p !== dispositor) add(p, 0.5);
+  if (dispositorPos) add(dispositor, 1.5); // the Moon's lord — the primary colour
+  for (const p of companyPlanets) add(p, 1.0); // conjunct — a direct influence
+  for (const p of aspectors) add(p.planet as PlanetName, 0.5); // aspect — a lighter one
   const gunaScore: Record<Guna, number> = { "Sāttvika": 0, "Rājasika": 0, "Tāmasika": 0 };
   for (const c of contribList) gunaScore[c.guna] += c.weight;
-  const gunaLeaning = (Object.keys(gunaScore) as Guna[]).sort((a, b) => gunaScore[b] - gunaScore[a])[0];
+  // Baseline Sāttvika (the Moon's own nature) only when nothing classified
+  // dominates — e.g. the sole influence is a node.
+  const gunaLeaning = contribList.length
+    ? (Object.keys(gunaScore) as Guna[]).sort((a, b) => gunaScore[b] - gunaScore[a])[0]
+    : "Sāttvika";
 
   // ── Lagna temperament-priority (Phaladeepika Ch.2) ──────────────────────
   const lagnaOccupants = chart.planets.filter((p) => p.house === 1);
@@ -247,7 +261,7 @@ export function mindTemperament(chart: Chart, shadbala: ShadbalaResult): MindTem
   const note =
     `Emotionally (from the Moon, Phaladeepika XV-15): the Moon is in ${SIGNS[moon.signIndex]} — ${MOON_SIGN_DISPOSITION[moon.signIndex]} — ` +
     `${brightening ? "waxing" : "waning"}, dispositor ${dispositor}; ${companyPhrase}. ` +
-    `The dominant grahas over the mind lean ${gunaLeaning}: ${GUNA_ORIENTATION[gunaLeaning]}. ` +
+    `The Moon's own nature is Sāttvika, and the grahas that dominate it here — ${contribList.map((c) => c.planet).join(", ") || "none classified"} — colour that baseline ${gunaLeaning}: ${GUNA_ORIENTATION[gunaLeaning]}. ` +
     `Outwardly (from the Lagna): ${lagnaNote}`;
 
   return {

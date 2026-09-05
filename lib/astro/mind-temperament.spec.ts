@@ -223,7 +223,29 @@ describe("mind & temperament — real chart", () => {
     expect(["Sāttvika", "Rājasika", "Tāmasika"]).toContain(r.gunaLeaning);
     expect(r.note).toMatch(/Phaladeepika XV-15/);
     expect(r.note.length).toBeGreaterThan(40);
-    // The Moon must always be a contributor and carry the largest base weight.
-    expect(r.contributors.some((c) => c.planet === "Moon")).toBe(true);
+    // The Moon must NOT vote on its own leaning — its guṇa is constant Sāttvika,
+    // so counting it collapses every chart to Sāttvika. The dominators (its
+    // dispositor / co-tenants / aspectors) decide.
+    expect(r.contributors.some((c) => c.planet === "Moon")).toBe(false);
+  });
+
+  it("the guṇa leaning actually discriminates across charts (not always Sāttvika)", () => {
+    // The Barnum guard the celebrity validation surfaced: 20/20 charts once read
+    // Sāttvika because the Moon voted on itself. The leaning must now vary.
+    const seen = new Set<string>();
+    const places: Array<[number, number, number]> = [
+      [28.6, 77.2, 5.5], [51.5, -0.1, 0], [-33.9, 151.2, 10], [40.7, -74, -5], [35.7, 139.7, 9],
+    ];
+    for (let i = 0; i < 24; i++) {
+      const [lat, lon, tz] = places[i % places.length];
+      const b = {
+        name: "S" + i, year: 1955 + (i * 2) % 50, month: 1 + ((i * 7) % 12),
+        day: 1 + ((i * 11) % 27), hour: (i * 13) % 24, minute: (i * 17) % 60,
+        latitude: lat, longitude: lon, tzOffsetHours: tz, ayanamsa: "lahiri", nodeType: "mean",
+      } as BirthData;
+      const chart = computeChart(b);
+      seen.add(mindTemperament(chart, computeShadbala(chart, b)).gunaLeaning);
+    }
+    expect(seen.size, `only produced: ${[...seen].join(", ")}`).toBeGreaterThanOrEqual(2);
   });
 });
