@@ -352,14 +352,19 @@ describe("confidence distribution — the three-witness grounding", () => {
     const yogas = computeYogas(chart);
     const bhavas = analyzeBhavas(chart, shadbala);
     const preds = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, SUBJECTS[0]);
+    // BPHS 32.34 root kāraka per house (1-indexed) — the classical pillar.
+    const ROOT_KARAKA = ["Sun", "Jupiter", "Mars", "Moon", "Jupiter", "Mars", "Venus", "Saturn", "Jupiter", "Mercury", "Jupiter", "Saturn"];
     for (const p of preds) {
-      const line = p.factors.find((f) => /three-witness test \(Phaladeepika 16\.12\)/.test(f));
+      const line = p.factors.find((f) => /three-witness test \(Phaladeepika 16\.12, BPHS 32\.34\)/.test(f));
       expect(line, `${p.key} missing the three-witness factor`).toBeTruthy();
       // The stated count of concurring witnesses must be 0–3.
       const m = line!.match(/(\d) of the three agree/);
       expect(m).toBeTruthy();
       expect(Number(m![1])).toBeGreaterThanOrEqual(0);
       expect(Number(m![1])).toBeLessThanOrEqual(3);
+      // The kāraka named must be the BPHS 32.34 root kāraka of the primary house.
+      const house = p.houses[0];
+      expect(line, `${p.key} names the wrong kāraka`).toContain(`kāraka ${ROOT_KARAKA[house - 1]}`);
     }
   });
 });

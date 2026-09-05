@@ -36,6 +36,26 @@ interface AreaDef {
   weak: string; // template when the area is challenged
 }
 
+// BPHS 32.34 — the deterministic root kāraka (natural significator) of each
+// bhāva, keyed only on house number (1-indexed). This is the classical "kāraka"
+// pillar of the three-witness test (Phaladeepika 16.12), distinct from a
+// life-area's topic significators. Non-exclusive (some houses carry further
+// kārakas in other schemes), but this is the primary assignment.
+const BHAVA_KARAKA: PlanetName[] = [
+  "Sun",     // 1  self, body
+  "Jupiter", // 2  wealth, family
+  "Mars",    // 3  courage, siblings
+  "Moon",    // 4  mother, home, comforts
+  "Jupiter", // 5  children, intellect
+  "Mars",    // 6  enemies, disease, debts
+  "Venus",   // 7  spouse
+  "Saturn",  // 8  longevity
+  "Jupiter", // 9  fortune, dharma
+  "Mercury", // 10 career, action
+  "Jupiter", // 11 gains
+  "Saturn",  // 12 loss, liberation
+];
+
 const AREAS: AreaDef[] = [
   {
     key: "personality", title: "Personality & Character", icon: "🧭",
@@ -549,11 +569,16 @@ export function computeLifePredictions(
       primaryBhava.verdict === "Strong" || primaryBhava.verdict === "Favourable";
     const lordSB = shadbala.planets[primaryBhava.lord as keyof ShadbalaResult["planets"]];
     const bhaveshaStrong = !!lordSB && lordSB.rupas >= lordSB.required;
-    const karakaStrong = strongKarakas.length > 0;
+    // The kāraka pillar uses the BPHS 32.34 ROOT kāraka of the primary house
+    // (keyed on house number), not the life-area's topic significators — that is
+    // what the classical triad actually names.
+    const rootKaraka = BHAVA_KARAKA[area.houses[0] - 1];
+    const karakaSB = shadbala.planets[rootKaraka as keyof ShadbalaResult["planets"]];
+    const karakaStrong = !!karakaSB && karakaSB.rupas >= karakaSB.required;
     const witnesses = [bhavaStrong, bhaveshaStrong, karakaStrong].filter(Boolean).length;
     factors.push(
-      `Classical three-witness test (Phaladeepika 16.12): the house is ${bhavaStrong ? "strong" : "not strong"}, ` +
-        `its lord ${primaryBhava.lord} is ${bhaveshaStrong ? "strong" : "not strong"}, and its significator is ${karakaStrong ? "strong" : "not strong"} — ` +
+      `Classical three-witness test (Phaladeepika 16.12, BPHS 32.34): the house is ${bhavaStrong ? "strong" : "not strong"}, ` +
+        `its lord ${primaryBhava.lord} is ${bhaveshaStrong ? "strong" : "not strong"}, and its kāraka ${rootKaraka} is ${karakaStrong ? "strong" : "not strong"} — ` +
         `${witnesses} of the three agree, so the reading is held ${witnesses === 3 ? "with firm classical support" : witnesses === 0 ? "loosely, as no witness backs it" : "with partial classical support"}.`
     );
 
