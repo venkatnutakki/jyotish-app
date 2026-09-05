@@ -30,6 +30,15 @@ import { detectEducationYogas } from "./education-yogas";
 import { afflictionModifiers, afflictionForArea } from "./afflictions";
 import { computeVimsopaka } from "./strengths";
 import { spouseIndications } from "./spouse-indications";
+import { personFromHouse } from "./person-indications";
+
+// Family members read by Bhāvat-Bhāvam from their significator house.
+const PERSON_AREA: Record<string, { house: number; role: string }> = {
+  mind: { house: 4, role: "mother" }, // the 4th also signifies the mother
+  fortune: { house: 9, role: "father" },
+  children: { house: 5, role: "child" },
+  siblings: { house: 3, role: "sibling" },
+};
 
 interface AreaDef {
   key: string;
@@ -560,6 +569,16 @@ export function computeLifePredictions(
       const sp = spouseIndications(chart);
       factors.push(sp.portrait);
       factors.push(sp.harmonyNote);
+    }
+
+    // 9c-bis. Bhāvat-bhāvam family portraits — the person signified by the area's
+    //     house read as their own ascendant (mother/4th, father/9th, child/5th,
+    //     sibling/3rd). Descriptive; no score effect.
+    const personDef = PERSON_AREA[area.key];
+    if (personDef) {
+      const person = personFromHouse(chart, personDef.house, personDef.role);
+      factors.push(person.portrait);
+      factors.push(person.wellbeingNote);
     }
 
     // 9d. Courage/co-born (parākrama) yogas — the same idea for the 3rd house,
