@@ -263,16 +263,33 @@ export function sputaDrishti(fromLon: number, toLon: number): number {
   return 0;
 }
 
-function drikBala(
+// Special (full) aspects, by whole-sign offset from the aspecting planet:
+// Saturn 3rd/10th, Mars 4th/8th, Jupiter 5th/9th (BPHS 26.9-12). The general
+// sputaDrishti gives only a partial value at these distances; the special
+// aspect raises it to full (60), which the earlier implementation omitted
+// entirely. Combined via max so the stronger of general/special applies.
+const SPECIAL_ASPECT: Partial<Record<SBP, number[]>> = {
+  Saturn: [2, 9], // 3rd & 10th
+  Mars: [3, 7], // 4th & 8th
+  Jupiter: [4, 8], // 5th & 9th
+};
+
+export function drikBala(
   planet: SBP,
   lon: number,
   positions: Record<SBP, number>,
   benefics: Set<SBP>
 ): number {
   let total = 0;
+  const toSign = Math.floor(norm360(lon) / 30);
   for (const other of SB_PLANETS) {
     if (other === planet) continue;
-    const v = sputaDrishti(positions[other], lon);
+    let v = sputaDrishti(positions[other], lon);
+    const special = SPECIAL_ASPECT[other];
+    if (special) {
+      const offset = (toSign - Math.floor(norm360(positions[other]) / 30) + 12) % 12;
+      if (special.includes(offset)) v = Math.max(v, 60); // full special aspect
+    }
     total += benefics.has(other) ? v : -v;
   }
   return total / 4; // scale to virupas
