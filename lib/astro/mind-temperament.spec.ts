@@ -227,6 +227,20 @@ describe("mind & temperament — real chart", () => {
     // so counting it collapses every chart to Sāttvika. The dominators (its
     // dispositor / co-tenants / aspectors) decide.
     expect(r.contributors.some((c) => c.planet === "Moon")).toBe(false);
+    // The janma nakṣatra (birth star) is read and carries an archetype.
+    expect(r.janmaNakshatra.name.length).toBeGreaterThan(2);
+    expect(r.janmaNakshatra.archetype.length).toBeGreaterThan(10);
+    expect(r.note).toContain("Birth star");
+  });
+
+  it("reads a chart-varying janma nakṣatra across the corpus (not a constant)", () => {
+    const stars = new Set<string>();
+    for (let i = 0; i < 24; i++) {
+      const b = { name: "S" + i, year: 1960 + i, month: 1 + (i % 12), day: 1 + ((i * 7) % 27), hour: (i * 5) % 24, minute: (i * 11) % 60, latitude: 28.6, longitude: 77.2, tzOffsetHours: 5.5, ayanamsa: "lahiri", nodeType: "mean" } as BirthData;
+      const chart = computeChart(b);
+      stars.add(mindTemperament(chart, computeShadbala(chart, b)).janmaNakshatra.name);
+    }
+    expect(stars.size).toBeGreaterThanOrEqual(6);
   });
 
   it("the guṇa leaning actually discriminates across charts (not always Sāttvika)", () => {

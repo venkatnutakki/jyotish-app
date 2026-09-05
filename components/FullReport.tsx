@@ -101,6 +101,7 @@ interface ReportData {
     company: string; companyPlanets: string[]; gunaLeaning: string;
     contributors: { planet: string; guna: string; weight: number }[];
     moonDisposition: string;
+    janmaNakshatra?: { name: string; archetype: string };
     moonCondition: { waning: boolean; steadiedByBenefic: boolean; strongPhase: boolean; note: string };
     lagna: { basis: string; decider: string; guna: string | null; occupants: string[]; injectors: string[]; note: string };
     intellect: { dignity: string; strong: boolean; note: string };
@@ -526,6 +527,11 @@ export function FullReport({ data }: { data: ReportData }) {
             <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
               Moon in {data.mindTemperament.moonSign} · disp. {data.mindTemperament.dispositor}
             </span>
+            {data.mindTemperament.janmaNakshatra && (
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
+                Birth star: {data.mindTemperament.janmaNakshatra.name}
+              </span>
+            )}
             <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
               {data.mindTemperament.brightening ? "Waxing" : "Waning"} ({data.mindTemperament.brightness.toFixed(2)})
             </span>
