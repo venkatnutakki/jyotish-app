@@ -22,6 +22,8 @@ const FACTOR_LABEL: Record<string, string> = {
   saturnTransit: "Saturn transit to the house",
   exactContact: "exact contact by a period lord",
   fastTrigger: "fast trigger (Sun/Mars)",
+  jupiterAshtakavarga: "Jupiter's Ashtakavarga transit strength",
+  saturnAshtakavarga: "Saturn's Ashtakavarga transit strength",
 };
 
 export function TimingPanel({

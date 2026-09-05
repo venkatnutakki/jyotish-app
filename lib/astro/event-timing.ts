@@ -38,6 +38,7 @@ import type { PlanetName } from "./constants";
 import { SIGN_LORDS } from "./constants";
 import { activation, concurrence } from "./dasha-depth";
 import { transitLongitude } from "./transit-events";
+import { computeAshtakavarga, type Ashtakavarga } from "./ashtakavarga";
 import { norm360 } from "./time";
 
 const DAY_MS = 86_400_000;
@@ -185,6 +186,7 @@ function scoreDay(
   birth: BirthData,
   dasha: DashaPeriod[],
   profile: EventProfile,
+  av: Ashtakavarga,
   at: Date
 ): DayScore | null {
   const sig = signifiers(chart, profile);
@@ -239,6 +241,23 @@ function scoreDay(
     }
   }
   parts.exactContact = contact;
+
+  // T6 — Ashtakavarga transit gating (BPHS 66–69). A slow planet transiting a
+  // sign rich in bindus gives supported results there; a bindu-poor sign
+  // obstructs. This VARIES as Jupiter/Saturn change sign across the range
+  // (~yearly / ~2.5-yearly), so it is a legitimate timing factor, not a
+  // constant promise factor. Positive-only: a strong-bindu transit lifts a
+  // window's rank; a weak one simply does not (denial stays with the gates).
+  // SAV neutral ≈ 28 (337/12); per-planet BAV neutral ≈ 4.
+  for (const [planet, cap] of [["Jupiter", 8], ["Saturn", 7]] as const) {
+    const sign = Math.floor(transitLongitude(planet as PlanetName, at, birth.nodeType ?? "mean") / 30) % 12;
+    const savBand = av.sav[sign] >= 30 ? 1 : av.sav[sign] >= 25 ? 0.5 : 0;
+    const bavBand = av.bav[planet][sign] >= 5 ? 1 : av.bav[planet][sign] >= 4 ? 0.5 : 0;
+    const v = (cap / 2) * (savBand + bavBand);
+    parts[`${planet.toLowerCase()}Ashtakavarga`] = v;
+    if (v >= cap * 0.75)
+      reasons.push(`${planet} transits a bindu-rich sign (SAV ${av.sav[sign]}, its own ${av.bav[planet][sign]}/8) — Ashtakavarga favours the matter here.`);
+  }
 
   // T7 — fast trigger: the month-shaper.
   const fastLon = transitLongitude(profile.fastTrigger, at, birth.nodeType ?? "mean");
@@ -298,12 +317,15 @@ export function searchTimingWindows(
     };
   }
 
+  // Ashtakavarga is natal — computed once and reused for every sampled day.
+  const av = computeAshtakavarga(chart);
+
   // Sample daily.
   const days: DayScore[] = [];
   let sampled = 0;
   for (let t = from.getTime(); t <= to.getTime(); t += DAY_MS) {
     sampled++;
-    const s = scoreDay(chart, birth, dasha, profile, new Date(t));
+    const s = scoreDay(chart, birth, dasha, profile, av, new Date(t));
     if (s) days.push(s);
   }
 
