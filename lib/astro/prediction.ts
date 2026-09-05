@@ -27,6 +27,7 @@ import { functionalNatures, type FunctionalNature } from "./functional-nature";
 import { detectRelationshipYogas } from "./marriage-yogas";
 import { detectCourageYogas } from "./sibling-yogas";
 import { detectEducationYogas } from "./education-yogas";
+import { detectChildrenYogas } from "./children-yogas";
 import { afflictionModifiers, afflictionForArea } from "./afflictions";
 import { computeVimsopaka } from "./strengths";
 import { spouseIndications } from "./spouse-indications";
@@ -605,6 +606,17 @@ export function computeLifePredictions(
       }
     }
 
+    // 9g. Progeny (putra) yogas — the same upside for the 5th, floored in the
+    //     base engine (validation showed actual parents reading Challenging).
+    //     Convergence-gated, bounded, children only.
+    if (area.key === "children") {
+      const ch = detectChildrenYogas(chart);
+      if (ch.bonus > 0) {
+        score += ch.bonus;
+        if (ch.note) factors.push(ch.note);
+      }
+    }
+
     // 9f. Classical afflictions tempering this area (grahaṇa, guru-chāṇḍāla,
     //     viṣa, kemadruma, pāpa-kartari). Bounded and capped so a heavily-
     //     afflicted area is tempered, not annihilated; denial stays with the
@@ -687,19 +699,18 @@ export function computeLifePredictions(
       promiseNote =
         `The ${ordinal(area.houses[0])} house is classically weakened — ${vitality.annihilators.slice(0, 2).join(", and ")}. ` +
         `BPHS treats a bhāva under two such conditions, with nothing relieving them, as unable to give its full fruit.`;
-    } else if (corroboratingDenials >= 1 && score >= 1.4) {
-      // "Spoiled" means a matter that ARRIVES but is damaged in the having — so
-      // it must apply to a reading the main chart otherwise supports (score at
-      // least approaching Mixed-positive), NOT to an already-weak one. The old
-      // condition was `score < 2.0`, which fired precisely when the chart did
-      // NOT support the matter, contradicting its own note and piling "damaged"
-      // onto structurally low-scoring areas (marriage, siblings) on a single
-      // cross-check. Now it downgrades only a matter that would otherwise reach
-      // Favourable/Strong; a genuinely weak area is reported as weak, not
-      // spoiled.
+    } else if (corroboratingDenials >= 2 && score >= 1.4) {
+      // "Spoiled" means a matter that ARRIVES but is damaged in the having. It
+      // requires BOTH independent cross-checks (the topic's varga AND the
+      // Jaimini reading) to deny — a single denial already subtracts from the
+      // score above, so spoiling on one lens double-penalised it (validation
+      // showed 41% of careers spoiled on a lone D10 blemish, undercalling
+      // genuine achievers). Requiring concurrence follows the same multi-witness
+      // discipline as the denial gate, and only applies to a matter the main
+      // chart otherwise supports (score ≥ 1.4), never an already-weak one.
       promise = "spoiled";
       promiseNote =
-        `${vargaDenies ? "The topic's divisional chart" : "The Jaimini reading"} undercuts this while the ` +
+        `Both the topic's divisional chart and the Jaimini reading undercut this while the ` +
         `main chart supports it — the classical picture of a matter that arrives but is damaged in the having, ` +
         `rather than one that never comes.`;
     } else {
