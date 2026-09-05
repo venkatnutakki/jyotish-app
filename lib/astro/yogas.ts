@@ -391,5 +391,38 @@ export function computeYogas(chart: Chart): Yoga[] {
   if (chart.planets.some((p) => digY(p.planet) && (KENDRA.includes(p.house) || TRIKONA.includes(p.house))) && strongY(lordOf(1)))
     yogas.push({ name: "Mṛdaṅga Yoga", category: "Raja", description: "A dignified planet holds an angle or trine with a strong Lagna-lord — happiness, status and a life as comfortable as a king's." });
 
+  // ---- Node-axis and affliction yogas --------------------------------------
+  // Detected here so they enrich the Yogas display and the classical dossier
+  // the Ask/Chat/interpretation layers reason over. All are category "Other" —
+  // deliberately in no life-area's yogaCategories, so they are reported and
+  // reasoned about without perturbing the validated area scores. (Parivartana
+  // is already detected above, so it is not repeated here.)
+  const rahu = P.Rahu, ketu = P.Ketu;
+  const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+
+  // Kāla Sarpa — all seven grahas hemmed on one side of the Rāhu–Ketu axis.
+  if (rahu) {
+    const arc = (lon: number) => (lon - rahu.longitude + 360) % 360;
+    const ds = SEVEN.map((n) => arc(P[n].longitude));
+    const allFwd = ds.every((d) => d > 0 && d < 180);
+    const allBwd = ds.every((d) => d > 180);
+    if (allFwd || allBwd)
+      yogas.push({ name: "Kāla Sarpa Yoga", category: "Other", description: "All seven grahas are hemmed between Rāhu and Ketu — intensity, karmic pressure and pronounced ups and downs; eased when a planet sits outside the axis or the nodes are well placed." });
+  }
+
+  // Guru-Chāṇḍāla — Jupiter conjunct a node: wisdom and ethics tested.
+  if (rahu && (P.Jupiter.signIndex === rahu.signIndex || (ketu && P.Jupiter.signIndex === ketu.signIndex)))
+    yogas.push({ name: "Guru-Chāṇḍāla Yoga", category: "Other", description: "Jupiter is conjunct a node — unorthodox brilliance, but received wisdom, ethics and guidance are questioned; discernment must be consciously cultivated.", planets: ["Jupiter"] });
+
+  // Grahaṇa (eclipse) — a luminary conjunct a node.
+  const sunNode = rahu && (P.Sun.signIndex === rahu.signIndex || (ketu && P.Sun.signIndex === ketu.signIndex));
+  const moonNode = rahu && (P.Moon.signIndex === rahu.signIndex || (ketu && P.Moon.signIndex === ketu.signIndex));
+  if (sunNode || moonNode)
+    yogas.push({ name: "Grahaṇa Yoga", category: "Other", description: `The ${sunNode && moonNode ? "Sun and Moon are" : sunNode ? "Sun is" : "Moon is"} conjunct a node (eclipse yoga) — the ${sunNode && moonNode ? "vitality and the mind are" : sunNode ? "soul and vitality are" : "mind and emotions are"} shadowed; conscious, remedial effort lifts it.` });
+
+  // Viṣa (Punarphoo) — Moon conjunct Saturn.
+  if (P.Moon.signIndex === P.Saturn.signIndex)
+    yogas.push({ name: "Viṣa (Punarphoo) Yoga", category: "Other", description: "Moon conjunct Saturn — an earnest but heavy mind, prone to melancholy and delay in youth, maturing into depth, patience and endurance with age.", planets: ["Moon", "Saturn"] });
+
   return yogas;
 }
