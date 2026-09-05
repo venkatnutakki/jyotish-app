@@ -512,9 +512,11 @@ export function FullReport({ data }: { data: ReportData }) {
           <p className="text-xs text-amber-100/50">
             Phaladeepika XV-15 reads character from the Moon; Sāravalī Ch. 4 gives
             each graha a guṇa and says whichever dominates the mind-significators
-            imparts its nature. Dominance is measured by Ṣaḍbala. This describes
-            the guṇa <em>orientation</em> — it does not assign fixed personality
-            labels, which the classics do not support.
+            imparts its nature. The guṇa table is classical; the way of weighing
+            which planet dominates (by Ṣaḍbala) is a modern convention, as no
+            verse prescribes it. This describes the guṇa <em>orientation</em> —
+            it does not assign fixed personality labels, which the classics do
+            not support.
           </p>
           <p className="text-sm leading-relaxed text-amber-50/90">{data.mindTemperament.note}</p>
           <div className="flex flex-wrap gap-2 pt-1 text-[11px]">

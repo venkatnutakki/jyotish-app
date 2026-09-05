@@ -539,13 +539,32 @@ export function computeLifePredictions(
 
     const verdict = verdictFromScore(score);
 
-    // Confidence reflects how many INDEPENDENT layers agree — house/lord,
-    // kāraka strength, yoga support, varga confirmation, KP cuspal sub-lord,
-    // classical concordance — rather than any single strong signal. This
-    // mirrors how a careful reading only commits fully once multiple layers
-    // converge, and says so honestly when they don't (calibrated confidence
-    // over a forced flat verdict).
+    // Classical three-witness concurrence — Phaladeepika 16.12 reads every
+    // matter jointly from the Bhāva, its lord (Bhāveśa) and its Kāraka; 16.35
+    // ties a confident positive to the Bhāva-lord being strong. This is the one
+    // verified classical basis for the multi-witness principle (3-0), so the
+    // confidence below is grounded in the triad, not only in the engine's own
+    // lenses. It touches CONFIDENCE only, never the verdict score.
+    const bhavaStrong =
+      primaryBhava.verdict === "Strong" || primaryBhava.verdict === "Favourable";
+    const lordSB = shadbala.planets[primaryBhava.lord as keyof ShadbalaResult["planets"]];
+    const bhaveshaStrong = !!lordSB && lordSB.rupas >= lordSB.required;
+    const karakaStrong = strongKarakas.length > 0;
+    const witnesses = [bhavaStrong, bhaveshaStrong, karakaStrong].filter(Boolean).length;
+    factors.push(
+      `Classical three-witness test (Phaladeepika 16.12): the house is ${bhavaStrong ? "strong" : "not strong"}, ` +
+        `its lord ${primaryBhava.lord} is ${bhaveshaStrong ? "strong" : "not strong"}, and its significator is ${karakaStrong ? "strong" : "not strong"} — ` +
+        `${witnesses} of the three agree, so the reading is held ${witnesses === 3 ? "with firm classical support" : witnesses === 0 ? "loosely, as no witness backs it" : "with partial classical support"}.`
+    );
+
+    // Confidence reflects how many INDEPENDENT layers agree — the classical
+    // three-witness triad, house/lord, kāraka strength, yoga support, varga
+    // confirmation, KP cuspal sub-lord, classical concordance — rather than any
+    // single strong signal. This mirrors how a careful reading only commits
+    // fully once multiple layers converge, and says so honestly when they don't
+    // (calibrated confidence over a forced flat verdict).
     const confirmingLayers = [
+      strongKarakas.length > 0,
       strongKarakas.length > 0,
       relevant.length > 0,
       vargaConfirmation?.signal === 1,
@@ -563,7 +582,7 @@ export function computeLifePredictions(
       crossVarga.verification === "contested",
       sudarshana.applicable && sudarshana.agreement === "unanimous" && sudarshana.direction === -1,
     ].filter(Boolean).length;
-    const confidence: LifePrediction["confidence"] =
+    const baseConfidence: LifePrediction["confidence"] =
       contradictingLayers >= 2
         ? "Low"
         : confirmingLayers >= 3
@@ -573,6 +592,18 @@ export function computeLifePredictions(
             : confirmingLayers >= 1
               ? "Moderate"
               : "Low";
+
+    // The three-witness triad CAPS confidence — it never inflates it. Phaladeepika
+    // 16.35 makes a confident positive conditional on the Bhāva-lord's strength,
+    // so a reading the classical triad does not back cannot be reported at high
+    // confidence however many of the engine's other lenses happen to agree. This
+    // only ever lowers a rating, keeping the scale honest rather than swelling
+    // the top tier.
+    const ORDER: LifePrediction["confidence"][] = ["Low", "Moderate", "High", "Very High"];
+    const cap: LifePrediction["confidence"] =
+      witnesses >= 2 ? "Very High" : witnesses === 1 ? "High" : "Moderate";
+    const confidence: LifePrediction["confidence"] =
+      ORDER[Math.min(ORDER.indexOf(baseConfidence), ORDER.indexOf(cap))];
 
     // Plain-language reading, explicitly anchored to the classical sources.
     const tone =

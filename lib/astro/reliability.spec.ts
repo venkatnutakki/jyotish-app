@@ -325,3 +325,41 @@ describe("verdict distribution", () => {
     }
   });
 });
+
+describe("confidence distribution — the three-witness grounding", () => {
+  it("does not inflate confidence to 'Very High' for everyone", () => {
+    // Phaladeepika 16.12's three-witness concurrence was folded into confidence
+    // as ONE more confirming signal. That must sharpen calibration, not collapse
+    // it — a scale that says "Very High" to almost everything is uninformative.
+    const counts = new Map<string, number>();
+    for (const b of SUBJECTS) {
+      for (const c of confidences(b).values()) counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    const total = [...counts.values()].reduce((a, c) => a + c, 0);
+    console.log("  confidence distribution:");
+    for (const [k, c] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${k.padEnd(12)} ${((c / total) * 100).toFixed(1)}%`);
+    }
+    expect((counts.get("Very High") ?? 0) / total, "'Very High' must not swamp the scale").toBeLessThan(0.5);
+    // At least three distinct confidence levels must actually occur.
+    expect(counts.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("states the three-witness test in every area's reasoning", () => {
+    const chart = computeChart(SUBJECTS[0]);
+    const dasha = vimshottariDasha(chart);
+    const shadbala = computeShadbala(chart, SUBJECTS[0]);
+    const yogas = computeYogas(chart);
+    const bhavas = analyzeBhavas(chart, shadbala);
+    const preds = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, SUBJECTS[0]);
+    for (const p of preds) {
+      const line = p.factors.find((f) => /three-witness test \(Phaladeepika 16\.12\)/.test(f));
+      expect(line, `${p.key} missing the three-witness factor`).toBeTruthy();
+      // The stated count of concurring witnesses must be 0–3.
+      const m = line!.match(/(\d) of the three agree/);
+      expect(m).toBeTruthy();
+      expect(Number(m![1])).toBeGreaterThanOrEqual(0);
+      expect(Number(m![1])).toBeLessThanOrEqual(3);
+    }
+  });
+});

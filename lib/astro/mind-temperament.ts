@@ -10,7 +10,11 @@
 //     heart and understanding — read emotional temperament from the Moon.
 //   • Sāravalī Ch.4 / Phaladeepika Ch.2.24 / BPHS Ch.3 (3-0, cross-confirmed):
 //     each graha has a fixed guṇa; whichever DOMINATES the mind-significators
-//     imparts its nature. Dominance = strength (Ṣaḍbala).
+//     imparts its nature. Dominance = strength (Ṣaḍbala). NOTE: the per-planet
+//     guṇa TABLE is classical, but no verse prescribes HOW to aggregate several
+//     planets' guṇas into one reading (verified 3-0) — so the Ṣaḍbala-weighted
+//     dominance step below is a defensible MODERN convention, not śāstra, and
+//     the UI says so.
 //   • Lagna temperament-priority (Phaladeepika Ch.2, 3-0): a planet IN the
 //     Lagna imposes its nature; with none, the native takes the Lagna-lord's;
 //     planets aspecting the Lagna inject their temperament too.
