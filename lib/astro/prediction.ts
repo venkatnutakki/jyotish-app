@@ -582,7 +582,16 @@ export function computeLifePredictions(
       promiseNote =
         `The ${ordinal(area.houses[0])} house is classically weakened — ${vitality.annihilators.slice(0, 2).join(", and ")}. ` +
         `BPHS treats a bhāva under two such conditions, with nothing relieving them, as unable to give its full fruit.`;
-    } else if (corroboratingDenials >= 1 && score < 2.0) {
+    } else if (corroboratingDenials >= 1 && score >= 1.4) {
+      // "Spoiled" means a matter that ARRIVES but is damaged in the having — so
+      // it must apply to a reading the main chart otherwise supports (score at
+      // least approaching Mixed-positive), NOT to an already-weak one. The old
+      // condition was `score < 2.0`, which fired precisely when the chart did
+      // NOT support the matter, contradicting its own note and piling "damaged"
+      // onto structurally low-scoring areas (marriage, siblings) on a single
+      // cross-check. Now it downgrades only a matter that would otherwise reach
+      // Favourable/Strong; a genuinely weak area is reported as weak, not
+      // spoiled.
       promise = "spoiled";
       promiseNote =
         `${vargaDenies ? "The topic's divisional chart" : "The Jaimini reading"} undercuts this while the ` +
