@@ -28,6 +28,7 @@ import { detectRelationshipYogas } from "./marriage-yogas";
 import { detectCourageYogas } from "./sibling-yogas";
 import { detectEducationYogas } from "./education-yogas";
 import { afflictionModifiers, afflictionForArea } from "./afflictions";
+import { computeVimsopaka } from "./strengths";
 
 interface AreaDef {
   key: string;
@@ -300,6 +301,10 @@ export function computeLifePredictions(
   // mapped to the areas they temper. Detected once; applied as a bounded,
   // capped negative modifier per area below.
   const afflictions = afflictionModifiers(chart);
+  // Vimśopaka bala (BPHS Ch.7) — a planet's dignity summed across the 16
+  // divisional charts, out of 20, with classical named tiers. A descriptive
+  // strength grounding for each area's kāraka; it does not change the score.
+  const vimsopakaGrade = new Map(computeVimsopaka(chart).map((v) => [v.planet, v.grade]));
 
   return AREAS.map((area) => {
     const factors: string[] = [];
@@ -355,6 +360,15 @@ export function computeLifePredictions(
       } else {
         factors.push(
           `Significator ${karakaStrengths[0].k} is not strong (${karakaStrengths[0].s!.rupas.toFixed(1)} rūpas), so results need effort.`
+        );
+      }
+      // 2b. Vimśopaka bala — the significator's dignity across the 16 vargas
+      //     (BPHS Ch.7), a deeper strength read than Ṣaḍbala alone. Descriptive.
+      const primaryKaraka = area.karakas[0];
+      const vg = primaryKaraka && vimsopakaGrade.get(primaryKaraka);
+      if (vg) {
+        factors.push(
+          `Across the sixteen divisional charts (Vimśopaka bala), the significator ${primaryKaraka} is graded ${vg} — ${/Pūrṇa|uttama/i.test(vg) ? "its dignity holds up under divisional scrutiny, a mark of durable strength" : /Madhya/i.test(vg) ? "moderate, so its promise is real but uneven across the vargas" : "its dignity thins in the finer charts, so results need conscious effort"}.`
         );
       }
     }
