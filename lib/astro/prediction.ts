@@ -24,6 +24,7 @@ import { computePlanetStates, bhavaVitality } from "./avastha";
 import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
 import { sudarshanaVote, type SudarshanaVote } from "./sudarshana-vote";
 import { functionalNatures, type FunctionalNature } from "./functional-nature";
+import { detectRelationshipYogas } from "./marriage-yogas";
 
 interface AreaDef {
   key: string;
@@ -518,6 +519,20 @@ export function computeLifePredictions(
         factors.push(
           `Career eminence: ${lensNames.length} strong, independent testimonies of worldly success converge — ${lensNames.join("; ")}. Such convergence is uncommon and marks genuine eminence, so the reading is lifted.`
         );
+      }
+    }
+
+    // 9c. Relationship yogas — the specific classical testimonies of a good
+    //     marriage (Venus↔7th-lord union, Mālavya, Jupiter's aspect on the 7th)
+    //     that generic 7th-house analysis misses. The 7th is judged cautiously
+    //     in the base engine, so without these a genuinely well-supported
+    //     marriage cannot rise above the caution. Convergence-gated (≥2) and
+    //     bounded, so ordinary charts gain nothing. Marriage only.
+    if (area.key === "marriage") {
+      const rel = detectRelationshipYogas(chart);
+      if (rel.bonus > 0) {
+        score += rel.bonus;
+        if (rel.note) factors.push(rel.note);
       }
     }
 
