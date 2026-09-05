@@ -27,6 +27,7 @@ import { functionalNatures, type FunctionalNature } from "./functional-nature";
 import { detectRelationshipYogas } from "./marriage-yogas";
 import { detectCourageYogas } from "./sibling-yogas";
 import { detectEducationYogas } from "./education-yogas";
+import { afflictionModifiers, afflictionForArea } from "./afflictions";
 
 interface AreaDef {
   key: string;
@@ -295,6 +296,10 @@ export function computeLifePredictions(
   const deliveryOf = new Map(
     gradedYogas.map((y) => [y.name, yogaDelivery(y, bhanga, planetStates)])
   );
+  // Classical afflictions (grahaṇa, guru-chāṇḍāla, viṣa, kemadruma, pāpa-kartari)
+  // mapped to the areas they temper. Detected once; applied as a bounded,
+  // capped negative modifier per area below.
+  const afflictions = afflictionModifiers(chart);
 
   return AREAS.map((area) => {
     const factors: string[] = [];
@@ -560,6 +565,16 @@ export function computeLifePredictions(
         score += edu.bonus;
         if (edu.note) factors.push(edu.note);
       }
+    }
+
+    // 9f. Classical afflictions tempering this area (grahaṇa, guru-chāṇḍāla,
+    //     viṣa, kemadruma, pāpa-kartari). Bounded and capped so a heavily-
+    //     afflicted area is tempered, not annihilated; denial stays with the
+    //     promise gate. Applied before the daśā nudge so polarity is correct.
+    const afflict = afflictionForArea(afflictions, area.key);
+    if (afflict.delta < 0) {
+      score += afflict.delta;
+      for (const n of afflict.notes) factors.push(n);
     }
 
     // 4 (deferred). Apply the daśā timing nudge now that every other factor is
