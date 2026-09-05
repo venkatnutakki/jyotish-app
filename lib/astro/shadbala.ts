@@ -240,21 +240,27 @@ function cheshtaBala(
 // --- Drik Bala ---------------------------------------------------------------
 // Sri Pati aspect strength: sum of drishti from every other planet (benefics
 // positive, malefics negative), scaled to virupas.
-function sputaDrishti(fromLon: number, toLon: number): number {
-  const d = norm360(toLon - fromLon); // aspect angle 0..360
-  // Parashari virupa drishti as a function of angular separation.
-  let v = 0;
-  if (d >= 30 && d < 60) v = (d - 30) / 2;
-  else if (d >= 60 && d < 90) v = (d - 60) + 15;
-  else if (d >= 90 && d < 120) v = (120 - d) / 2 + 30;
-  else if (d >= 120 && d < 150) v = (d - 120) + 30;
-  else if (d >= 150 && d < 180) v = (180 - d) * 2;
-  else if (d >= 180 && d < 300) {
-    // full/partial on the far side
-    if (d < 210) v = (d - 180) * 2 / 2 + 0; // ramps
-    else v = 0;
-  }
-  return v;
+export function sputaDrishti(fromLon: number, toLon: number): number {
+  // BPHS Ch.26 (Drishti Bala), vv.6-8: the general graha-drishti value in
+  // virupas as a function of the forward angular distance d = (aspected −
+  // aspecting). Decoded verbatim from the text:
+  //   30–60°:  (d−30)/2        [0 → 15]
+  //   60–90°:  (d−60)+15       [15 → 45]
+  //   90–120°: (120−d)/2 + 30  [45 → 30]
+  //   120–150°: 150−d          [30 → 0]
+  //   150–180°: (d−150)×2      [0 → 60]  — FULL at 180°, the universal 7th aspect
+  // (An earlier implementation had the 120–180° range INVERTED, giving 0 at the
+  // 7th aspect and full at 150° — corrected here against the primary text.)
+  // Drishti is cast forward, so the far half (>180°) carries only the special
+  // 3/4/8/9/10 aspects of Mars/Jupiter/Saturn, which BPHS handles separately
+  // (vv.9-12) and are not modelled in this general term.
+  const d = norm360(toLon - fromLon);
+  if (d >= 30 && d < 60) return (d - 30) / 2;
+  if (d >= 60 && d < 90) return (d - 60) + 15;
+  if (d >= 90 && d < 120) return (120 - d) / 2 + 30;
+  if (d >= 120 && d < 150) return 150 - d;
+  if (d >= 150 && d <= 180) return (d - 150) * 2;
+  return 0;
 }
 
 function drikBala(
