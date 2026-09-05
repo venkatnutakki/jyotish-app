@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { computeChart } from "@/lib/astro/chart";
+import { functionalNatures } from "@/lib/astro/functional-nature";
+import { dashaOnset } from "@/lib/astro/dasha-onset";
+import { doubleTransit } from "@/lib/astro/double-transit";
 import { vimshottariDasha, yoginiDasha } from "@/lib/astro/dasha";
 import { computeRemedies } from "@/lib/astro/remedies";
 import { computePanchang } from "@/lib/astro/panchang";
@@ -112,6 +115,12 @@ export async function POST(req: NextRequest) {
       curses: computeCurses(chart),
       inauspiciousBirth: computeInauspiciousBirth(chart, birth, weekday),
       kotaChakra: computeKotaChakra(chart),
+      // --- deep-research additions (2026-09): functional nature, daśā onset,
+      //     double transit. See lib/astro/{functional-nature,dasha-onset,
+      //     double-transit}.ts and their specs.
+      functionalNature: functionalNatures(chart),
+      dashaOnsets: dasha.map((d) => dashaOnset(chart, d.lord)).filter(Boolean),
+      doubleTransit: doubleTransit(chart, new Date(), birth.nodeType),
     });
   } catch (err) {
     return NextResponse.json(

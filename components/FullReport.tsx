@@ -93,6 +93,9 @@ interface ReportData {
   kalachakra?: { signName: string; years: number; start: string; end: string; role?: string }[];
   specialPoints?: { name: string; abbr: string; sign: string; degree: number; note: string }[];
   planetStates?: { planet: string; combust: boolean; combustOrb?: number; war?: { with: string; won: boolean }; baladi: string; jagradadi: string; deeptadi?: string }[];
+  functionalNature?: { planet: string; nature: "yogakaraka" | "benefic" | "malefic" | "neutral"; houses: number[]; reason: string }[];
+  dashaOnsets?: ({ lord: string; emphasis: "early" | "middle" | "late"; reversed: boolean; tenor: "favourable" | "mixed" | "difficult"; note: string } | null)[];
+  doubleTransit?: { houses: number[]; jupiterSign: number; saturnSign: number; note: string };
   ishtaKashta?: { planet: string; ishta: number; kashta: number; net: number }[];
   vimsopaka?: { planet: string; shadvarga: number; shodashavarga: number; grade: string }[];
   shoola?: { signName: string; years: number; start: string }[];
@@ -492,9 +495,70 @@ export function FullReport({ data }: { data: ReportData }) {
         </div>
       </Section>
 
+      {/* Functional nature — BPHS Ch.34 */}
+      {data.functionalNature && data.functionalNature.length > 0 && (
+        <Section title="Functional Nature of the Grahas (BPHS Ch. 34)">
+          <p className="text-xs text-amber-100/50">
+            Keyed to this ascendant, not to a planet&apos;s natural nature. The
+            yogakāraka is the single most auspicious lord; a functional benefic
+            supports the houses it rules, a functional malefic tempers them —
+            the same lord, in the same dignity, reads differently by lagna.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead><tr>{["Graha", "Owns", "Functional nature", "Why"].map((h) => <th key={h} className={cellH}>{h}</th>)}</tr></thead>
+              <tbody className="text-amber-50/90">
+                {data.functionalNature.map((f) => (
+                  <tr key={f.planet}>
+                    <td className={cell + " font-medium"}>{f.planet}</td>
+                    <td className={cell + " text-center tabular-nums"}>{f.houses.join(", ") || "—"}</td>
+                    <td className={cell + (f.nature === "yogakaraka" ? " font-semibold text-amber-200" : f.nature === "malefic" ? " text-rose-300/80" : f.nature === "benefic" ? " text-emerald-300/80" : " text-amber-50/60")}>
+                      {f.nature === "yogakaraka" ? "Yogakāraka" : f.nature.charAt(0).toUpperCase() + f.nature.slice(1)}
+                    </td>
+                    <td className={cell + " text-amber-50/60"}>{f.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
       {/* Vimshottari dasha */}
       <Section title="Vimśottari Daśā">
         <DashaTree dasha={data.dasha} />
+        {data.dashaOnsets && data.dashaOnsets.some(Boolean) && (
+          <div className="mt-3 space-y-1.5 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+            <p className="text-xs font-medium text-amber-200/80">
+              When within each period its results ripen, and how it opens (BPHS Ch. 47)
+            </p>
+            <p className="text-[11px] text-amber-100/45">
+              The lord&apos;s natal drekkāṇa fixes the early/middle/late emphasis
+              (reversed if retrograde or for the nodes); its dignity and house at
+              onset colour the whole period. Coarse thirds, not dates.
+            </p>
+            <ul className="space-y-0.5 pt-1">
+              {data.dashaOnsets.filter(Boolean).slice(0, 9).map((o, i) => (
+                <li key={i} className="flex gap-1.5 text-xs text-amber-100/70">
+                  <span className="text-amber-400/60">•</span>
+                  <span>{o!.note}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {data.doubleTransit && (
+          <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-400/5 p-3">
+            <p className="text-xs font-medium text-amber-200/80">
+              Jupiter–Saturn double transit (now)
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-100/70">{data.doubleTransit.note}</p>
+            <p className="mt-1 text-[11px] text-amber-100/40">
+              A corroborating window for a matter already promised by the chart
+              and lit by the running daśā — never, by itself, a cause.
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* Yogini dasha (second system) */}

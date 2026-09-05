@@ -23,6 +23,7 @@ import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
 import { computePlanetStates, bhavaVitality } from "./avastha";
 import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
 import { sudarshanaVote, type SudarshanaVote } from "./sudarshana-vote";
+import { functionalNatures, type FunctionalNature } from "./functional-nature";
 
 interface AreaDef {
   key: string;
@@ -258,6 +259,14 @@ export function computeLifePredictions(
   // present yoga formed by a combust planet weighed the same as a strong one.
   const planetStates = computePlanetStates(chart);
   const benefics = naturalBenefics(chart);
+  // Functional benefic/malefic nature per lagna (BPHS Ch.34). Orthogonal to a
+  // planet's natural nature and to its Ṣaḍbala: the SAME lord in the SAME
+  // dignity gives a house a different quality depending on whether he is a
+  // functional benefic, a functional malefic, or the chart's yogakāraka. A
+  // bounded nudge, never an override.
+  const funcNature = new Map<string, FunctionalNature>(
+    functionalNatures(chart).map((r) => [r.planet, r.nature])
+  );
   const gradedYogas = gradeYogas(yogas, shadbala);
   const bhanga = computeYogaBhanga(chart, planetStates);
   const deliveryOf = new Map(
@@ -274,8 +283,24 @@ export function computeLifePredictions(
       const weight = idx === 0 ? 1 : 0.5;
       score += VERDICT_SCORE[b.verdict] * weight;
       if (idx === 0) {
+        // Functional nature of the bhāva lord (BPHS Ch.34): a house is better
+        // disposed when its lord is a functional benefic or the yogakāraka, and
+        // worse when its lord is a functional malefic for this lagna — even at
+        // the same dignity. Bounded so it shades, never decides.
+        const fn = funcNature.get(b.lord);
+        const fnNudge =
+          fn === "yogakaraka" ? 0.4 : fn === "benefic" ? 0.2 : fn === "malefic" ? -0.25 : 0;
+        score += fnNudge;
+        const fnPhrase =
+          fn === "yogakaraka"
+            ? `, and is the yogakāraka for this lagna — the single most auspicious lord it could have`
+            : fn === "benefic"
+              ? `, a functional benefic for this lagna`
+              : fn === "malefic"
+                ? `, a functional malefic for this lagna, which tempers the house even so`
+                : "";
         factors.push(
-          `The ${ordinal(h)} house (${b.significations.split(",")[0]}) is ${b.verdict.toLowerCase()}; its lord ${b.lord} is ${b.lordDignity} in ${SIGNS[b.lordSign]}.`
+          `The ${ordinal(h)} house (${b.significations.split(",")[0]}) is ${b.verdict.toLowerCase()}; its lord ${b.lord} is ${b.lordDignity} in ${SIGNS[b.lordSign]}${fnPhrase}.`
         );
       }
     });

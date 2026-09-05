@@ -3,6 +3,9 @@
 // via the fetch interceptor in api-shim.ts). No server, no network.
 
 import { computeChart } from "./astro/chart";
+import { functionalNatures } from "./astro/functional-nature";
+import { dashaOnset } from "./astro/dasha-onset";
+import { doubleTransit } from "./astro/double-transit";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
@@ -93,6 +96,9 @@ export function reportRoute(birth: BirthData) {
     elements: computeElements(chart, shadbala.ranking), gunas: computeGunas(chart, shadbala.ranking),
     karakaEffects: computeKarakaEffects(chart, computeJaimini(chart).karakamsha), pranapada: computePranapada(chart, birth),
     curses: computeCurses(chart), inauspiciousBirth: computeInauspiciousBirth(chart, birth, weekday), kotaChakra: computeKotaChakra(chart),
+    functionalNature: functionalNatures(chart),
+    dashaOnsets: dasha.map((d) => dashaOnset(chart, d.lord)).filter(Boolean),
+    doubleTransit: doubleTransit(chart, new Date(), birth.nodeType),
   };
 }
 
