@@ -459,6 +459,50 @@ export function computeLifePredictions(
     else if (crossVarga.verification === "weak") score -= 0.15;
     factors.push(crossVarga.note);
 
+    // 9b. Career eminence — worldly success is classically judged by CONVERGENCE
+    //     across independent lenses (Rāja/Mahāpuruṣa yogas, the Daśāṃśa D10, the
+    //     10th-lord's own Ṣaḍbala, and a Dhana/status testimony), not by the 10th
+    //     house alone. The single-lens contributions above each plateau (yogas
+    //     cap at 1.5, D10 at ±0.6), so a chart eminent across ALL of them still
+    //     read only "Favourable" — the celebrity validation showed Jobs/Monroe
+    //     undercalled. This bounded term rewards the AGREEMENT of ≥2 distinct
+    //     lenses, so ordinary charts (0–1 lens) gain nothing while genuine
+    //     convergence lifts the verdict. Career only.
+    if (area.key === "career") {
+      const strongYoga = (name: string) => (deliveryOf.get(name)?.multiplier ?? 0) >= 1;
+      // Each lens is deliberately STRICT so it marks genuine eminence, not a
+      // commonplace condition. A first cut with loose lenses (any raja yoga, the
+      // D10-lord merely angular, the lord merely passing its threshold) fired
+      // for 85% of charts and pushed career to ~48% Excellent — pure Barnum
+      // inflation. These thresholds fire for a small minority instead; the
+      // honest cost is that some eminent natives whose charts do not show it
+      // strongly go unflagged, which is preferable to inflating everyone.
+      const mahapurushaLens = yogas.some((y) => y.category === "Mahapurusha" && strongYoga(y.name));
+      const rajaCount = yogas.filter((y) => y.category === "Raja" && strongYoga(y.name)).length;
+      const rajaLens = mahapurushaLens || rajaCount >= 2; // a Mahāpuruṣa, or ≥2 rāja yogas
+      const dhanaLens = yogas.filter((y) => y.category === "Dhana" && strongYoga(y.name)).length >= 2;
+      // D10 lens: the 10th-lord must be EXALTED or in OWN sign there — not merely
+      // angular or friendly (those are too common to signal eminence).
+      const d10Lens = vargaConfirmation?.dignity === "exalted" || vargaConfirmation?.dignity === "own sign";
+      // 10th-lord lens: clearly strong, not merely passing (1.25× the threshold).
+      const tenthLordSB = shadbala.planets[lordOfPrimary as keyof ShadbalaResult["planets"]];
+      const lordLens = !!tenthLordSB && tenthLordSB.rupas >= tenthLordSB.required * 1.25;
+      const lensNames = [
+        rajaLens && "multiple/Mahāpuruṣa-grade yogas",
+        d10Lens && "the 10th-lord exalted or own in the Daśāṃśa (D10)",
+        lordLens && "the 10th-lord markedly strong in Ṣaḍbala",
+        dhanaLens && "two or more delivered Dhana yogas",
+      ].filter(Boolean) as string[];
+      // Require THREE independent strong testimonies to converge; a small bonus.
+      if (lensNames.length >= 3) {
+        const bonus = Math.min((lensNames.length - 2) * 0.4, 0.8);
+        score += bonus;
+        factors.push(
+          `Career eminence: ${lensNames.length} strong, independent testimonies of worldly success converge — ${lensNames.join("; ")}. Such convergence is uncommon and marks genuine eminence, so the reading is lifted.`
+        );
+      }
+    }
+
     // 4 (deferred). Apply the daśā timing nudge now that every other factor is
     // in, so it follows the reading's FINAL polarity rather than a mid-loop
     // partial. An active period amplifies whatever the chart promises; it never

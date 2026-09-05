@@ -326,6 +326,29 @@ describe("verdict distribution", () => {
   });
 });
 
+describe("career eminence — must stay rare, not Barnum", () => {
+  it("fires for only a small minority of charts", () => {
+    // A first cut with loose lenses fired for 85% of charts and pushed career to
+    // ~48% Excellent. The eminence bonus is only honest if genuine convergence
+    // is uncommon; guard it so it can never regress into a blanket booster.
+    let fired = 0, total = 0;
+    for (const b of SUBJECTS) {
+      const chart = computeChart(b);
+      const dasha = vimshottariDasha(chart);
+      const shadbala = computeShadbala(chart, b);
+      const yogas = computeYogas(chart);
+      const bhavas = analyzeBhavas(chart, shadbala);
+      const preds = computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, b);
+      const career = preds.find((p) => p.key === "career")!;
+      total++;
+      if (career.factors.some((f) => /Career eminence/.test(f))) fired++;
+    }
+    const rate = fired / total;
+    console.log(`  career eminence fired for ${(rate * 100).toFixed(1)}% of ${total} charts`);
+    expect(rate, "career eminence must fire for a small minority, not most charts").toBeLessThan(0.2);
+  });
+});
+
 describe("confidence distribution — the three-witness grounding", () => {
   it("does not inflate confidence to 'Very High' for everyone", () => {
     // Phaladeepika 16.12's three-witness concurrence was folded into confidence
