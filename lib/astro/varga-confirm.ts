@@ -85,3 +85,59 @@ export function confirmInVarga(chart: Chart, areaKey: string, lord: PlanetName):
 
   return { varga: { code: def.code, name: def.name }, lord, dignity, inKendra, signal, note };
 }
+
+export interface VargaLagnaSignal {
+  varga: { code: string; name: string };
+  lagnaSign: number;
+  lord: PlanetName;
+  signal: -1 | 0 | 1;
+  note: string;
+}
+
+/**
+ * Read the varga's OWN lagna — the primary reading point of any divisional
+ * chart, and one `confirmInVarga` above does NOT look at (it reads only the
+ * D1-lord's dignity inside the varga). Classically the strength of the
+ * Navāṃśa lagna and its lord IS the reading of marriage/spouse quality; the
+ * D24 lagna, of learning; and so on. This is a distinct, independent lens, and
+ * it is BIDIRECTIONAL — a strong varga lagna lifts the reading, a weak one
+ * tempers it — so it sharpens discrimination without a net positive bias.
+ */
+export function vargaLagnaSignal(chart: Chart, areaKey: string): VargaLagnaSignal | null {
+  const def = AREA_VARGA[areaKey];
+  if (!def) return null;
+
+  const v = computeVarga(chart, def.n);
+  const lagna = v.ascendantSignIndex;
+  const lord = SIGN_LORDS[lagna];
+  const lp = v.planets.find((p) => p.planet === lord);
+  if (!lp) return null;
+
+  let pts = 0;
+  // Dignity of the varga-lagna lord within the varga.
+  if (EXALT[lord] === lp.signIndex) pts += 2;
+  else if (OWN[lord]?.includes(lp.signIndex)) pts += 1;
+  else if (DEBIL[lord] === lp.signIndex) pts -= 2;
+  // Its placement from the varga lagna.
+  const house = ((lp.signIndex - lagna + 12) % 12) + 1;
+  if ([1, 4, 5, 7, 9, 10].includes(house)) pts += 1; // kendra / trikoṇa
+  else if ([6, 8, 12].includes(house)) pts -= 1; // dusthāna
+  // Natural benefics / malefics tenanting the varga lagna itself.
+  const BEN = new Set<string>(["Jupiter", "Venus"]);
+  const MAL = new Set<string>(["Sun", "Mars", "Saturn", "Rahu", "Ketu"]);
+  for (const p of v.planets) {
+    if (p.signIndex !== lagna || p.planet === lord) continue;
+    if (BEN.has(p.planet)) pts += 1;
+    else if (MAL.has(p.planet)) pts -= 1;
+  }
+
+  const signal: -1 | 0 | 1 = pts >= 2 ? 1 : pts <= -2 ? -1 : 0;
+  const note =
+    signal === 1
+      ? `${def.code} (${def.name}) is strong at its root: the ${def.name} lagna's lord ${lord} is well-dignified and placed — the divisional chart itself supports this, not only the D1 promise.`
+      : signal === -1
+        ? `${def.code} (${def.name}) is weak at its root: the ${def.name} lagna's lord ${lord} is poorly dignified or placed, so the divisional chart tempers the D1 reading here.`
+        : `${def.code} (${def.name}) lagna is mixed — neither clearly strong nor weak at its root.`;
+
+  return { varga: { code: def.code, name: def.name }, lagnaSign: lagna, lord, signal, note };
+}

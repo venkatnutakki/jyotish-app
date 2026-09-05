@@ -16,7 +16,7 @@ import type { Yoga } from "./yogas";
 import type { DashaPeriod } from "./dasha";
 import { activation, concurrence } from "./dasha-depth";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./classical-evidence";
-import { confirmInVarga, type VargaConfirmation } from "./varga-confirm";
+import { confirmInVarga, vargaLagnaSignal, type VargaConfirmation } from "./varga-confirm";
 import { computeGradedSignificators, classifyCusp, type CuspVerdict } from "./kp-prediction";
 import { confirmInJaimini, type JaiminiConfirmation } from "./jaimini-confirm";
 import { crossVargaVerify, type CrossVargaCheck } from "./varga-cross";
@@ -409,6 +409,17 @@ export function computeLifePredictions(
     if (vargaConfirmation) {
       score += vargaConfirmation.signal * 0.6;
       factors.push(vargaConfirmation.note);
+    }
+    // 6b. The varga's OWN lagna — a distinct, bidirectional lens (the divisional
+    //     chart read from its own ascendant, not via the D1-lord). Classically
+    //     the primary reading point of a varga; it lifts a topic whose varga is
+    //     strong at root and tempers one whose varga is weak, sharpening
+    //     discrimination in the topical areas (marriage/D9, siblings/D3, …)
+    //     without a net positive bias.
+    const vargaLagna = vargaLagnaSignal(chart, area.key);
+    if (vargaLagna && vargaLagna.signal !== 0) {
+      score += vargaLagna.signal * 0.4;
+      factors.push(vargaLagna.note);
     }
 
     // 7. KP cuspal sub-lord — a second, independent confirmation lens. KP holds
