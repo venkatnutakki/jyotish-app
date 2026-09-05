@@ -96,6 +96,7 @@ interface ReportData {
   functionalNature?: { planet: string; nature: "yogakaraka" | "benefic" | "malefic" | "neutral"; houses: number[]; reason: string }[];
   dashaOnsets?: ({ lord: string; emphasis: "early" | "middle" | "late"; reversed: boolean; tenor: "favourable" | "mixed" | "difficult"; note: string } | null)[];
   doubleTransit?: { houses: number[]; jupiterSign: number; saturnSign: number; note: string };
+  mindTemperament?: { moonSign: string; dispositor: string; brightening: boolean; brightness: number; company: string; companyPlanets: string[]; gunaLeaning: string; contributors: { planet: string; guna: string; weight: number }[]; note: string };
   ishtaKashta?: { planet: string; ishta: number; kashta: number; net: number }[];
   vimsopaka?: { planet: string; shadvarga: number; shodashavarga: number; grade: string }[];
   shoola?: { signName: string; years: number; start: string }[];
@@ -494,6 +495,35 @@ export function FullReport({ data }: { data: ReportData }) {
           </table>
         </div>
       </Section>
+
+      {/* Mind & Temperament — Phaladeepika XV-15 + Saravali Ch.4 */}
+      {data.mindTemperament && (
+        <Section title="Mind & Temperament (from the Moon)">
+          <p className="text-xs text-amber-100/50">
+            Phaladeepika XV-15 reads character from the Moon; Sāravalī Ch. 4 gives
+            each graha a guṇa and says whichever dominates the mind-significators
+            imparts its nature. Dominance is measured by Ṣaḍbala. This describes
+            the guṇa <em>orientation</em> — it does not assign fixed personality
+            labels, which the classics do not support.
+          </p>
+          <p className="text-sm leading-relaxed text-amber-50/90">{data.mindTemperament.note}</p>
+          <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+            <span className="rounded-full border border-amber-300/30 bg-amber-400/5 px-2 py-0.5 text-amber-100/80">
+              Leaning: <strong className="text-amber-200">{data.mindTemperament.gunaLeaning}</strong>
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
+              Moon in {data.mindTemperament.moonSign} · disp. {data.mindTemperament.dispositor}
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
+              {data.mindTemperament.brightening ? "Waxing" : "Waning"} ({data.mindTemperament.brightness.toFixed(2)})
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
+              Company: {data.mindTemperament.company}
+              {data.mindTemperament.companyPlanets.length ? ` (${data.mindTemperament.companyPlanets.join(", ")})` : ""}
+            </span>
+          </div>
+        </Section>
+      )}
 
       {/* Functional nature — BPHS Ch.34 */}
       {data.functionalNature && data.functionalNature.length > 0 && (

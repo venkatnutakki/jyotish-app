@@ -6,6 +6,7 @@ import { computeChart } from "./astro/chart";
 import { functionalNatures } from "./astro/functional-nature";
 import { dashaOnset } from "./astro/dasha-onset";
 import { doubleTransit } from "./astro/double-transit";
+import { mindTemperament } from "./astro/mind-temperament";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
@@ -99,6 +100,7 @@ export function reportRoute(birth: BirthData) {
     functionalNature: functionalNatures(chart),
     dashaOnsets: dasha.map((d) => dashaOnset(chart, d.lord)).filter(Boolean),
     doubleTransit: doubleTransit(chart, new Date(), birth.nodeType),
+    mindTemperament: mindTemperament(chart, shadbala),
   };
 }
 

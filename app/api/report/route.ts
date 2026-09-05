@@ -3,6 +3,7 @@ import { computeChart } from "@/lib/astro/chart";
 import { functionalNatures } from "@/lib/astro/functional-nature";
 import { dashaOnset } from "@/lib/astro/dasha-onset";
 import { doubleTransit } from "@/lib/astro/double-transit";
+import { mindTemperament } from "@/lib/astro/mind-temperament";
 import { vimshottariDasha, yoginiDasha } from "@/lib/astro/dasha";
 import { computeRemedies } from "@/lib/astro/remedies";
 import { computePanchang } from "@/lib/astro/panchang";
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
       functionalNature: functionalNatures(chart),
       dashaOnsets: dasha.map((d) => dashaOnset(chart, d.lord)).filter(Boolean),
       doubleTransit: doubleTransit(chart, new Date(), birth.nodeType),
+      mindTemperament: mindTemperament(chart, shadbala),
     });
   } catch (err) {
     return NextResponse.json(
