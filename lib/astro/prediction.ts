@@ -25,6 +25,7 @@ import { gradeYogas, computeYogaBhanga, yogaDelivery } from "./yoga-strength";
 import { sudarshanaVote, type SudarshanaVote } from "./sudarshana-vote";
 import { functionalNatures, type FunctionalNature } from "./functional-nature";
 import { detectRelationshipYogas } from "./marriage-yogas";
+import { detectCourageYogas } from "./sibling-yogas";
 
 interface AreaDef {
   key: string;
@@ -533,6 +534,18 @@ export function computeLifePredictions(
       if (rel.bonus > 0) {
         score += rel.bonus;
         if (rel.note) factors.push(rel.note);
+      }
+    }
+
+    // 9d. Courage/co-born (parākrama) yogas — the same idea for the 3rd house,
+    //     which the base engine reads flatly (clusters at Mixed). Convergence-
+    //     gated, bounded, independent of the 3rd verdict and Mars kāraka.
+    //     Siblings only.
+    if (area.key === "siblings") {
+      const cour = detectCourageYogas(chart);
+      if (cour.bonus > 0) {
+        score += cour.bonus;
+        if (cour.note) factors.push(cour.note);
       }
     }
 
