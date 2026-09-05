@@ -26,6 +26,7 @@ import { sudarshanaVote, type SudarshanaVote } from "./sudarshana-vote";
 import { functionalNatures, type FunctionalNature } from "./functional-nature";
 import { detectRelationshipYogas } from "./marriage-yogas";
 import { detectCourageYogas } from "./sibling-yogas";
+import { detectEducationYogas } from "./education-yogas";
 
 interface AreaDef {
   key: string;
@@ -546,6 +547,18 @@ export function computeLifePredictions(
       if (cour.bonus > 0) {
         score += cour.bonus;
         if (cour.note) factors.push(cour.note);
+      }
+    }
+
+    // 9e. Learning (vidyā) yogas — credits the already-detected Sarasvatī /
+    //     Budha-Āditya / Kalānidhi yogas (which the empty education yogaCategories
+    //     never reached) plus Jupiter-on-5th and Budha-Guru. Convergence-gated,
+    //     bounded, education only.
+    if (area.key === "education") {
+      const edu = detectEducationYogas(chart, yogas, (name) => (deliveryOf.get(name)?.multiplier ?? 1) >= 1);
+      if (edu.bonus > 0) {
+        score += edu.bonus;
+        if (edu.note) factors.push(edu.note);
       }
     }
 
