@@ -101,7 +101,7 @@ interface ReportData {
     company: string; companyPlanets: string[]; gunaLeaning: string;
     contributors: { planet: string; guna: string; weight: number }[];
     moonDisposition: string;
-    janmaNakshatra?: { name: string; archetype: string };
+    janmaNakshatra?: { name: string; gana: string; archetype: string };
     moonCondition: { waning: boolean; steadiedByBenefic: boolean; strongPhase: boolean; note: string };
     lagna: { basis: string; decider: string; guna: string | null; occupants: string[]; injectors: string[]; note: string };
     intellect: { dignity: string; strong: boolean; note: string };

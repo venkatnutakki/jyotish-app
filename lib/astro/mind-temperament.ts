@@ -33,7 +33,7 @@
 import { naturalBenefics } from "./bhava";
 import type { ShadbalaResult } from "./shadbala";
 import { SIGNS, SIGN_LORDS, NAKSHATRAS, type PlanetName } from "./constants";
-import { NAK_ATTR } from "./nakshatra-attributes";
+import { nakshatraProfile } from "./nakshatra-attributes";
 import type { Chart, PlanetPosition } from "./types";
 
 export type Guna = "Sāttvika" | "Rājasika" | "Tāmasika";
@@ -102,8 +102,8 @@ export interface MindTemperament {
   contributors: { planet: PlanetName; guna: Guna; weight: number }[];
   /** Sāravalī Ch.23 Moon-sign disposition core. */
   moonDisposition: string;
-  /** The janma nakṣatra — the Moon's birth star — and its temperament archetype. */
-  janmaNakshatra: { name: string; archetype: string };
+  /** The janma nakṣatra — the Moon's birth star — its gaṇa and temperament archetype. */
+  janmaNakshatra: { name: string; gana: string; archetype: string };
   /** BPHS Ch.3 — the Moon's mental-stability condition. */
   moonCondition: {
     waning: boolean;
@@ -265,12 +265,13 @@ export function mindTemperament(chart: Chart, shadbala: ShadbalaResult): MindTem
   // point of Vedic character reading (the Moon-sign gives 12 types; the birth
   // star resolves 27). Descriptive enrichment; it does not alter the score.
   const nakIdx = moon.nakshatraIndex;
-  const janmaNakshatra = { name: NAKSHATRAS[nakIdx].name, archetype: NAK_ATTR[nakIdx]?.archetype ?? "" };
+  const jn = nakshatraProfile(nakIdx);
+  const janmaNakshatra = { name: NAKSHATRAS[nakIdx].name, gana: jn.gana, archetype: jn.archetype };
 
   const note =
     `Emotionally (from the Moon, Phaladeepika XV-15): the Moon is in ${SIGNS[moon.signIndex]} — ${MOON_SIGN_DISPOSITION[moon.signIndex]} — ` +
     `${brightening ? "waxing" : "waning"}, dispositor ${dispositor}; ${companyPhrase}. ` +
-    `Birth star ${janmaNakshatra.name}: ${janmaNakshatra.archetype} ` +
+    `Birth star ${janmaNakshatra.name} (${janmaNakshatra.gana} gaṇa): ${janmaNakshatra.archetype} ` +
     `The Moon's own nature is Sāttvika, and the grahas that dominate it here — ${contribList.map((c) => c.planet).join(", ") || "none classified"} — colour that baseline ${gunaLeaning}: ${GUNA_ORIENTATION[gunaLeaning]}. ` +
     `Outwardly (from the Lagna): ${lagnaNote}`;
 
