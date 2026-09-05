@@ -96,7 +96,17 @@ interface ReportData {
   functionalNature?: { planet: string; nature: "yogakaraka" | "benefic" | "malefic" | "neutral"; houses: number[]; reason: string }[];
   dashaOnsets?: ({ lord: string; emphasis: "early" | "middle" | "late"; reversed: boolean; tenor: "favourable" | "mixed" | "difficult"; note: string } | null)[];
   doubleTransit?: { houses: number[]; jupiterSign: number; saturnSign: number; note: string };
-  mindTemperament?: { moonSign: string; dispositor: string; brightening: boolean; brightness: number; company: string; companyPlanets: string[]; gunaLeaning: string; contributors: { planet: string; guna: string; weight: number }[]; note: string };
+  mindTemperament?: {
+    moonSign: string; dispositor: string; brightening: boolean; brightness: number;
+    company: string; companyPlanets: string[]; gunaLeaning: string;
+    contributors: { planet: string; guna: string; weight: number }[];
+    moonDisposition: string;
+    moonCondition: { waning: boolean; steadiedByBenefic: boolean; strongPhase: boolean; note: string };
+    lagna: { basis: string; decider: string; guna: string | null; occupants: string[]; injectors: string[]; note: string };
+    intellect: { dignity: string; strong: boolean; note: string };
+    affliction: { papakartariMoon: boolean; note: string } | null;
+    note: string;
+  };
   ishtaKashta?: { planet: string; ishta: number; kashta: number; net: number }[];
   vimsopaka?: { planet: string; shadvarga: number; shodashavarga: number; grade: string }[];
   shoola?: { signName: string; years: number; start: string }[];
@@ -509,7 +519,7 @@ export function FullReport({ data }: { data: ReportData }) {
           <p className="text-sm leading-relaxed text-amber-50/90">{data.mindTemperament.note}</p>
           <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
             <span className="rounded-full border border-amber-300/30 bg-amber-400/5 px-2 py-0.5 text-amber-100/80">
-              Leaning: <strong className="text-amber-200">{data.mindTemperament.gunaLeaning}</strong>
+              Mind leaning: <strong className="text-amber-200">{data.mindTemperament.gunaLeaning}</strong>
             </span>
             <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
               Moon in {data.mindTemperament.moonSign} · disp. {data.mindTemperament.dispositor}
@@ -521,6 +531,26 @@ export function FullReport({ data }: { data: ReportData }) {
               Company: {data.mindTemperament.company}
               {data.mindTemperament.companyPlanets.length ? ` (${data.mindTemperament.companyPlanets.join(", ")})` : ""}
             </span>
+          </div>
+          <div className="grid gap-2 pt-1 sm:grid-cols-2">
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-xs leading-relaxed text-amber-100/70">
+              <span className="font-medium text-amber-200/80">Outward temperament (Lagna)</span>
+              <p className="mt-0.5">{data.mindTemperament.lagna.note}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-xs leading-relaxed text-amber-100/70">
+              <span className="font-medium text-amber-200/80">Steadiness of mind (Moon)</span>
+              <p className="mt-0.5">{data.mindTemperament.moonCondition.note}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-xs leading-relaxed text-amber-100/70">
+              <span className="font-medium text-amber-200/80">Intellect (Mercury)</span>
+              <p className="mt-0.5">{data.mindTemperament.intellect.note}</p>
+            </div>
+            {data.mindTemperament.affliction && (
+              <div className="rounded-lg border border-rose-300/20 bg-rose-400/5 p-2.5 text-xs leading-relaxed text-rose-100/70">
+                <span className="font-medium text-rose-200/80">A note of strain</span>
+                <p className="mt-0.5">{data.mindTemperament.affliction.note}</p>
+              </div>
+            )}
           </div>
         </Section>
       )}
