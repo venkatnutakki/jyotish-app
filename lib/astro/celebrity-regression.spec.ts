@@ -53,6 +53,20 @@ describe("celebrity regression — stability of the full pipeline + this session
         // "notPromised" (validated fix — a Harvard BA and a master's were being
         // wrongly denied). It can be delayed/spoiled/Challenging, but not denied.
         if (p.key === "education") expect(p.promise).not.toBe("notPromised");
+        // Outright denial requires a FULL three-witness concurrence (KP + varga +
+        // Jaimini all deny). Validated fix — firing on KP + only one witness wrongly
+        // denied a married man's 7th and a mother's 5th. Lock it: any notPromised
+        // must have all three denial witnesses present.
+        if (p.promise === "notPromised") {
+          const pp = p as unknown as {
+            kpConfirmation?: { signal?: number } | null;
+            vargaConfirmation?: { signal?: number } | null;
+            jaiminiConfirmation?: { signal?: number } | null;
+          };
+          expect(pp.kpConfirmation?.signal).toBe(-1);
+          expect(pp.vargaConfirmation?.signal).toBe(-1);
+          expect(pp.jaiminiConfirmation?.signal).toBe(-1);
+        }
       }
       // annotateYogas (this session): every yoga has effective + cautionNote;
       // a cancelled yoga MUST carry a caution note (the fix's contract).

@@ -702,39 +702,34 @@ export function computeLifePredictions(
     // softened to an obstruction (delayed, capped Mixed), never notPromised.
     const educationSpectrum = area.key === "education";
 
-    if (kpDenies && corroboratingDenials >= 1 && !gateKarakaStrong && !educationSpectrum) {
+    if (kpDenies && corroboratingDenials >= 2 && !educationSpectrum) {
+      // Outright denial is the strongest claim the engine makes, so it requires a
+      // FULL three-witness concurrence — KP's cuspal sub-lord AND the topic's varga
+      // AND the Jaimini reading all denying. Validation showed that firing on only
+      // KP + ONE of the two badly over-called "not promised" (92% of corpus denials
+      // were merely 2-of-3, and it wrongly denied a married man's 7th, a mother's
+      // 5th, and graduates' education). Two-of-three is obstruction, not closure —
+      // that falls through to the next branch.
       promise = "notPromised";
       promiseNote =
-        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} denies this in KP, ` +
-        `and ${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} independently agrees. ` +
-        `Read this as a matter the chart does not clearly grant, rather than one that merely goes badly — ` +
-        `the two are different, and effort spent here is better redirected.`;
-    } else if (kpDenies && corroboratingDenials >= 1 && gateKarakaStrong) {
-      // KP and a second lens both deny, but the root kāraka is strong — a genuine
-      // classical witness that the matter IS available. Downgrade the denial to
-      // obstruction rather than closure: it comes, but late or after real effort.
-      // This is a HEAVILY-contested matter kept open only by the kāraka, so it is
-      // capped at Mixed below (never a positive verdict) — otherwise uncapping the
-      // "delayed" score would let a double-denial read Favourable+, which
-      // validation caught (a documented college drop-out reading well on education).
+        `All three independent methods agree the chart does not clearly grant this — the ` +
+        `${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} denies it in KP, ` +
+        `its divisional chart denies it, and the Jaimini reading agrees. Read this as a matter the chart ` +
+        `withholds, different from one that merely goes badly — so effort is better redirected.`;
+    } else if (kpDenies && corroboratingDenials >= 1) {
+      // KP + exactly ONE corroborating method (>=2 was caught above), or education
+      // (never denied outright): heavily contested but not a unanimous denial —
+      // obstruction, not closure. Capped at Mixed below (never a positive verdict),
+      // so uncapping "delayed" can't let a two-of-three denial read Favourable+.
       promise = "delayed";
       softenedDenial = true;
-      promiseNote =
-        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ` +
-        `${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} both withhold this in KP, ` +
-        `but its kāraka ${gateKaraka} is strong — a real classical witness that the matter is available. ` +
-        `Read it as genuinely obstructed (it arrives late, or only after real effort), not as denied.`;
-    } else if (kpDenies && corroboratingDenials >= 1 && educationSpectrum) {
-      // Education: KP and its varga both obstruct formal learning, but education is
-      // not a matter that is granted-or-not — read as higher/formal study genuinely
-      // obstructed (late, or through real struggle), capped at Mixed, never denied.
-      promise = "delayed";
-      softenedDenial = true;
-      promiseNote =
-        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ` +
-        `${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} both obstruct formal learning in KP — ` +
-        `but education is a spectrum, not a matter that is granted-or-not. Read this as higher or formal study ` +
-        `genuinely obstructed (it comes late, or through real struggle), rather than denied.`;
+      const secondLens = vargaDenies ? "the topic's divisional chart" : "the Jaimini reading";
+      const thirdLens = vargaDenies ? "the Jaimini reading" : "the topic's divisional chart";
+      promiseNote = educationSpectrum
+        ? `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ${secondLens} both obstruct formal learning in KP — but education is a spectrum, not a matter that is granted-or-not. Read this as higher or formal study genuinely obstructed (it comes late, or through real struggle), rather than denied.`
+        : gateKarakaStrong
+          ? `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ${secondLens} withhold this in KP, but its kāraka ${gateKaraka} is strong — a real classical witness that the matter is available. Read it as genuinely obstructed (it arrives late, or only after real effort), not as denied.`
+          : `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ${secondLens} withhold this in KP, but ${thirdLens} does not — two of three methods, not a unanimous denial. Read it as genuinely obstructed (late, or after real effort), not as closed.`;
     } else if (kpDenies) {
       promise = "delayed";
       promiseNote =
