@@ -102,6 +102,11 @@ describe("celebrity regression — stability of the full pipeline + this session
         expect(["Excellent", "Strong"]).toContain(v.get("wealth"));    // immense wealth
         expect(["Excellent", "Strong"]).toContain(v.get("career"));
       }
+      if (c.name === "Oprah Winfrey") {
+        // Documented billionaire — wealth must never read low. (Wealth-sweep
+        // validation: 0/5 documented-wealthy read low; lock the strongest here.)
+        expect(["Excellent", "Strong", "Favourable"]).toContain(v.get("wealth"));
+      }
     });
   }
 });
