@@ -13,6 +13,7 @@ import { computeShadbala } from "@/lib/astro/shadbala";
 import { computeJaimini } from "@/lib/astro/jaimini";
 import { computeKp, computeKpFull } from "@/lib/astro/kp";
 import { computeYogas } from "@/lib/astro/yogas";
+import { annotateYogas } from "@/lib/astro/yoga-strength";
 import { analyzeBhavas } from "@/lib/astro/bhava";
 import { computeLifePredictions } from "@/lib/astro/prediction";
 import { computeForecast } from "@/lib/astro/forecast";
@@ -72,7 +73,9 @@ export async function POST(req: NextRequest) {
       jaimini: computeJaimini(chart),
       kp: computeKp(chart),
       kpFull: computeKpFull(chart, birth),
-      yogas,
+      // Annotated so a cancelled/marred yoga (e.g. Rāja yoga with a combust
+      // participant) shows its caveat in the list, matching the predictions.
+      yogas: annotateYogas(yogas, shadbala, chart),
       bhavas,
       predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
       // Which of those verdicts survive the birth time being a few minutes off.

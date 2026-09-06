@@ -16,6 +16,7 @@ import { computeShadbala } from "./astro/shadbala";
 import { computeJaimini } from "./astro/jaimini";
 import { computeKp, computeKpFull } from "./astro/kp";
 import { computeYogas } from "./astro/yogas";
+import { annotateYogas } from "./astro/yoga-strength";
 import { analyzeBhavas } from "./astro/bhava";
 import { computeLifePredictions, formatPredictionDossier } from "./astro/prediction";
 import { computeForecast } from "./astro/forecast";
@@ -82,7 +83,7 @@ export function reportRoute(birth: BirthData) {
     chart, panchang: computePanchang(chart, weekday), dasha, ashtakavarga, shadbala,
     grahaRasmi: computeGrahaRasmi(chart), samudayaAV: computeSamudayaAV(chart, ashtakavarga), avLongevity: computeAvLongevity(ashtakavarga),
     jaimini: computeJaimini(chart), kp: computeKp(chart), kpFull: computeKpFull(chart, birth),
-    yogas, bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
+    yogas: annotateYogas(yogas, shadbala, chart), bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),
     forecast: computeForecast(chart, birth, dasha, shadbala, Date.now(), 12),
     yogini: yoginiDasha(chart), upagraha: computeUpagraha(chart, birth),
     remedies: computeRemedies(chart, shadbala, dasha), interpretation: interpretChart(chart, dasha),

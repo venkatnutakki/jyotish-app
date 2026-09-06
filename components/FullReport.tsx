@@ -31,7 +31,7 @@ interface ReportData {
     cusps: { house: number; longitude: number; subLord: string }[];
     significators: { planet: string; occupies: number; significates: number[] }[];
   };
-  yogas: { name: string; category: string; description: string }[];
+  yogas: { name: string; category: string; description: string; cautionNote?: string | null; effective?: boolean }[];
   bhavas: {
     house: number;
     significations: string;
@@ -497,9 +497,12 @@ export function FullReport({ data }: { data: ReportData }) {
         <ul className="space-y-1">
           {data.yogas.map((y) => (
             <li key={y.name}>
-              <span className="font-medium text-amber-100">{y.name}</span>{" "}
+              <span className={"font-medium " + (y.effective === false ? "text-amber-100/50 line-through decoration-amber-100/30" : "text-amber-100")}>{y.name}</span>{" "}
               <span className="text-amber-100/40">({y.category})</span>
               <span className="text-amber-50/70"> — {y.description}</span>
+              {y.cautionNote && (
+                <span className="text-rose-300/75"> ⚠ {y.cautionNote}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -540,7 +543,7 @@ export function FullReport({ data }: { data: ReportData }) {
           <p className="text-sm leading-relaxed text-amber-50/90">{data.mindTemperament.note}</p>
           <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
             <span className="rounded-full border border-amber-300/30 bg-amber-400/5 px-2 py-0.5 text-amber-100/80">
-              Mind leaning: <strong className="text-amber-200">{data.mindTemperament.gunaLeaning}</strong>
+              Mind&apos;s guṇa (from the Moon): <strong className="text-amber-200">{data.mindTemperament.gunaLeaning}</strong>
             </span>
             <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-amber-100/70">
               Moon in {data.mindTemperament.moonSign} · disp. {data.mindTemperament.dispositor}
@@ -797,7 +800,15 @@ export function FullReport({ data }: { data: ReportData }) {
       {(data.elements || data.gunas) && (
         <Section title="Pañca-tattva & Triguṇa — Temperament">
           {data.elements && <p className="text-sm text-amber-50/85"><b>Element:</b> {data.elements.dominant} (via {data.elements.ruler}) — {data.elements.trait}</p>}
-          {data.gunas && <p className="text-sm text-amber-50/85"><b>Guṇa:</b> {data.gunas.dominant} — {data.gunas.trait}</p>}
+          {data.gunas && <p className="text-sm text-amber-50/85"><b>Overall guṇa (whole chart):</b> {data.gunas.dominant} — {data.gunas.trait}</p>}
+          {data.gunas && data.mindTemperament && data.mindTemperament.gunaLeaning !== data.gunas.dominant && (
+            <p className="text-xs text-amber-100/55">
+              This is the <b>whole-chart</b> guṇa (all grahas, BPHS 76-77). It can differ
+              from the <b>mind&apos;s</b> guṇa above ({data.mindTemperament.gunaLeaning}, read from the
+              Moon and its dominators) — they describe different things: overall nature versus how
+              the mind itself works.
+            </p>
+          )}
         </Section>
       )}
 

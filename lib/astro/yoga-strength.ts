@@ -10,7 +10,7 @@ import { SIGN_LORDS, type PlanetName } from "./constants";
 import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { Chart } from "./types";
-import type { PlanetState } from "./avastha";
+import { computePlanetStates, type PlanetState } from "./avastha";
 
 export type YogaStrengthTier = "strong" | "moderate" | "weak";
 
@@ -183,4 +183,33 @@ export function yogaDelivery(
   let mult = tier === "strong" ? 1 : tier === "moderate" ? 0.5 : tier === "weak" ? 0.25 : 1;
   if (bhanga.level === "marred") mult = Math.min(mult, 0.5);
   return { multiplier: mult, note: bhanga.level === "marred" ? bhanga.reason : null };
+}
+
+export interface AnnotatedYoga extends GradedYoga {
+  /** Caveat when the yoga is cancelled (bhaṅga) or marred — the SAME classical
+   *  note the prediction sections use (e.g. "Mercury is combust, so this yoga is
+   *  classically cancelled"). Null when the yoga delivers cleanly. */
+  cautionNote: string | null;
+  /** false when a bhaṅga cancels the yoga outright (delivery multiplier 0). */
+  effective: boolean;
+}
+
+/**
+ * Grade the yogas AND attach each one's delivery caveat, so a display list can
+ * show a cancelled/marred yoga honestly instead of presenting it as if it were
+ * in full force. This reuses the exact bhaṅga + combustion logic the scored
+ * predictions use — a Rāja yoga cancelled by a combust participant reads the
+ * same in the yoga list as it does in the career reading.
+ */
+export function annotateYogas(
+  yogas: Yoga[],
+  shadbala: ShadbalaResult,
+  chart: Chart
+): AnnotatedYoga[] {
+  const states = computePlanetStates(chart);
+  const bhanga = computeYogaBhanga(chart, states);
+  return gradeYogas(yogas, shadbala).map((y) => {
+    const d = yogaDelivery(y, bhanga, states);
+    return { ...y, cautionNote: d.note, effective: d.multiplier > 0 };
+  });
 }
