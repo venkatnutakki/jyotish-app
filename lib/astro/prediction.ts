@@ -671,7 +671,10 @@ export function computeLifePredictions(
     // telling somebody a matter is closed to them.
     let promise: PromiseStatus = "promised";
     let promiseNote = "";
-    let karakaRescuedDenial = false;
+    // A would-be denial softened to an obstruction (kāraka-rescued, or education
+    // which is never deniable outright): available but heavily contested, so
+    // capped at Mixed below — never allowed to read as a positive verdict.
+    let softenedDenial = false;
 
     const kpDenies = kpConfirmation?.signal === -1;
     const vargaDenies = vargaConfirmation?.signal === -1;
@@ -689,15 +692,24 @@ export function computeLifePredictions(
     const gateKaraka = BHAVA_KARAKA[area.houses[0] - 1];
     const gateKarakaSB = shadbala.planets[gateKaraka as keyof ShadbalaResult["planets"]];
     const gateKarakaStrong = !!gateKarakaSB && gateKarakaSB.rupas >= gateKarakaSB.required;
+    // Education is a SPECTRUM, not a granted-or-not matter: everyone learns
+    // something, so "not promised" (education denied outright) is the wrong frame —
+    // a weak education chart means formal/higher study is obstructed or limited,
+    // not absent. Higher learning is the 9th's domain, and the app judges the
+    // promise only from the 4th cusp (schooling), so a 4th-cusp denial cannot deny
+    // a degree. Validation across known degree-holders (a Harvard BA and a master's
+    // both read "not promised") confirmed the over-call. Education is therefore
+    // softened to an obstruction (delayed, capped Mixed), never notPromised.
+    const educationSpectrum = area.key === "education";
 
-    if (kpDenies && corroboratingDenials >= 1 && !gateKarakaStrong) {
+    if (kpDenies && corroboratingDenials >= 1 && !gateKarakaStrong && !educationSpectrum) {
       promise = "notPromised";
       promiseNote =
         `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} denies this in KP, ` +
         `and ${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} independently agrees. ` +
         `Read this as a matter the chart does not clearly grant, rather than one that merely goes badly — ` +
         `the two are different, and effort spent here is better redirected.`;
-    } else if (kpDenies && corroboratingDenials >= 1) {
+    } else if (kpDenies && corroboratingDenials >= 1 && gateKarakaStrong) {
       // KP and a second lens both deny, but the root kāraka is strong — a genuine
       // classical witness that the matter IS available. Downgrade the denial to
       // obstruction rather than closure: it comes, but late or after real effort.
@@ -706,12 +718,23 @@ export function computeLifePredictions(
       // "delayed" score would let a double-denial read Favourable+, which
       // validation caught (a documented college drop-out reading well on education).
       promise = "delayed";
-      karakaRescuedDenial = true;
+      softenedDenial = true;
       promiseNote =
         `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ` +
         `${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} both withhold this in KP, ` +
         `but its kāraka ${gateKaraka} is strong — a real classical witness that the matter is available. ` +
         `Read it as genuinely obstructed (it arrives late, or only after real effort), not as denied.`;
+    } else if (kpDenies && corroboratingDenials >= 1 && educationSpectrum) {
+      // Education: KP and its varga both obstruct formal learning, but education is
+      // not a matter that is granted-or-not — read as higher/formal study genuinely
+      // obstructed (late, or through real struggle), capped at Mixed, never denied.
+      promise = "delayed";
+      softenedDenial = true;
+      promiseNote =
+        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ` +
+        `${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} both obstruct formal learning in KP — ` +
+        `but education is a spectrum, not a matter that is granted-or-not. Read this as higher or formal study ` +
+        `genuinely obstructed (it comes late, or through real struggle), rather than denied.`;
     } else if (kpDenies) {
       promise = "delayed";
       promiseNote =
@@ -757,10 +780,11 @@ export function computeLifePredictions(
     // "Excellent but late" is a coherent and useful thing to say.
     if (promise === "notPromised") {
       score = Math.min(score, 0.4); // → Challenging: not granted, whatever its natal strength
-    } else if (promise === "spoiled" || karakaRescuedDenial) {
-      // spoiled: it comes, but damaged. karakaRescuedDenial: a matter KP AND its
-      // varga both denied, kept open only by a strong kāraka — available, but
-      // heavily obstructed and contested, so at most Mixed, never a positive read.
+    } else if (promise === "spoiled" || softenedDenial) {
+      // spoiled: it comes, but damaged. softenedDenial: a would-be denial (KP +
+      // varga) downgraded to obstruction — kept open by a strong kāraka, or an
+      // education matter that is never deniable outright — available but heavily
+      // obstructed and contested, so at most Mixed, never a positive read.
       score = Math.min(score, 1.4);
     }
 

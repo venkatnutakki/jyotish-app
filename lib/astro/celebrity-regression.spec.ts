@@ -49,6 +49,10 @@ describe("celebrity regression — stability of the full pipeline + this session
         expect(CONFS).toContain(p.confidence);
         expect(p.factors.length).toBeGreaterThan(0);
         expect(p.reading.length).toBeGreaterThan(20);
+        // Education is a spectrum, never granted-or-not: it must never read
+        // "notPromised" (validated fix — a Harvard BA and a master's were being
+        // wrongly denied). It can be delayed/spoiled/Challenging, but not denied.
+        if (p.key === "education") expect(p.promise).not.toBe("notPromised");
       }
       // annotateYogas (this session): every yoga has effective + cautionNote;
       // a cancelled yoga MUST carry a caution note (the fix's contract).
