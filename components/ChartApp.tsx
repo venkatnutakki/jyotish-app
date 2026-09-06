@@ -19,6 +19,7 @@ import { ForecastPanel } from "./ForecastPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { UpagrahaPanel } from "./UpagrahaPanel";
 import { bhavaChalitChart } from "@/lib/astro/charts-extra";
+import { AYANAMSA_INFO } from "@/lib/astro/ayanamsa-systems";
 import { FullReport } from "./FullReport";
 import { PredictionCards, type LifePredictionView } from "./PredictionCards";
 import { VerifyPanel } from "./VerifyPanel";
@@ -1014,7 +1015,7 @@ export function ChartApp() {
                     {chart.birth.name || "Birth Chart"}
                   </h2>
                   <p className="text-xs text-amber-100/50">
-                    {chart.birth.place} · Ayanamsa (Lahiri){" "}
+                    {chart.birth.place} · Ayanāṃśa ({AYANAMSA_INFO[chart.birth.ayanamsa ?? "lahiri"].name}){" "}
                     {chart.ayanamsa.toFixed(3)}°
                   </p>
                 </div>
