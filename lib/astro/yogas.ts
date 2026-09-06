@@ -346,17 +346,15 @@ export function computeYogas(chart: Chart): Yoga[] {
     yogas.push({ name: "Chāmara Yoga", category: "Raja", description: "The exalted Lagna-lord is angular and aspected by Jupiter — long life, learning, eloquence and royal favour." });
 
   // ---- Additional classical Rāja / Dhana yogas ----
-  const MAL2 = new Set<PlanetName>(["Sun", "Mars", "Saturn", "Rahu", "Ketu"]);
   const beneficsIn = (h: number) => chart.planets.filter((p) => p.house === h && BENEFIC.has(p.planet)).map((p) => p.planet);
   const anyIn = (h: number) => chart.planets.some((p) => p.house === h);
   const digY = (pl: PlanetName) => OWN[pl]?.includes(P[pl].signIndex) || EXALT[pl] === P[pl].signIndex;
   const strongY = (pl: PlanetName) => digY(pl) || KENDRA.includes(P[pl].house) || TRIKONA.includes(P[pl].house);
   const mutualKendra = (a: PlanetName, b: PlanetName) => KENDRA.includes(rel(P[a].signIndex, P[b].signIndex));
 
-  // Parvata — benefics in kendras and the 6th & 8th free of malefics.
-  const malIn = (h: number) => chart.planets.some((p) => p.house === h && MAL2.has(p.planet));
-  if (KENDRA.some((h) => beneficsIn(h).length > 0) && !malIn(6) && !malIn(8))
-    yogas.push({ name: "Parvata Yoga", category: "Raja", description: "Benefics hold the angles while the 6th and 8th are free of malefics — fortune, eloquence, charity and lasting fame." });
+  // (Parvata Yoga is detected once above, near the Nābhasa group — the second
+  //  copy that used to live here was a duplicate and produced two identical
+  //  entries in the report, so it has been removed.)
 
   // Sādhu — only benefics (no malefics) in the 3rd & 6th from the Arudha Lagna.
   const l1sign = P[lordOf(1)].signIndex;

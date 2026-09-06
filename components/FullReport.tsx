@@ -7,7 +7,7 @@ import { ashtottariDasha, charaDasha } from "@/lib/astro/dashas-extra";
 import { computeVarga, VARGAS } from "@/lib/astro/varga";
 import { AV_PLANETS } from "@/lib/astro/ashtakavarga";
 import { KARAKA_NAMES } from "@/lib/astro/jaimini";
-import { NAKSHATRAS, PLANET_SANSKRIT, SIGNS } from "@/lib/astro/constants";
+import { NAKSHATRAS, PLANET_SANSKRIT, SIGNS, SIGN_LORDS } from "@/lib/astro/constants";
 import { formatLongitude } from "@/lib/astro/display";
 import type { Chart } from "@/lib/astro/types";
 
@@ -200,7 +200,9 @@ export function FullReport({ data }: { data: ReportData }) {
             ["Karaṇa", String(data.panchang.karana)],
             ["Lagna (Asc)", formatLongitude(chart.ascendant, SIGNS)],
             ["Rāśi (Moon sign)", SIGNS[moon.signIndex]],
-            ["Janma Rāśi lord", NAKSHATRAS[moon.nakshatraIndex].lord],
+            // Janma Rāśi lord = lord of the MOON'S SIGN (rāśīśa), not the
+            // nakṣatra lord (that is shown separately above as "Nakṣatra lord").
+            ["Janma Rāśi lord", SIGN_LORDS[moon.signIndex]],
           ].map(([k, v]) => (
             <div key={k}>
               <span className="text-amber-100/50">{k}: </span>
