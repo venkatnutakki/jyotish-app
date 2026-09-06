@@ -671,19 +671,47 @@ export function computeLifePredictions(
     // telling somebody a matter is closed to them.
     let promise: PromiseStatus = "promised";
     let promiseNote = "";
+    let karakaRescuedDenial = false;
 
     const kpDenies = kpConfirmation?.signal === -1;
     const vargaDenies = vargaConfirmation?.signal === -1;
     const jaiminiDenies = jaiminiConfirmation?.signal === -1 && jaiminiCorroborates;
     const corroboratingDenials = [vargaDenies, jaiminiDenies].filter(Boolean).length;
 
-    if (kpDenies && corroboratingDenials >= 1) {
+    // A strong ROOT kāraka (BPHS 32.34) is itself a classical promise-witness:
+    // Phaladeepika 16.12 reads every matter jointly from the bhāva, its lord and
+    // its kāraka, so a strong natural significator is genuine evidence the matter
+    // is AVAILABLE. It does not override the KP sub-lord, but it stops a
+    // corroborated denial from reading as absolute — a matter whose kāraka is
+    // strong is obstructed, not closed. This corrects a validated real-chart miss:
+    // a married native whose 7th read "not promised" while his kāraka Venus was
+    // strong. General (any house), bounded (denial → delayed, never → promised).
+    const gateKaraka = BHAVA_KARAKA[area.houses[0] - 1];
+    const gateKarakaSB = shadbala.planets[gateKaraka as keyof ShadbalaResult["planets"]];
+    const gateKarakaStrong = !!gateKarakaSB && gateKarakaSB.rupas >= gateKarakaSB.required;
+
+    if (kpDenies && corroboratingDenials >= 1 && !gateKarakaStrong) {
       promise = "notPromised";
       promiseNote =
         `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} denies this in KP, ` +
         `and ${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} independently agrees. ` +
         `Read this as a matter the chart does not clearly grant, rather than one that merely goes badly — ` +
         `the two are different, and effort spent here is better redirected.`;
+    } else if (kpDenies && corroboratingDenials >= 1) {
+      // KP and a second lens both deny, but the root kāraka is strong — a genuine
+      // classical witness that the matter IS available. Downgrade the denial to
+      // obstruction rather than closure: it comes, but late or after real effort.
+      // This is a HEAVILY-contested matter kept open only by the kāraka, so it is
+      // capped at Mixed below (never a positive verdict) — otherwise uncapping the
+      // "delayed" score would let a double-denial read Favourable+, which
+      // validation caught (a documented college drop-out reading well on education).
+      promise = "delayed";
+      karakaRescuedDenial = true;
+      promiseNote =
+        `The ${ordinal(kpConfirmation!.cuspHouse)} cusp's sub-lord ${kpConfirmation!.subLord} and ` +
+        `${vargaDenies ? "the topic's divisional chart" : "the Jaimini reading"} both withhold this in KP, ` +
+        `but its kāraka ${gateKaraka} is strong — a real classical witness that the matter is available. ` +
+        `Read it as genuinely obstructed (it arrives late, or only after real effort), not as denied.`;
     } else if (kpDenies) {
       promise = "delayed";
       promiseNote =
@@ -729,8 +757,11 @@ export function computeLifePredictions(
     // "Excellent but late" is a coherent and useful thing to say.
     if (promise === "notPromised") {
       score = Math.min(score, 0.4); // → Challenging: not granted, whatever its natal strength
-    } else if (promise === "spoiled") {
-      score = Math.min(score, 1.4); // → at most Mixed: it comes, but damaged
+    } else if (promise === "spoiled" || karakaRescuedDenial) {
+      // spoiled: it comes, but damaged. karakaRescuedDenial: a matter KP AND its
+      // varga both denied, kept open only by a strong kāraka — available, but
+      // heavily obstructed and contested, so at most Mixed, never a positive read.
+      score = Math.min(score, 1.4);
     }
 
     const verdict = verdictFromScore(score);
