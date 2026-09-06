@@ -65,7 +65,7 @@ export function afflictionModifiers(chart: Chart): AfflictionModifier[] {
   if (conjNode(jup) && jup) {
     push("education", -0.45, jup.house, "Jupiter", "Jupiter (vidyā-kāraka) is conjunct a node (guru-chāṇḍāla) — formal learning meets unorthodox turns and tests");
     push("fortune", -0.35, jup.house, "Jupiter", "Jupiter, lord of dharma/bhāgya, is nodal — fortune and faith are questioned before they steady");
-    push("spirituality", -0.2, jup.house, "Jupiter", "The guru-kāraka is nodal — the spiritual path is unconventional and hard-won");
+    push("spirituality", -0.2, jup.house, "Jupiter", "The guru-kāraka is nodal (guru-chāṇḍāla) — the faith principle is intensified and tested: it deepens into either devout, sometimes unorthodox practice or questioned belief, and the path is hard-won either way");
   }
   // Viṣa (Punarphoo) — Moon conjunct Saturn: a heavy mind.
   if (moon && sat && moon.signIndex === sat.signIndex)

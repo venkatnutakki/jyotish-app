@@ -410,7 +410,7 @@ export function computeYogas(chart: Chart): Yoga[] {
 
   // Guru-Chāṇḍāla — Jupiter conjunct a node: wisdom and ethics tested.
   if (rahu && (P.Jupiter.signIndex === rahu.signIndex || (ketu && P.Jupiter.signIndex === ketu.signIndex)))
-    yogas.push({ name: "Guru-Chāṇḍāla Yoga", category: "Other", description: "Jupiter is conjunct a node — unorthodox brilliance, but received wisdom, ethics and guidance are questioned; discernment must be consciously cultivated.", planets: ["Jupiter"] });
+    yogas.push({ name: "Guru-Chāṇḍāla Yoga", category: "Other", description: "Jupiter is conjunct a node — the guru principle (wisdom, faith, dharma) is intensified and complicated. It resolves to one of two poles: profound, sometimes unorthodox devotion (Ketu is the mokṣa-kāraka), or a mind that questions received wisdom and authority. Either way it runs deep and asks for conscious discernment.", planets: ["Jupiter"] });
 
   // Grahaṇa (eclipse) — a luminary conjunct a node.
   const sunNode = rahu && (P.Sun.signIndex === rahu.signIndex || (ketu && P.Sun.signIndex === ketu.signIndex));
