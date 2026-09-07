@@ -12,6 +12,7 @@ import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions, formatPredictionDossier } from "./prediction";
+import { chartDashaTimeline, formatDashaTimeline } from "./dasha-tenor";
 import { computeJaimini } from "./jaimini";
 import { matchTopics, TOPICS } from "./question";
 import { areaEvidence, type ClassicalEvidence } from "./classical-evidence";
@@ -37,6 +38,9 @@ HOW TO ANSWER:
 - For TIMING questions, use the daśā/antardaśā dates in the dossier and give
   concrete windows — the daśā is what a promise needs to activate; a transit only
   matters within a supportive running daśā, so weave them together, not separately.
+  Lean on the PERIOD FAVOURABILITY (chapters ahead) list: point to the favourable
+  windows by year as the times to act, and name the demanding/Sade-Sati ones as
+  times for patience — a demanding period rarely denies a promise, it asks more of it.
 - Don't call an outcome from one isolated factor. Weigh the house/lord, kāraka
   strength, any yogas, and the "[Varga check]" line if one is supplied — when
   several agree, answer with real confidence; when they conflict, resolve by which
@@ -104,6 +108,7 @@ export function buildChatDossier(birth: BirthData): string {
 
   const moon = chart.planets.find((p) => p.planet === "Moon")!;
   const jn = nakshatraProfile(moon.nakshatraIndex);
+  const tenorTimeline = formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12));
 
   return (
     `NATIVE: ${birth.name || "(unnamed)"} — ${birth.day}/${birth.month}/${birth.year}, ${birth.place || "given coordinates"}.\n` +
@@ -115,7 +120,10 @@ export function buildChatDossier(birth: BirthData): string {
     `ṢAḌBALA (rūpas, strong→weak): ${sb}\n` +
     (karakas ? `JAIMINI CHĀRA KĀRAKAS: ${karakas}\n` : "") +
     `\nDAŚĀ TIMELINE (Vimśottarī): ${timeline}\n` +
-    (antar ? `\nCurrent mahādaśā antardaśās:\n${antar}\n` : "")
+    (antar ? `\nCurrent mahādaśā antardaśās:\n${antar}\n` : "") +
+    (tenorTimeline
+      ? `\nPERIOD FAVOURABILITY — CHAPTERS AHEAD (tenor from each lord's iṣṭa/kaṣṭa + nature + placement; "under Sade Sati" = Saturn's testing transit). Use this to time favourable vs demanding windows by their years:\n${tenorTimeline}\n`
+      : "")
   );
 }
 

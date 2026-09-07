@@ -12,6 +12,7 @@ import { computeShadbala } from "@/lib/astro/shadbala";
 import { analyzeBhavas } from "@/lib/astro/bhava";
 import { computeYogas } from "@/lib/astro/yogas";
 import { computeLifePredictions, formatPredictionDossier } from "@/lib/astro/prediction";
+import { chartDashaTimeline, formatDashaTimeline } from "@/lib/astro/dasha-tenor";
 import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/classical-evidence";
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
@@ -47,7 +48,9 @@ RULES:
 - Cite the source for each classical claim in parentheses, e.g.
   "(Bhṛgu Sūtras — Venus in the 7th)" or "(Sārāvalī — Moon in Cancer)".
 - If the question is about TIMING, use the daśā/antardaśā periods given to indicate
-  when the matter is most likely to activate; be clear these are indicative windows.
+  when the matter is most likely to activate; and use the period-favourability list
+  to say which coming windows (by year) are favourable to act in versus demanding
+  and better met with patience. Be clear these are indicative windows.
 - Warm, plain language for an ordinary person. 150–300 words. No preamble.`;
 
 export async function POST(req: NextRequest) {
@@ -146,6 +149,9 @@ export async function POST(req: NextRequest) {
         : "") +
       `Relevant house verdicts:\n${houseLines}\n\n` +
       (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
+      (timing
+        ? `Period favourability (chapters ahead — tenor from each lord's iṣṭa/kaṣṭa + nature + placement; use to time favourable vs demanding windows by year):\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n`
+        : "") +
       `Classical rules that apply to this question (cite these):\n${evidenceText}`;
 
     // No AI → rule-based answer built from the verdicts + top classical quotes.

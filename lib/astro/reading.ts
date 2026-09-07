@@ -16,6 +16,7 @@ import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions, formatPredictionDossier } from "./prediction";
+import { chartDashaTimeline, formatDashaTimeline } from "./dasha-tenor";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import { SIGNS, NAKSHATRAS } from "./constants";
 import type { BirthData } from "./types";
@@ -91,6 +92,11 @@ PREDICTION METHOD — reason like a careful, experienced astrologer, not a looku
   varga confirmation supplied for an area line up, that is a genuine multi-layer
   confirmation worth stating with confidence; where only one layer supports a
   timing claim, hedge it accordingly.
+- Use the supplied PERIOD FAVOURABILITY (LIFE CHAPTERS AHEAD) to give the timeline
+  its emotional shape: name the favourable windows by their years as times to act
+  and build, the demanding/Sade-Sati windows as times for patience and care, and
+  say plainly which is which. A favourable period is when a promised matter is
+  best pursued; a demanding one rarely denies a promise but asks more effort.
 - Match your confidence language to the material's own confidence tier (Very
   High/High/Moderate/Low, supplied per area) — a "Low" confidence area should
   read as a measured, conditional take, not a confident verdict dressed up in
@@ -170,6 +176,10 @@ export function buildReading(birth: BirthData): BuiltReading {
   // --- Life-area predictions with their verbatim classical citations ---
   const predictionText = formatPredictionDossier(predictions);
 
+  // Period favourability (tenor) for the coming years — lets the reading TIME
+  // favourable vs demanding windows, not just name which lord runs when.
+  const tenorTimeline = formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12));
+
   const userContext =
     `NATIVE: ${birth.name || "(unnamed)"} — born ${birth.day}/${birth.month}/${birth.year} at ${birth.place || "given coordinates"}.\n` +
     `Lagna: ${SIGNS[chart.ascendantSignIndex]}. Moon: ${SIGNS[moon.signIndex]}.\n` +
@@ -180,6 +190,10 @@ export function buildReading(birth: BirthData): BuiltReading {
     `═══ ṢAḌBALA STRENGTH RANKING ═══\n${sbText}\n\n` +
     `═══ DAŚĀ TIMELINE (Vimśottarī mahādaśās) ═══\n${mahaText}\n` +
     (antarText ? `\nCurrent mahādaśā sub-periods (antardaśās):\n${antarText}\n` : "") +
+    (tenorTimeline
+      ? `\n═══ PERIOD FAVOURABILITY — LIFE CHAPTERS AHEAD ═══\n` +
+        `Each sub-period's tenor is read from its lord's iṣṭa/kaṣṭa capacity, functional nature and placement in THIS chart; "under Sade Sati" marks Saturn's testing transit over the Moon. Use this to TIME the reading — say which coming windows are favourable, mixed or demanding, with their years.\n${tenorTimeline}\n`
+      : "") +
     `\n═══ LIFE-AREA PREDICTIONS WITH CLASSICAL CITATIONS ═══\n${predictionText}`;
 
   return { analysis, bhavas, predictions, headline: analysis.headline, userContext };

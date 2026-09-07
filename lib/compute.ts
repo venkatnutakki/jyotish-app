@@ -10,7 +10,7 @@ import { mindTemperament } from "./astro/mind-temperament";
 import { vargaReadings } from "./astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
 import { activeDashaChain } from "./astro/dasha-depth";
-import { dashaTenors, chartDashaTimeline } from "./astro/dasha-tenor";
+import { dashaTenors, chartDashaTimeline, formatDashaTimeline } from "./astro/dasha-tenor";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
 import { computeAshtakavarga, computePrastara } from "./astro/ashtakavarga";
@@ -250,7 +250,9 @@ RULES:
 - Cite the source for each classical claim in parentheses, e.g.
   "(Bhṛgu Sūtras — Venus in the 7th)" or "(Sārāvalī — Moon in Cancer)".
 - If the question is about TIMING, use the daśā/antardaśā periods given to indicate
-  when the matter is most likely to activate; be clear these are indicative windows.
+  when the matter is most likely to activate; and use the period-favourability list
+  to say which coming windows (by year) are favourable to act in versus demanding
+  and better met with patience. Be clear these are indicative windows.
 - Warm, plain language for an ordinary person. 150–300 words. No preamble.`;
 
 // AI routes fall back to the classical reading offline (no key / AI unreachable).
@@ -334,6 +336,7 @@ export async function askRoute(body: { birth: BirthData; question: string }) {
         (synthesis ? `ENGINE SYNTHESIS for the matched area(s) — verdict · confidence · reasoning factors (weigh these; they already combine house, kāraka strength, yogas, varga and daśā):\n${synthesis}\n\n` : "") +
         `Relevant house verdicts:\n${houseLines}\n\n` +
         (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
+        (timing ? `Period favourability (chapters ahead — tenor from each lord's iṣṭa/kaṣṭa + nature + placement; time favourable vs demanding windows by year):\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n` : "") +
         `Classical rules that apply to this question (cite these):\n${evidenceText}`;
       const { text, provider, model } = await chatClient(ASK_SYSTEM, context, cfg);
       if (text?.trim()) {

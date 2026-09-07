@@ -104,3 +104,15 @@ export function chartDashaTimeline(
   }
   return rows;
 }
+
+/** Render the life-chapters timeline as prompt text for the AI reading/chat/ask. */
+export function formatDashaTimeline(rows: DashaTimelineRow[]): string {
+  if (!rows.length) return "";
+  return rows
+    .map((r) => {
+      const y0 = new Date(r.from).getFullYear();
+      const y1 = new Date(r.to).getFullYear();
+      return `  ${r.md}–${r.ad}: ${y0}–${y1} — ${r.tenor}${r.sadeSati ? " (under Sade Sati)" : ""}`;
+    })
+    .join("\n");
+}
