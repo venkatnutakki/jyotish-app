@@ -90,6 +90,81 @@ export function detectProvider(): Provider | null {
   return availableProviders()[0] ?? null;
 }
 
+/** Thrown when every configured provider failed. Carries what was tried, for diagnostics. */
+export class AiUnavailableError extends Error {
+  tried: Provider[];
+  rateLimited: boolean;
+  constructor(tried: Provider[], rateLimited: boolean, cause?: unknown) {
+    const why = tried.length === 0 ? "no provider configured" : rateLimited ? "rate-limited" : "unavailable";
+    super(`AI ${why}${tried.length ? ` (tried: ${tried.join(", ")})` : ""}${cause instanceof Error ? ` — ${cause.message}` : ""}`);
+    this.name = "AiUnavailableError";
+    this.tried = tried;
+    this.rateLimited = rateLimited;
+  }
+}
+
+/** A user-facing note explaining why the classical answer is shown instead of the AI one. */
+export function describeAiFallback(err: unknown): string {
+  if (err instanceof AiUnavailableError) {
+    if (err.tried.length === 0)
+      return "No AI provider configured — showing the rule-based classical answer. Add a provider key (e.g. Gemini or Groq) for a natural-language answer.";
+    const who = err.tried.join(" → ");
+    if (err.rateLimited)
+      return err.tried.length === 1
+        ? `AI provider rate-limited (${who}) with no fallback configured — showing the classical answer. Add a second provider (e.g. GROQ_API_KEY) so it can fail over.`
+        : `All AI providers were rate-limited (tried ${who}) — showing the classical answer; please retry shortly.`;
+    return `AI unavailable (tried ${who}) — showing the classical answer.`;
+  }
+  return `AI request failed (${err instanceof Error ? err.message : "error"}); showing the classical answer.`;
+}
+
+/** Recognise a rate-limit / quota error across providers (HTTP 429 or quota text). */
+function isRateLimit(e: unknown): boolean {
+  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  return (
+    m.includes("429") || m.includes("rate limit") || m.includes("ratelimit") ||
+    m.includes("too many requests") || m.includes("quota") || m.includes("resource exhausted") ||
+    m.includes("resource_exhausted")
+  );
+}
+
+const RATE_LIMIT_RETRY_MS = 1200;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * Try each configured provider in order (primary → fallbacks). If the whole chain
+ * fails AND a rate-limit was hit, wait briefly and retry the chain once — this
+ * clears a transient per-minute/burst 429 even when only one provider is set,
+ * while a configured fallback (e.g. Groq) is still tried instantly first. Throws
+ * AiUnavailableError (with the providers tried) when nothing succeeds.
+ */
+async function failover<T>(run: (p: Provider) => Promise<T>): Promise<T> {
+  const providers = availableProviders();
+  if (!providers.length) throw new AiUnavailableError([], false);
+  const pass = async (): Promise<{ ok: true; val: T } | { ok: false; rl: boolean; err: unknown }> => {
+    let lastErr: unknown;
+    let rl = false;
+    for (const p of providers) {
+      try {
+        return { ok: true, val: await run(p) };
+      } catch (e) {
+        lastErr = e;
+        if (isRateLimit(e)) rl = true;
+        console.warn(`[llm] provider ${p} failed, trying next:`, e instanceof Error ? e.message : e);
+      }
+    }
+    return { ok: false, rl, err: lastErr };
+  };
+  let res = await pass();
+  if (!res.ok && res.rl) {
+    console.warn(`[llm] all providers rate-limited; retrying the chain once after ${RATE_LIMIT_RETRY_MS}ms`);
+    await sleep(RATE_LIMIT_RETRY_MS);
+    res = await pass();
+  }
+  if (res.ok) return res.val;
+  throw new AiUnavailableError(providers, res.rl, res.err);
+}
+
 async function chatOpenAICompatible(
   base: string,
   key: string,
@@ -289,18 +364,7 @@ async function chatWith(provider: Provider, system: string, user: string): Promi
  * succeeds (primary → fallbacks). Throws only if every provider fails / none set.
  */
 export async function chat(system: string, user: string): Promise<ChatResult> {
-  const providers = availableProviders();
-  if (!providers.length) throw new Error("No AI provider configured");
-  let lastErr: unknown;
-  for (const p of providers) {
-    try {
-      return await chatWith(p, system, user);
-    } catch (e) {
-      lastErr = e;
-      console.warn(`[llm] provider ${p} failed, trying next:`, e instanceof Error ? e.message : e);
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
+  return failover((p) => chatWith(p, system, user));
 }
 
 // ── Multi-turn chat (for the conversational /api/chat route) ─────────────────
@@ -512,39 +576,21 @@ export interface StreamStart {
  * Throws if no provider can start.
  */
 export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096): Promise<StreamStart> {
-  const providers = availableProviders();
-  if (!providers.length) throw new Error("No AI provider configured");
-  let lastErr: unknown;
-  for (const p of providers) {
-    try {
-      const gen = streamWith(p, system, messages, maxTokens);
-      const first = await gen.next(); // provider errors (429/503) surface here
-      if (first.done) continue; // empty stream → try next provider
-      const primed = (async function* () {
-        yield first.value as string;
-        yield* gen;
-      })();
-      return { provider: p, model: providerConfig(p).model, stream: primed };
-    } catch (e) {
-      lastErr = e;
-      console.warn(`[llm] stream via ${p} failed, trying next:`, e instanceof Error ? e.message : e);
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
+  // Failover happens only BEFORE the first chunk (a provider that starts streaming
+  // owns the response); an empty stream counts as a failure so the next is tried.
+  return failover(async (p) => {
+    const gen = streamWith(p, system, messages, maxTokens);
+    const first = await gen.next(); // provider errors (429/503) surface here
+    if (first.done) throw new Error("empty stream");
+    const primed = (async function* () {
+      yield first.value as string;
+      yield* gen;
+    })();
+    return { provider: p, model: providerConfig(p).model, stream: primed };
+  });
 }
 
 /** Multi-turn version of chat(): tries each configured provider until one succeeds. */
 export async function chatMessages(system: string, messages: ChatMessage[]): Promise<ChatResult> {
-  const providers = availableProviders();
-  if (!providers.length) throw new Error("No AI provider configured");
-  let lastErr: unknown;
-  for (const p of providers) {
-    try {
-      return await chatMessagesWith(p, system, messages);
-    } catch (e) {
-      lastErr = e;
-      console.warn(`[llm] provider ${p} failed, trying next:`, e instanceof Error ? e.message : e);
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error("All AI providers failed");
+  return failover((p) => chatMessagesWith(p, system, messages));
 }

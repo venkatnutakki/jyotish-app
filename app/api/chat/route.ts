@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildChatSystem } from "@/lib/astro/chat";
 import { askRoute } from "@/lib/compute";
-import { chatMessages, chatMessagesStream, detectProvider, type ChatMessage } from "@/lib/ai/llm";
+import { chatMessages, chatMessagesStream, detectProvider, describeAiFallback, type ChatMessage } from "@/lib/ai/llm";
 import { validateBirth } from "@/lib/astro/validate";
 
 // AI generation can take a while — allow up to 60s (also the Vercel Hobby cap).
@@ -74,10 +74,10 @@ export async function POST(req: NextRequest) {
             "X-Model": model,
           },
         });
-      } catch {
+      } catch (e) {
         // No provider could even start a stream → classical JSON (client detects
         // the content-type and renders it the non-streaming way).
-        return classicalReply("The AI service is busy right now, so here's a classical answer. Try again shortly for a fuller AI reply.");
+        return classicalReply(describeAiFallback(e));
       }
     }
 
@@ -85,10 +85,10 @@ export async function POST(req: NextRequest) {
       const { text, provider, model } = await chatMessages(system, trimmed);
       if (!text?.trim()) return classicalReply("The AI returned an empty reply; showing a classical answer.");
       return NextResponse.json({ source: "ai", provider, model, reply: text });
-    } catch {
+    } catch (e) {
       // Every provider failed (e.g. Gemini 503/quota) → don't surface the raw
       // error; fall back to the classical answer so the chat always responds.
-      return classicalReply("The AI service is busy right now, so here's a classical answer. Try again shortly for a fuller AI reply.");
+      return classicalReply(describeAiFallback(e));
     }
   } catch (err) {
     return NextResponse.json(

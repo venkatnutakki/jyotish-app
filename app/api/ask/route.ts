@@ -17,7 +17,7 @@ import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/c
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { researchQuestion, formatQuestionResearch } from "@/lib/astro/question-research";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
-import { chat, detectProvider } from "@/lib/ai/llm";
+import { chat, detectProvider, describeAiFallback } from "@/lib/ai/llm";
 import { validateBirth } from "@/lib/astro/validate";
 
 // AI answers can take ~10-30s — allow up to 60s (also the Vercel Hobby cap).
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
         topics: topics.map((t) => t.label),
         answer: `On ${primary.label.toLowerCase()}: the ${ordinal(primary.houses[0])} house is ${pv.verdict.toLowerCase()}. ${evidence.slice(0, 2).map((e) => `${e.source} (${e.subject}): ${trimSentence(e.text)}`).join(" ")}`,
         evidence,
-        note: `AI request failed (${aiErr instanceof Error ? aiErr.message : "error"}); showing the classical answer.`,
+        note: describeAiFallback(aiErr),
       });
     }
   } catch (err) {
