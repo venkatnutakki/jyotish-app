@@ -12,9 +12,12 @@ import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions, formatPredictionDossier } from "./prediction";
-import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "./dasha-tenor";
+import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary, dashaTenors } from "./dasha-tenor";
+import { activeDashaChain } from "./dasha-depth";
+import { computeAshtakavarga } from "./ashtakavarga";
 import { computeJaimini } from "./jaimini";
 import { matchTopics, TOPICS } from "./question";
+import { researchQuestion, formatQuestionResearch } from "./question-research";
 import { areaEvidence, type ClassicalEvidence } from "./classical-evidence";
 import { confirmInVarga } from "./varga-confirm";
 import { SIGNS, NAKSHATRAS } from "./constants";
@@ -28,6 +31,15 @@ the classical texts (Bṛhat Parāśara Horā Śāstra, Bhṛgu Sūtras, Sārāv
 Sāra, Jaimini Sūtras, Significations of the Planets).
 
 HOW TO ANSWER:
+- A RESEARCHED ANSWER block may be supplied for the latest question — a deterministic
+  convergence verdict computed by the engine (which lenses support/deny the matter, the
+  outlook, confidence, and authoritative timing). When it is present it is AUTHORITATIVE:
+  lead with its verdict and reproduce its direction, tally and timing faithfully — your
+  job is to VOICE it warmly and explain the reasoning, never to re-derive a different
+  conclusion or contradict it. If that block says the question must be CLARIFIED first
+  (needs a life-area, or is too vague), ASK the user those clarifying questions and stop
+  — do not guess a reading. If it offers an OPTIONAL SHARPENER, you may ask it back when
+  it would genuinely tighten the answer.
 - Answer the user's actual question directly and conversationally. This is a chat,
   not an essay — match the depth of the question (a short question gets a focused
   answer; "tell me everything about my career" gets a fuller one).
@@ -42,11 +54,26 @@ HOW TO ANSWER:
   invent windows, cite past years, or infer a favourable window from a life-area
   verdict (an "Excellent" area is quality, not timing). Point to the favourable
   windows by their listed years to act, and the demanding/Sade-Sati ones for patience.
-- Don't call an outcome from one isolated factor. Weigh the house/lord, kāraka
-  strength, any yogas, and the "[Varga check]" line if one is supplied — when
-  several agree, answer with real confidence; when they conflict, resolve by which
-  factor is classically stronger (better dignity/strength) and say plainly that the
-  weaker factor tempers the promise, rather than glossing over the conflict.
+- For "WHAT IS HAPPENING NOW / right now" questions, anchor on the RUNNING NOW block
+  (mahā→antar→pratyantar→sūkṣma with dates and tenor). Name the actual sub-period the
+  native is in and what its lord signifies — e.g. a Rāhu pratyantar clouding the
+  career lord's antardaśā reads as fog and uncertainty; say when it ends by its date.
+- CONVERGENCE — this is how a serious yes/no life question ("will I lose my job?",
+  "will this marriage happen?") must be answered: never call it from one factor.
+  Cross-check the matter across EVERY independent lens in the dossier — the house
+  verdict, the house-lord, the kāraka strength, the relevant divisional (varga)
+  check, the KP cuspal sub-lord, the Jaimini note, the Ashtakavarga bindus of the
+  house (SAV ≥28 = strong/resilient, well below = weak), and the running daśā — then
+  say plainly HOW MANY agree and in which direction. When the lenses converge, answer
+  with real confidence; when they conflict, resolve by the classically stronger factor
+  and name the weaker one as the caveat. A feared outcome that does NOT corroborate
+  across the lenses is itself the honest, reassuring answer — say so.
+- EMOTIONAL ATTUNEMENT: if the native writes with stress, fear or distress, respond
+  as a person first — acknowledge the feeling before the analysis, separate what is
+  actually indicated from what fear is imagining, and never catastrophize or state a
+  frightening outcome as certain. Keep the guidance-not-fate framing. If the distress
+  is heavy, gently suggest real-world support (someone they trust, or a professional)
+  alongside — not instead of — the reading.
 - You may ask a brief clarifying question back if it would genuinely sharpen the
   answer. Never invent placements, dates or rules not in the dossier.
 - Plain, kind language. Use the native's name occasionally. No preamble.`;
@@ -113,6 +140,29 @@ export function buildChatDossier(birth: BirthData): string {
   const tenorTimeline = formatDashaTimeline(tenorRows);
   const timingSummary = dashaTimingSummary(tenorRows);
 
+  // RUNNING NOW — the full active chain to sūkṣma, each lord tagged with its
+  // tenor. This is what a "what is happening right now" question needs: the actual
+  // pratyantar/sūkṣma the native is in, with its ending date.
+  const tenors = dashaTenors(chart, shadbala);
+  const runningNow = activeDashaChain(dasha, new Date(), 4)
+    .map((c) => `${c.level}: ${c.lord} [${tenors.get(c.lord)?.tenor ?? "mixed"}] — to ${c.end.toISOString().slice(0, 10)}`)
+    .join("\n");
+
+  // Ashtakavarga SAV per house (from the lagna) — the objective "how resilient is
+  // this house" measure for convergence answers. Average is 28; ≥30 strong, ≤22 weak.
+  let savLine = "";
+  try {
+    const av = computeAshtakavarga(chart);
+    savLine = av.sav
+      .map((_, i) => {
+        const houseSign = (chart.ascendantSignIndex + i) % 12;
+        return `H${i + 1} ${av.sav[houseSign]}`;
+      })
+      .join(" · ");
+  } catch {
+    /* ashtakavarga optional */
+  }
+
   return (
     `NATIVE: ${birth.name || "(unnamed)"} — ${birth.day}/${birth.month}/${birth.year}, ${birth.place || "given coordinates"}.\n` +
     `Lagna: ${asc}. Janma Nakṣatra (Moon): ${NAKSHATRAS[moon.nakshatraIndex].name} — deity ${jn.deity}, śakti ${jn.shakti}, ${jn.gana} gaṇa.\n\n` +
@@ -121,8 +171,10 @@ export function buildChatDossier(birth: BirthData): string {
     `YOGAS:\n${yogaText}\n\n` +
     `LIFE-AREA SYNTHESIS (engine verdict · confidence · reasoning factors):\n${synthesis}\n\n` +
     `ṢAḌBALA (rūpas, strong→weak): ${sb}\n` +
+    (savLine ? `ASHTAKAVARGA (SAV bindus per house from lagna; avg 28, ≥30 strong, ≤22 weak — a house's resilience): ${savLine}\n` : "") +
     (karakas ? `JAIMINI CHĀRA KĀRAKAS: ${karakas}\n` : "") +
     `\nDAŚĀ TIMELINE (Vimśottarī): ${timeline}\n` +
+    (runningNow ? `\nRUNNING NOW (the active period to sūkṣma — use this for "what is happening now"):\n${runningNow}\n` : "") +
     (antar ? `\nCurrent mahādaśā antardaśās:\n${antar}\n` : "") +
     (tenorTimeline
       ? `\nTIMING SUMMARY (authoritative — state faithfully for timing questions, don't contradict or add other years): ${timingSummary}\n` +
@@ -165,8 +217,13 @@ export function evidenceForQuestion(birth: BirthData, question: string): string 
 export function buildChatSystem(birth: BirthData, latestQuestion: string): string {
   const dossier = buildChatDossier(birth);
   const ev = latestQuestion ? evidenceForQuestion(birth, latestQuestion) : "";
+  // The deterministic research pass for THIS question — the computed convergence
+  // verdict and (if the question is unanswerable as posed) the clarifications to
+  // ask back. This is authoritative: the model presents it, it does not re-reason.
+  const research = latestQuestion ? formatQuestionResearch(researchQuestion(birth, latestQuestion)) : "";
   return (
     `${CHAT_SYSTEM_BASE}\n\n══════ CHART DOSSIER ══════\n${dossier}` +
+    (research ? `\n══════ RESEARCHED ANSWER TO THE LATEST QUESTION (authoritative — lead with this) ══════\n${research}` : "") +
     (ev ? `\n══════ CLASSICAL CITATIONS RELEVANT TO THE LATEST QUESTION ══════\n${ev}` : "")
   );
 }

@@ -59,6 +59,7 @@ import { muhurtaWindow } from "./astro/muhurta";
 import { computeCompatibility, type Person } from "./astro/compatibility";
 import { compareCharts } from "./astro/chart-comparison";
 import { matchTopics, isTimingQuestion, TOPICS } from "./astro/question";
+import { researchQuestion, formatQuestionResearch } from "./astro/question-research";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./astro/classical-evidence";
 import { SIGNS, NAKSHATRAS } from "./astro/constants";
 import { buildReading, READING_SYSTEM } from "./astro/reading";
@@ -238,6 +239,13 @@ the divisional-chart (varga) cross-check, functional nature, afflictions, the
 three-witness concurrence and family/spouse indications. Lead with it.
 
 RULES:
+- A RESEARCHED VERDICT block may be supplied — the engine's deterministic convergence
+  across every lens (which support/deny the matter, the outlook and confidence, and
+  authoritative timing). When present it is AUTHORITATIVE: lead with its verdict and
+  reproduce its direction and tally faithfully; do not re-derive or contradict it. If it
+  says the question must be CLARIFIED first, ask that clarifying question and stop — do
+  not guess. If the question was asked as a worry and the verdict is "supported", say
+  plainly that the feared outcome does not corroborate.
 - Answer ONLY the question asked, directly, in the first paragraph.
 - Base your answer on the ENGINE SYNTHESIS for the area, then justify it with the
   classical quotes and computed facts. Do NOT invent placements, yogas, or rules
@@ -333,7 +341,9 @@ export async function askRoute(body: { birth: BirthData; question: string }) {
       const chartFacts = `Lagna ${SIGNS[chart.ascendantSignIndex]}; Moon in ${SIGNS[moon.signIndex]} (${NAKSHATRAS[moon.nakshatraIndex].name} nakṣatra). ` + (maha ? `Current daśā: ${maha.lord}${antar ? ` / ${antar.lord}` : ""}.` : "");
       const evidenceText = evidence.map((e) => `· [${e.source} — ${e.subject}] ${e.text}`).join("\n");
       const synthesis = formatPredictionDossier(predictions, { keys: topics.map((t) => t.key), withCitations: false });
+      const research = formatQuestionResearch(researchQuestion(birth, question));
       const context = `QUESTION: ${question}\n\nTopics: ${topics.map((t) => t.label).join("; ")}\n${chartFacts}\n\n` +
+        (research ? `${research}\n\n` : "") +
         (synthesis ? `ENGINE SYNTHESIS for the matched area(s) — verdict · confidence · reasoning factors (weigh these; they already combine house, kāraka strength, yogas, varga and daśā):\n${synthesis}\n\n` : "") +
         `Relevant house verdicts:\n${houseLines}\n\n` +
         (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +

@@ -15,6 +15,7 @@ import { computeLifePredictions, formatPredictionDossier } from "@/lib/astro/pre
 import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "@/lib/astro/dasha-tenor";
 import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/classical-evidence";
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
+import { researchQuestion, formatQuestionResearch } from "@/lib/astro/question-research";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
 import { chat, detectProvider } from "@/lib/ai/llm";
 import { validateBirth } from "@/lib/astro/validate";
@@ -36,6 +37,13 @@ three-witness concurrence and family/spouse indications. This is the multi-facto
 view a careful astrologer would form — lead with it.
 
 RULES:
+- A RESEARCHED VERDICT block may be supplied — the engine's deterministic convergence
+  across every lens (which support/deny the matter, the outlook and confidence, and
+  authoritative timing). When present it is AUTHORITATIVE: lead with its verdict and
+  reproduce its direction and tally faithfully; do not re-derive or contradict it. If it
+  says the question must be CLARIFIED first, ask that clarifying question and stop — do
+  not guess. If the question was asked as a worry and the verdict is "supported", say
+  plainly that the feared outcome does not corroborate.
 - Answer ONLY the question asked, directly, in the first paragraph.
 - Base your answer on the ENGINE SYNTHESIS for the area, then justify it with the
   classical quotes and computed facts. Do NOT invent placements, yogas, or rules
@@ -143,10 +151,12 @@ export async function POST(req: NextRequest) {
       withCitations: false,
     });
 
+    const research = formatQuestionResearch(researchQuestion(birth, question));
     const context =
       `QUESTION: ${question}\n\n` +
       `Topics: ${topics.map((t) => t.label).join("; ")}\n` +
       `${chartFacts}\n\n` +
+      (research ? `${research}\n\n` : "") +
       (synthesis
         ? `ENGINE SYNTHESIS for the matched area(s) — verdict · confidence · reasoning factors (weigh these; they already combine house, kāraka strength, yogas, varga and daśā):\n${synthesis}\n\n`
         : "") +
