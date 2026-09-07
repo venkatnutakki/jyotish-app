@@ -16,7 +16,7 @@ import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions, formatPredictionDossier } from "./prediction";
-import { chartDashaTimeline, formatDashaTimeline } from "./dasha-tenor";
+import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "./dasha-tenor";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import { SIGNS, NAKSHATRAS } from "./constants";
 import type { BirthData } from "./types";
@@ -178,7 +178,9 @@ export function buildReading(birth: BirthData): BuiltReading {
 
   // Period favourability (tenor) for the coming years — lets the reading TIME
   // favourable vs demanding windows, not just name which lord runs when.
-  const tenorTimeline = formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12));
+  const tenorRows = chartDashaTimeline(chart, shadbala, dasha, new Date(), 12);
+  const tenorTimeline = formatDashaTimeline(tenorRows);
+  const timingSummary = dashaTimingSummary(tenorRows);
 
   const userContext =
     `NATIVE: ${birth.name || "(unnamed)"} — born ${birth.day}/${birth.month}/${birth.year} at ${birth.place || "given coordinates"}.\n` +
@@ -192,7 +194,8 @@ export function buildReading(birth: BirthData): BuiltReading {
     (antarText ? `\nCurrent mahādaśā sub-periods (antardaśās):\n${antarText}\n` : "") +
     (tenorTimeline
       ? `\n═══ PERIOD FAVOURABILITY — LIFE CHAPTERS AHEAD (from now forward) ═══\n` +
-        `Each sub-period's tenor is read from its lord's iṣṭa/kaṣṭa capacity, functional nature and placement in THIS chart; "under Sade Sati" marks Saturn's testing transit over the Moon. This list is the ONLY basis for period-favourability timing: cite ONLY these windows, by their exact years and stated tenor. NEVER relabel a window (do not call a "mixed" or "difficult" period favourable, or vice-versa) and NEVER invent windows or comment on years not listed here.\n${tenorTimeline}\n`
+        `TIMING SUMMARY (this is the authoritative timing — state it faithfully, do not contradict or embellish with other years): ${timingSummary}\n\n` +
+        `Full list below; each sub-period's tenor is from its lord's iṣṭa/kaṣṭa capacity, functional nature and placement in THIS chart; "under Sade Sati" marks Saturn's testing transit over the Moon. Cite ONLY these windows, by their exact years and stated tenor. NEVER relabel a window (a "mixed"/"difficult" period is not "favourable"), and NEVER invent windows or comment on years not listed here (in particular, do not mention past years).\n${tenorTimeline}\n`
       : "") +
     `\n═══ LIFE-AREA PREDICTIONS WITH CLASSICAL CITATIONS ═══\n${predictionText}`;
 

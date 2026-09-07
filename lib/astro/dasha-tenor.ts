@@ -116,3 +116,26 @@ export function formatDashaTimeline(rows: DashaTimelineRow[]): string {
     })
     .join("\n");
 }
+
+/**
+ * A single pre-digested timing sentence the AI can state verbatim — the current
+ * period + tenor and the next favourable window — so it need not (and must not)
+ * invent windows. Deterministic; the authoritative timing source for prose.
+ */
+export function dashaTimingSummary(rows: DashaTimelineRow[]): string {
+  if (!rows.length) return "";
+  const yr = (iso: string) => new Date(iso).getFullYear();
+  const cur = rows[0];
+  let s = `Right now, until ${yr(cur.to)}, you are in the ${cur.md}–${cur.ad} sub-period — ${cur.tenor}${cur.sadeSati ? ", under Sade Sati" : ""}.`;
+  const nextFav = rows.find((r, i) => i > 0 && r.tenor === "favourable");
+  if (nextFav) {
+    s += ` The next clearly favourable window is the ${nextFav.md}–${nextFav.ad} period, ${yr(nextFav.from)}–${yr(nextFav.to)}${nextFav.sadeSati ? " (though it opens under Sade Sati, so demanding before it rewards)" : ""}.`;
+  }
+  // A demanding window — but only if it's a DIFFERENT period than the favourable
+  // one just named (a favourable-under-Sade-Sati period is already covered above).
+  const nextHard = rows.find((r, i) => i > 0 && (r.tenor === "difficult" || r.sadeSati) && r !== nextFav);
+  if (nextHard) {
+    s += ` A stretch to meet with patience: the ${nextHard.md}–${nextHard.ad} period, ${yr(nextHard.from)}–${yr(nextHard.to)}${nextHard.sadeSati ? " (under Sade Sati)" : ""}.`;
+  }
+  return s;
+}

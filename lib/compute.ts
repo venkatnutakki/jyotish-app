@@ -10,7 +10,7 @@ import { mindTemperament } from "./astro/mind-temperament";
 import { vargaReadings } from "./astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
 import { activeDashaChain } from "./astro/dasha-depth";
-import { dashaTenors, chartDashaTimeline, formatDashaTimeline } from "./astro/dasha-tenor";
+import { dashaTenors, chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "./astro/dasha-tenor";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
 import { computeAshtakavarga, computePrastara } from "./astro/ashtakavarga";
@@ -336,7 +336,7 @@ export async function askRoute(body: { birth: BirthData; question: string }) {
         (synthesis ? `ENGINE SYNTHESIS for the matched area(s) — verdict · confidence · reasoning factors (weigh these; they already combine house, kāraka strength, yogas, varga and daśā):\n${synthesis}\n\n` : "") +
         `Relevant house verdicts:\n${houseLines}\n\n` +
         (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
-        (timing ? `Period favourability (chapters ahead, from now forward — tenor from each lord's iṣṭa/kaṣṭa + nature + placement). Cite ONLY these windows by their exact years and stated tenor; never relabel one or mention years not listed:\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n` : "") +
+        (timing ? (() => { const rows = chartDashaTimeline(chart, shadbala, dasha, new Date(), 12); return `TIMING SUMMARY (authoritative — base the timing answer on this, do not add other years): ${dashaTimingSummary(rows)}\nPeriod favourability (chapters ahead, from now forward). Cite ONLY these windows by their exact years and stated tenor; never relabel one or mention past years:\n${formatDashaTimeline(rows)}\n\n`; })() : "") +
         `Classical rules that apply to this question (cite these):\n${evidenceText}`;
       const { text, provider, model } = await chatClient(ASK_SYSTEM, context, cfg);
       if (text?.trim()) {

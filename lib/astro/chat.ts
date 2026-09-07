@@ -12,7 +12,7 @@ import { analyzeBhavas } from "./bhava";
 import { computeYogas } from "./yogas";
 import { gradeYogas } from "./yoga-strength";
 import { computeLifePredictions, formatPredictionDossier } from "./prediction";
-import { chartDashaTimeline, formatDashaTimeline } from "./dasha-tenor";
+import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "./dasha-tenor";
 import { computeJaimini } from "./jaimini";
 import { matchTopics, TOPICS } from "./question";
 import { areaEvidence, type ClassicalEvidence } from "./classical-evidence";
@@ -108,7 +108,9 @@ export function buildChatDossier(birth: BirthData): string {
 
   const moon = chart.planets.find((p) => p.planet === "Moon")!;
   const jn = nakshatraProfile(moon.nakshatraIndex);
-  const tenorTimeline = formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12));
+  const tenorRows = chartDashaTimeline(chart, shadbala, dasha, new Date(), 12);
+  const tenorTimeline = formatDashaTimeline(tenorRows);
+  const timingSummary = dashaTimingSummary(tenorRows);
 
   return (
     `NATIVE: ${birth.name || "(unnamed)"} — ${birth.day}/${birth.month}/${birth.year}, ${birth.place || "given coordinates"}.\n` +
@@ -122,7 +124,8 @@ export function buildChatDossier(birth: BirthData): string {
     `\nDAŚĀ TIMELINE (Vimśottarī): ${timeline}\n` +
     (antar ? `\nCurrent mahādaśā antardaśās:\n${antar}\n` : "") +
     (tenorTimeline
-      ? `\nPERIOD FAVOURABILITY — CHAPTERS AHEAD, from now forward (tenor from each lord's iṣṭa/kaṣṭa + nature + placement; "under Sade Sati" = Saturn's testing transit). This is the ONLY basis for period timing: cite ONLY these windows by their exact years and stated tenor; never relabel one (a "mixed"/"difficult" window is not "favourable") or invent windows/years not listed:\n${tenorTimeline}\n`
+      ? `\nTIMING SUMMARY (authoritative — state faithfully for timing questions, don't contradict or add other years): ${timingSummary}\n` +
+        `PERIOD FAVOURABILITY — CHAPTERS AHEAD, from now forward (tenor from each lord's iṣṭa/kaṣṭa + nature + placement; "under Sade Sati" = Saturn's testing transit). Cite ONLY these windows by their exact years and stated tenor; never relabel one (a "mixed"/"difficult" window is not "favourable") or invent windows/past years not listed:\n${tenorTimeline}\n`
       : "")
   );
 }

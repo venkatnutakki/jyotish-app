@@ -12,7 +12,7 @@ import { computeShadbala } from "@/lib/astro/shadbala";
 import { analyzeBhavas } from "@/lib/astro/bhava";
 import { computeYogas } from "@/lib/astro/yogas";
 import { computeLifePredictions, formatPredictionDossier } from "@/lib/astro/prediction";
-import { chartDashaTimeline, formatDashaTimeline } from "@/lib/astro/dasha-tenor";
+import { chartDashaTimeline, formatDashaTimeline, dashaTimingSummary } from "@/lib/astro/dasha-tenor";
 import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/classical-evidence";
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       `Relevant house verdicts:\n${houseLines}\n\n` +
       (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
       (timing
-        ? `Period favourability (chapters ahead, from now forward — tenor from each lord's iṣṭa/kaṣṭa + nature + placement). Cite ONLY these windows by their exact years and stated tenor; never relabel one (a "mixed"/"difficult" window is not "favourable") or mention years not listed:\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n`
+        ? (() => { const rows = chartDashaTimeline(chart, shadbala, dasha, new Date(), 12); return `TIMING SUMMARY (authoritative — base the timing answer on this, do not add other years): ${dashaTimingSummary(rows)}\nPeriod favourability (chapters ahead, from now forward). Cite ONLY these windows by their exact years and stated tenor; never relabel one or mention past years not listed:\n${formatDashaTimeline(rows)}\n\n`; })()
         : "") +
       `Classical rules that apply to this question (cite these):\n${evidenceText}`;
 
