@@ -175,21 +175,40 @@ export function CompatibilityView() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="no-print grid gap-4 md:grid-cols-2">
         <PersonForm label="Partner 1" p={groom} set={setGroom} />
         <PersonForm label="Partner 2" p={bride} set={setBride} />
       </div>
-      <button
-        onClick={check}
-        disabled={loading}
-        className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
-      >
-        {loading ? "Matching…" : "Check Compatibility (Guṇa Milan)"}
-      </button>
-      {error && <p className="text-sm text-rose-300">{error}</p>}
+      <div className="no-print flex flex-wrap items-center gap-2">
+        <button
+          onClick={check}
+          disabled={loading}
+          className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+        >
+          {loading ? "Matching…" : "Check Compatibility (Guṇa Milan)"}
+        </button>
+        {(result || comparison) && (
+          <button
+            onClick={() => window.print()}
+            className="rounded-lg border border-amber-300/40 px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/10"
+          >
+            🖨 Print / Save as PDF
+          </button>
+        )}
+      </div>
+      {error && <p className="no-print text-sm text-rose-300">{error}</p>}
+
+      {(result || comparison) && (
+        <div className="report space-y-6">
+          <header className="report-section text-center">
+            <h2 className="text-xl font-bold text-amber-100">
+              {(groom.name || "Partner 1")} &amp; {(bride.name || "Partner 2")}
+            </h2>
+            <p className="text-xs text-amber-100/50">Compatibility &amp; Chart Comparison</p>
+          </header>
 
       {result && (
-        <div className="space-y-4">
+        <div className="report-section space-y-4">
           <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-white/10 bg-gradient-to-b from-amber-400/[0.08] to-transparent p-5">
             <div className="text-center">
               <div className="text-4xl font-bold text-amber-100">
@@ -269,7 +288,7 @@ export function CompatibilityView() {
       )}
 
       {comparison && (
-        <div className="space-y-4">
+        <div className="report-section space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-200/80">
             Side-by-Side &amp; Current Periods
           </h3>
@@ -331,6 +350,8 @@ export function CompatibilityView() {
             The pratyantar and sūkṣma levels are only as precise as the birth time — confirm it
             from a record before reading fine sub-period dates.
           </p>
+        </div>
+      )}
         </div>
       )}
     </div>

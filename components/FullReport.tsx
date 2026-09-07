@@ -17,6 +17,7 @@ interface ReportData {
   chart: Chart;
   panchang: Record<string, string | number>;
   dasha: SerializedDasha[];
+  currentDasha?: { level: string; lord: string; start: string; end: string }[];
   ashtakavarga: { bav: Record<string, number[]>; sav: number[] };
   shadbala: {
     ranking: { planet: string; rupas: number }[];
@@ -619,6 +620,28 @@ export function FullReport({ data }: { data: ReportData }) {
 
       {/* Vimshottari dasha */}
       <Section title="Vimśottari Daśā">
+        {data.currentDasha && data.currentDasha.length > 0 && (
+          <div className="break-inside-avoid rounded-lg border border-amber-300/20 bg-amber-400/5 p-3">
+            <p className="text-xs font-medium text-amber-200/80">Running now — mahādaśā to sūkṣma</p>
+            <p className="mt-0.5 mb-2 text-[11px] text-amber-100/45">
+              The exact period active today at every level. The finer levels
+              (pratyantar, sūkṣma) are only as precise as the birth time.
+            </p>
+            <div className="space-y-1">
+              {data.currentDasha.map((c) => (
+                <div key={c.level} className="flex items-baseline gap-2 text-xs">
+                  <span className="w-24 shrink-0 uppercase tracking-wide text-amber-200/60">
+                    {({ maha: "Mahādaśā", antar: "Antardaśā", pratyantar: "Pratyantar", sukshma: "Sūkṣma" } as Record<string, string>)[c.level] ?? c.level}
+                  </span>
+                  <span className="font-medium text-amber-50">{c.lord}</span>
+                  <span className="ml-auto tabular-nums text-amber-100/45">
+                    {new Date(c.start).toLocaleDateString()} → {new Date(c.end).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <DashaTree dasha={data.dasha} />
         {data.dashaOnsets && data.dashaOnsets.some(Boolean) && (
           <div className="mt-3 space-y-1.5 rounded-lg border border-white/10 bg-white/[0.02] p-3">

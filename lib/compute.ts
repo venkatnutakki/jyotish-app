@@ -9,6 +9,7 @@ import { doubleTransit } from "./astro/double-transit";
 import { mindTemperament } from "./astro/mind-temperament";
 import { vargaReadings } from "./astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
+import { activeDashaChain } from "./astro/dasha-depth";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
 import { computeAshtakavarga, computePrastara } from "./astro/ashtakavarga";
@@ -81,7 +82,9 @@ export function reportRoute(birth: BirthData) {
   const bhavas = analyzeBhavas(chart, shadbala);
   const ashtakavarga = computeAshtakavarga(chart);
   return {
-    chart, panchang: computePanchang(chart, weekday), dasha, ashtakavarga, shadbala,
+    chart, panchang: computePanchang(chart, weekday), dasha,
+    currentDasha: activeDashaChain(dasha, new Date(), 4).map((c) => ({ level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString() })),
+    ashtakavarga, shadbala,
     grahaRasmi: computeGrahaRasmi(chart), samudayaAV: computeSamudayaAV(chart, ashtakavarga), avLongevity: computeAvLongevity(ashtakavarga),
     jaimini: computeJaimini(chart), kp: computeKp(chart), kpFull: computeKpFull(chart, birth),
     yogas: annotateYogas(yogas, shadbala, chart), bhavas, predictions: computeLifePredictions(chart, bhavas, shadbala, yogas, dasha, birth),

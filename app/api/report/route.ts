@@ -6,6 +6,7 @@ import { doubleTransit } from "@/lib/astro/double-transit";
 import { mindTemperament } from "@/lib/astro/mind-temperament";
 import { vargaReadings } from "@/lib/astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "@/lib/astro/dasha";
+import { activeDashaChain } from "@/lib/astro/dasha-depth";
 import { computeRemedies } from "@/lib/astro/remedies";
 import { computePanchang } from "@/lib/astro/panchang";
 import { computeAshtakavarga } from "@/lib/astro/ashtakavarga";
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest) {
       chart,
       panchang: computePanchang(chart, weekday),
       dasha,
+      // Current running period, all levels (mahā → antar → pratyantar → sūkṣma).
+      currentDasha: activeDashaChain(dasha, new Date(), 4).map((c) => ({
+        level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString(),
+      })),
       ashtakavarga,
       grahaRasmi: computeGrahaRasmi(chart),
       samudayaAV: computeSamudayaAV(chart, ashtakavarga),
