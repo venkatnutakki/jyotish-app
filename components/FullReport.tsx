@@ -17,7 +17,8 @@ interface ReportData {
   chart: Chart;
   panchang: Record<string, string | number>;
   dasha: SerializedDasha[];
-  currentDasha?: { level: string; lord: string; start: string; end: string }[];
+  currentDasha?: { level: string; lord: string; start: string; end: string; tenor?: string }[];
+  dashaTimeline?: { md: string; ad: string; from: string; to: string; tenor: string; sadeSati: boolean }[];
   ashtakavarga: { bav: Record<string, number[]>; sav: number[] };
   shadbala: {
     ranking: { planet: string; rupas: number }[];
@@ -162,6 +163,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 const cellH = "border border-white/10 px-2 py-1 text-left font-medium text-amber-200/70";
 const cell = "border border-white/10 px-2 py-1";
+const TENOR_CLR: Record<string, string> = {
+  favourable: "text-emerald-300", mixed: "text-amber-200/70", difficult: "text-rose-300",
+};
+const tenorChip = (t?: string) =>
+  t ? <span className={"text-[10px] uppercase tracking-wide " + (TENOR_CLR[t] ?? "text-amber-100/50")}>{t}</span> : null;
 
 export function FullReport({ data }: { data: ReportData }) {
   const { chart } = data;
@@ -634,11 +640,36 @@ export function FullReport({ data }: { data: ReportData }) {
                     {({ maha: "Mahādaśā", antar: "Antardaśā", pratyantar: "Pratyantar", sukshma: "Sūkṣma" } as Record<string, string>)[c.level] ?? c.level}
                   </span>
                   <span className="font-medium text-amber-50">{c.lord}</span>
+                  {tenorChip(c.tenor)}
                   <span className="ml-auto tabular-nums text-amber-100/45">
                     {new Date(c.start).toLocaleDateString()} → {new Date(c.end).toLocaleDateString()}
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+        {data.dashaTimeline && data.dashaTimeline.length > 0 && (
+          <div className="break-inside-avoid rounded-lg border border-white/10 bg-white/[0.02] p-3">
+            <p className="text-xs font-medium text-amber-200/80">Life chapters ahead — antardaśās with their tenor</p>
+            <p className="mt-0.5 mb-2 text-[11px] text-amber-100/45">
+              Each sub-period&apos;s favourability is read from its lord&apos;s iṣṭa/kaṣṭa
+              capacity, functional nature and placement; SS marks Sade Sati.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-xs">
+                <thead><tr>{["Period", "Antardaśā", "Tenor", "Window"].map((h) => <th key={h} className={cellH}>{h}</th>)}</tr></thead>
+                <tbody className="text-amber-50/90">
+                  {data.dashaTimeline.map((r, i) => (
+                    <tr key={i}>
+                      <td className={cell}>{r.md} daśā</td>
+                      <td className={cell + " font-medium"}>{r.md}–{r.ad}</td>
+                      <td className={cell}><span className={TENOR_CLR[r.tenor] ?? ""}>{r.tenor}</span>{r.sadeSati && <span className="text-rose-300/70"> · SS</span>}</td>
+                      <td className={cell + " tabular-nums whitespace-nowrap"}>{new Date(r.from).toLocaleDateString()} → {new Date(r.to).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

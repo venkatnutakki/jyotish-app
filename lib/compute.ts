@@ -10,6 +10,7 @@ import { mindTemperament } from "./astro/mind-temperament";
 import { vargaReadings } from "./astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "./astro/dasha";
 import { activeDashaChain } from "./astro/dasha-depth";
+import { dashaTenors, chartDashaTimeline } from "./astro/dasha-tenor";
 import { computeRemedies } from "./astro/remedies";
 import { computePanchang } from "./astro/panchang";
 import { computeAshtakavarga, computePrastara } from "./astro/ashtakavarga";
@@ -83,7 +84,8 @@ export function reportRoute(birth: BirthData) {
   const ashtakavarga = computeAshtakavarga(chart);
   return {
     chart, panchang: computePanchang(chart, weekday), dasha,
-    currentDasha: activeDashaChain(dasha, new Date(), 4).map((c) => ({ level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString() })),
+    currentDasha: (() => { const tn = dashaTenors(chart, shadbala); return activeDashaChain(dasha, new Date(), 4).map((c) => ({ level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString(), tenor: tn.get(c.lord)?.tenor ?? "mixed" })); })(),
+    dashaTimeline: chartDashaTimeline(chart, shadbala, dasha, new Date(), 12),
     ashtakavarga, shadbala,
     grahaRasmi: computeGrahaRasmi(chart), samudayaAV: computeSamudayaAV(chart, ashtakavarga), avLongevity: computeAvLongevity(ashtakavarga),
     jaimini: computeJaimini(chart), kp: computeKp(chart), kpFull: computeKpFull(chart, birth),

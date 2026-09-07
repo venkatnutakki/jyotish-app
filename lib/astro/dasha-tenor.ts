@@ -10,8 +10,10 @@
 import type { Chart } from "./types";
 import type { PlanetName } from "./constants";
 import type { ShadbalaResult } from "./shadbala";
+import type { DashaPeriod } from "./dasha";
 import { computeIshtaKashta } from "./strengths";
 import { functionalNatures } from "./functional-nature";
+import { computeTransits } from "./transits";
 
 export type Tenor = "favourable" | "mixed" | "difficult";
 
@@ -58,4 +60,47 @@ export function dashaTenors(chart: Chart, shadbala: ShadbalaResult): Map<string,
     out.set(planet, { lord: planet, tenor, score: Math.round(score * 10) / 10, reason: bits.join("; ") });
   }
   return out;
+}
+
+export interface DashaTimelineRow {
+  md: string;
+  ad: string;
+  from: string;
+  to: string;
+  tenor: Tenor;
+  sadeSati: boolean;
+}
+
+/**
+ * A single chart's antardaśā timeline across the coming `years` — each period's
+ * lord tagged with its tenor and whether it falls under Sade Sati. The single-
+ * chart analog of the couple timeline: a map of the life-chapters ahead.
+ */
+export function chartDashaTimeline(
+  chart: Chart,
+  shadbala: ShadbalaResult,
+  dasha: DashaPeriod[],
+  at: Date,
+  years = 12
+): DashaTimelineRow[] {
+  const tenors = dashaTenors(chart, shadbala);
+  const start = at.getTime();
+  const end = start + years * 365.2425 * 86400000;
+  const rows: DashaTimelineRow[] = [];
+  for (const m of dasha) {
+    for (const s of m.sub ?? []) {
+      if (s.end.getTime() < start || s.start.getTime() > end) continue;
+      // Sade Sati read at the period's opening (clamped to "now" for the running one).
+      const probe = new Date(Math.min(Math.max(s.start.getTime(), start), s.end.getTime()));
+      rows.push({
+        md: m.lord,
+        ad: s.lord,
+        from: s.start.toISOString(),
+        to: s.end.toISOString(),
+        tenor: tenors.get(s.lord)?.tenor ?? "mixed",
+        sadeSati: computeTransits(chart, probe).sadeSati.active,
+      });
+    }
+  }
+  return rows;
 }

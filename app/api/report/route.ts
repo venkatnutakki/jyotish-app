@@ -7,6 +7,7 @@ import { mindTemperament } from "@/lib/astro/mind-temperament";
 import { vargaReadings } from "@/lib/astro/varga-readings";
 import { vimshottariDasha, yoginiDasha } from "@/lib/astro/dasha";
 import { activeDashaChain } from "@/lib/astro/dasha-depth";
+import { dashaTenors, chartDashaTimeline } from "@/lib/astro/dasha-tenor";
 import { computeRemedies } from "@/lib/astro/remedies";
 import { computePanchang } from "@/lib/astro/panchang";
 import { computeAshtakavarga } from "@/lib/astro/ashtakavarga";
@@ -66,10 +67,17 @@ export async function POST(req: NextRequest) {
       chart,
       panchang: computePanchang(chart, weekday),
       dasha,
-      // Current running period, all levels (mahā → antar → pratyantar → sūkṣma).
-      currentDasha: activeDashaChain(dasha, new Date(), 4).map((c) => ({
-        level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString(),
-      })),
+      // Current running period, all levels (mahā → antar → pratyantar → sūkṣma),
+      // each tagged with the period-lord's favourability tenor for this chart.
+      currentDasha: (() => {
+        const tn = dashaTenors(chart, shadbala);
+        return activeDashaChain(dasha, new Date(), 4).map((c) => ({
+          level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString(),
+          tenor: tn.get(c.lord)?.tenor ?? "mixed",
+        }));
+      })(),
+      // The life-chapters ahead: antardaśās across the coming years, with tenor.
+      dashaTimeline: chartDashaTimeline(chart, shadbala, dasha, new Date(), 12),
       ashtakavarga,
       grahaRasmi: computeGrahaRasmi(chart),
       samudayaAV: computeSamudayaAV(chart, ashtakavarga),
