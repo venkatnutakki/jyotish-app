@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       `Relevant house verdicts:\n${houseLines}\n\n` +
       (timing && upcoming ? `Upcoming antardaśā windows: ${upcoming}\n\n` : "") +
       (timing
-        ? `Period favourability (chapters ahead — tenor from each lord's iṣṭa/kaṣṭa + nature + placement; use to time favourable vs demanding windows by year):\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n`
+        ? `Period favourability (chapters ahead, from now forward — tenor from each lord's iṣṭa/kaṣṭa + nature + placement). Cite ONLY these windows by their exact years and stated tenor; never relabel one (a "mixed"/"difficult" window is not "favourable") or mention years not listed:\n${formatDashaTimeline(chartDashaTimeline(chart, shadbala, dasha, new Date(), 12))}\n\n`
         : "") +
       `Classical rules that apply to this question (cite these):\n${evidenceText}`;
 

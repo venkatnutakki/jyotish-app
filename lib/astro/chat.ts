@@ -122,7 +122,7 @@ export function buildChatDossier(birth: BirthData): string {
     `\nDAŚĀ TIMELINE (Vimśottarī): ${timeline}\n` +
     (antar ? `\nCurrent mahādaśā antardaśās:\n${antar}\n` : "") +
     (tenorTimeline
-      ? `\nPERIOD FAVOURABILITY — CHAPTERS AHEAD (tenor from each lord's iṣṭa/kaṣṭa + nature + placement; "under Sade Sati" = Saturn's testing transit). Use this to time favourable vs demanding windows by their years:\n${tenorTimeline}\n`
+      ? `\nPERIOD FAVOURABILITY — CHAPTERS AHEAD, from now forward (tenor from each lord's iṣṭa/kaṣṭa + nature + placement; "under Sade Sati" = Saturn's testing transit). This is the ONLY basis for period timing: cite ONLY these windows by their exact years and stated tenor; never relabel one (a "mixed"/"difficult" window is not "favourable") or invent windows/years not listed:\n${tenorTimeline}\n`
       : "")
   );
 }

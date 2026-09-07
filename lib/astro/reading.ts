@@ -191,8 +191,8 @@ export function buildReading(birth: BirthData): BuiltReading {
     `═══ DAŚĀ TIMELINE (Vimśottarī mahādaśās) ═══\n${mahaText}\n` +
     (antarText ? `\nCurrent mahādaśā sub-periods (antardaśās):\n${antarText}\n` : "") +
     (tenorTimeline
-      ? `\n═══ PERIOD FAVOURABILITY — LIFE CHAPTERS AHEAD ═══\n` +
-        `Each sub-period's tenor is read from its lord's iṣṭa/kaṣṭa capacity, functional nature and placement in THIS chart; "under Sade Sati" marks Saturn's testing transit over the Moon. Use this to TIME the reading — say which coming windows are favourable, mixed or demanding, with their years.\n${tenorTimeline}\n`
+      ? `\n═══ PERIOD FAVOURABILITY — LIFE CHAPTERS AHEAD (from now forward) ═══\n` +
+        `Each sub-period's tenor is read from its lord's iṣṭa/kaṣṭa capacity, functional nature and placement in THIS chart; "under Sade Sati" marks Saturn's testing transit over the Moon. This list is the ONLY basis for period-favourability timing: cite ONLY these windows, by their exact years and stated tenor. NEVER relabel a window (do not call a "mixed" or "difficult" period favourable, or vice-versa) and NEVER invent windows or comment on years not listed here.\n${tenorTimeline}\n`
       : "") +
     `\n═══ LIFE-AREA PREDICTIONS WITH CLASSICAL CITATIONS ═══\n${predictionText}`;
 
