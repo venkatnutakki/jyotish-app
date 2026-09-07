@@ -33,6 +33,23 @@ describe("chart comparison", () => {
     expect(c.contrasts.some((s) => /mahādaśā/.test(s))).toBe(true);
   });
 
+  it("builds a combined timeline with per-person tenor + Sade Sati + combined label", () => {
+    const c = compareCharts(A, B, new Date("2026-09-07"));
+    expect(c.timeline.length).toBeGreaterThan(3);
+    const valid = ["both-favourable", "both-testing", "offset", "shared-change", "mixed"];
+    for (const s of c.timeline) {
+      expect(valid).toContain(s.combined);
+      expect(["favourable", "mixed", "difficult"]).toContain(s.a.tenor);
+      expect(["favourable", "mixed", "difficult"]).toContain(s.b.tenor);
+      expect(typeof s.a.sadeSati).toBe("boolean");
+      expect(new Date(s.from).getTime()).toBeLessThan(new Date(s.to).getTime());
+      expect(s.note.length).toBeGreaterThan(10);
+    }
+    // The two charts' phases are largely offset — the "one carries the other"
+    // pattern should appear at least once (prathima's Sade Sati vs venkata's not).
+    expect(c.timeline.some((s) => s.combined === "offset")).toBe(true);
+  });
+
   it("every daśā step has ordered dates", () => {
     const c = compareCharts(A, B, new Date("2026-09-07"));
     for (const s of [c.a, c.b]) {

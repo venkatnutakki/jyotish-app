@@ -112,6 +112,19 @@ const LEVEL_LABEL: Record<string, string> = {
   maha: "Mahādaśā", antar: "Antardaśā", pratyantar: "Pratyantar", sukshma: "Sūkṣma",
 };
 const ymd = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short" });
+const TENOR_CLR: Record<string, string> = {
+  favourable: "text-emerald-200", mixed: "text-amber-100", difficult: "text-rose-200",
+};
+const COMBINED_LABEL: Record<string, string> = {
+  "both-favourable": "both up", "both-testing": "both tested", offset: "offset", "shared-change": "shared change", mixed: "mixed",
+};
+const COMBINED_CLR: Record<string, string> = {
+  "both-favourable": "bg-emerald-400/15 text-emerald-200",
+  "both-testing": "bg-rose-400/15 text-rose-200",
+  offset: "bg-amber-400/15 text-amber-200",
+  "shared-change": "bg-sky-400/15 text-sky-200",
+  mixed: "bg-white/10 text-amber-100/60",
+};
 
 function DashaStack({ s }: { s: ChartSummary }) {
   return (
@@ -350,6 +363,42 @@ export function CompatibilityView() {
             The pratyantar and sūkṣma levels are only as precise as the birth time — confirm it
             from a record before reading fine sub-period dates.
           </p>
+
+          {/* Combined timeline — the coming years */}
+          {comparison.timeline && comparison.timeline.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-200/70">
+                Combined Timeline — the coming years
+              </h4>
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+                <table className="w-full text-xs">
+                  <thead className="text-amber-200/60">
+                    <tr className="[&>th]:px-2.5 [&>th]:py-1.5 [&>th]:text-left [&>th]:font-medium">
+                      <th>Window</th>
+                      <th>{comparison.a.name}</th>
+                      <th>{comparison.b.name}</th>
+                      <th>Together</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-amber-50/90 [&_td]:px-2.5 [&_td]:py-1.5 [&_tr]:border-t [&_tr]:border-white/10">
+                    {comparison.timeline.map((s, i) => (
+                      <tr key={i}>
+                        <td className="whitespace-nowrap tabular-nums text-amber-100/50">{ymd(s.from)}–{ymd(s.to)}</td>
+                        <td><span className={TENOR_CLR[s.a.tenor]}>{s.a.ad}</span>{s.a.sadeSati && <span className="text-rose-300/70"> ·SS</span>}</td>
+                        <td><span className={TENOR_CLR[s.b.tenor]}>{s.b.ad}</span>{s.b.sadeSati && <span className="text-rose-300/70"> ·SS</span>}</td>
+                        <td><span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${COMBINED_CLR[s.combined]}`}>{COMBINED_LABEL[s.combined]}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-amber-100/45">
+                Antardaśā periods aligned across both charts. Tenor is read from each period-lord&apos;s
+                iṣṭa/kaṣṭa capacity, functional nature and placement; <span className="text-rose-300/70">·SS</span> marks Sade Sati.
+                &ldquo;Offset&rdquo; means one is in a lighter phase while the other is tested — the steadier one can carry the household.
+              </p>
+            </div>
+          )}
         </div>
       )}
         </div>
