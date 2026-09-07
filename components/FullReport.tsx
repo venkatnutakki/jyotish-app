@@ -654,17 +654,20 @@ export function FullReport({ data }: { data: ReportData }) {
             <p className="text-xs font-medium text-amber-200/80">Life chapters ahead — antardaśās with their tenor</p>
             <p className="mt-0.5 mb-2 text-[11px] text-amber-100/45">
               Each sub-period&apos;s favourability is read from its lord&apos;s iṣṭa/kaṣṭa
-              capacity, functional nature and placement; SS marks Sade Sati.
+              capacity, functional nature and placement. The Sade Sati column is a
+              separate overlay — Saturn&apos;s 7½-year transit over the Moon — so a
+              favourable period can still fall under it and demand patience.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-xs">
-                <thead><tr>{["Period", "Antardaśā", "Tenor", "Window"].map((h) => <th key={h} className={cellH}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Period", "Antardaśā", "Tenor", "Sade Sati", "Window"].map((h) => <th key={h} className={cellH}>{h}</th>)}</tr></thead>
                 <tbody className="text-amber-50/90">
                   {data.dashaTimeline.map((r, i) => (
                     <tr key={i}>
                       <td className={cell}>{r.md} daśā</td>
                       <td className={cell + " font-medium"}>{r.md}–{r.ad}</td>
-                      <td className={cell}><span className={TENOR_CLR[r.tenor] ?? ""}>{r.tenor}</span>{r.sadeSati && <span className="text-rose-300/70"> · SS</span>}</td>
+                      <td className={cell}><span className={TENOR_CLR[r.tenor] ?? ""}>{r.tenor}</span></td>
+                      <td className={cell}>{r.sadeSati ? <span className="text-rose-300/80">active</span> : <span className="text-amber-100/30">—</span>}</td>
                       <td className={cell + " tabular-nums whitespace-nowrap"}>{new Date(r.from).toLocaleDateString()} → {new Date(r.to).toLocaleDateString()}</td>
                     </tr>
                   ))}
