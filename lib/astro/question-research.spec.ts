@@ -22,6 +22,10 @@ describe("question-research", () => {
 
     // a time word promotes a yes/no to a timing question (both include timing)
     expect(classifyQuestion("will I lose my job soon?").mode).toBe("timing");
+
+    // a yes/no with no horizon should be sharpened up front; one with a horizon should not
+    expect(classifyQuestion("will I get a promotion?").shouldAskFirst).toBe(true);
+    expect(classifyQuestion("will I get a promotion this year?").shouldAskFirst).toBe(false);
   });
 
   it("asks for clarification when no matter is identifiable", () => {
@@ -44,6 +48,14 @@ describe("question-research", () => {
     const f = formatQuestionResearch(r);
     expect(f).toContain("QUESTION RESEARCH");
     expect(f).toContain("RESEARCHED VERDICT");
+    // it always instructs the model to validate the reading against the user's life
+    expect(f).toContain("VALIDATE WITH THE USER");
+  });
+
+  it("tells the model to ask the time frame first for an open-horizon yes/no", () => {
+    const r = researchQuestion(OBAMA, "will I get a promotion?");
+    expect(r.intent.shouldAskFirst).toBe(true);
+    expect(formatQuestionResearch(r)).toContain("ASK FIRST");
   });
 
   it("names the feared-outcome reassurance only when supported + negative", () => {

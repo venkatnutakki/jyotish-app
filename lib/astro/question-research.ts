@@ -31,6 +31,8 @@ export interface QuestionIntent {
   timeframe: string | null;
   /** True when the question cannot be researched as posed and must be clarified. */
   needsClarification: boolean;
+  /** A yes/no or timing question with no horizon — ask the timeframe up front. */
+  shouldAskFirst: boolean;
   /** Questions to put back to the user (must-ask first if needsClarification). */
   clarifications: string[];
 }
@@ -86,13 +88,14 @@ export function classifyQuestion(question: string): QuestionIntent {
       "Which area of life is this about — career, marriage, wealth, health, children, education, property, travel, or something else?"
     );
   }
-  // Optional sharpeners (offered, not blocking) for a yes/no with no horizon.
-  if (!needsClarification && mode === "yes_no" && !timeframe) {
+  // A yes/no or timing question with no horizon should be sharpened up front.
+  const shouldAskFirst = !needsClarification && (mode === "yes_no" || mode === "timing") && !timeframe;
+  if (shouldAskFirst) {
     clarifications.push(
       "Is there a particular time frame you have in mind — the coming months, this year, or the next few years?"
     );
   }
-  return { topics, mode, negativePolarity, timeframe, needsClarification, clarifications };
+  return { topics, mode, negativePolarity, timeframe, needsClarification, shouldAskFirst, clarifications };
 }
 
 const verdictScore = (v: string): number =>
@@ -216,8 +219,11 @@ export function formatQuestionResearch(r: QuestionResearch): string {
     `CONVERGENCE across independent lenses (${r.supporting} support · ${r.denying} deny · ${r.neutral} neutral):\n${lines}\n` +
     `RESEARCHED VERDICT: ${r.verdict}\n` +
     (r.timing ? `AUTHORITATIVE TIMING: ${r.timing}\n` : "") +
-    (r.intent.clarifications.length
-      ? `OPTIONAL SHARPENERS (you MAY ask one back if it would sharpen the answer): ${r.intent.clarifications.join(" / ")}\n`
-      : "")
+    (r.intent.shouldAskFirst
+      ? `ASK FIRST: the question has no time horizon — open by asking "${r.intent.clarifications[0]}" so the timing can be pinned, then give the reading.\n`
+      : r.intent.clarifications.length
+      ? `OPTIONAL SHARPENER (ask it back if it would tighten the answer): ${r.intent.clarifications.join(" / ")}\n`
+      : "") +
+    `VALIDATE WITH THE USER (always close with this): after the reading, name 1–2 CONCRETE, checkable things the chart indicates for this matter (e.g. the kind of work, the timing of a past event, a family circumstance, a clear tendency) drawn from the synthesis, and ASK the user whether they match their actual life. If confirmed, note the added confidence; if the user corrects you, acknowledge it plainly and refine the interpretation/emphasis — but never fabricate or silently overwrite the computed verdict; where lived reality diverges from a computed reading, say so honestly.\n`
   );
 }
