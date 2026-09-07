@@ -47,10 +47,13 @@ RULES:
   that drives the verdict) rather than speaking generically.
 - Cite the source for each classical claim in parentheses, e.g.
   "(Bhṛgu Sūtras — Venus in the 7th)" or "(Sārāvalī — Moon in Cancer)".
-- If the question is about TIMING, use the daśā/antardaśā periods given to indicate
-  when the matter is most likely to activate; and use the period-favourability list
-  to say which coming windows (by year) are favourable to act in versus demanding
-  and better met with patience. Be clear these are indicative windows.
+- If the question is about TIMING: base the timing answer ONLY on the provided
+  TIMING SUMMARY and period-favourability list, using the EXACT years given for the
+  named periods. CRITICAL: do NOT state any other year or month, and do NOT infer a
+  favourable/demanding window from the life-area verdicts — an "Excellent" area
+  describes QUALITY, never WHEN. If the running period's tenor is "mixed", say the
+  time is mixed and point to the next favourable window named in the summary; do
+  not upgrade it. Never mention past years.
 - Warm, plain language for an ordinary person. 150–300 words. No preamble.`;
 
 export async function POST(req: NextRequest) {
