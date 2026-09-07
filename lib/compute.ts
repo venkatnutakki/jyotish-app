@@ -55,6 +55,7 @@ import { computeGocharaStrength } from "./astro/gochara-strength";
 import { computeNakshatraVedha } from "./astro/nakshatra-vedha";
 import { muhurtaWindow } from "./astro/muhurta";
 import { computeCompatibility, type Person } from "./astro/compatibility";
+import { compareCharts } from "./astro/chart-comparison";
 import { matchTopics, isTimingQuestion, TOPICS } from "./astro/question";
 import { areaEvidence, concordance, type ClassicalEvidence } from "./astro/classical-evidence";
 import { SIGNS, NAKSHATRAS } from "./astro/constants";
@@ -195,6 +196,7 @@ export function compatRoute(body: { groom: BirthData; bride: BirthData }) {
   return {
     compatibility: computeCompatibility(toPerson(gChart, groom.name), toPerson(bChart, bride.name)),
     mangal: { groom: gMangal, bride: bMangal, match: matchMangal(gMangal, bMangal) },
+    comparison: compareCharts(groom, bride),
   };
 }
 

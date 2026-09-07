@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeChart } from "@/lib/astro/chart";
 import { computeCompatibility, type Person } from "@/lib/astro/compatibility";
 import { computeMangalDosha, matchMangal } from "@/lib/astro/mangal-dosha";
+import { compareCharts } from "@/lib/astro/chart-comparison";
 import { validateBirth } from "@/lib/astro/validate";
 import type { Chart } from "@/lib/astro/types";
 
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       compatibility: result,
       mangal: { groom: gMangal, bride: bMangal, match: matchMangal(gMangal, bMangal) },
+      // Side-by-side comparison + each person's current daśā stack to sūkṣma.
+      comparison: compareCharts(groom, bride),
     });
   } catch (err) {
     return NextResponse.json(

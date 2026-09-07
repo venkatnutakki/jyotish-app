@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Compatibility } from "@/lib/astro/compatibility";
+import type { ChartComparison, ChartSummary } from "@/lib/astro/chart-comparison";
 import { CityAutocomplete, type CityHit } from "./CityAutocomplete";
 import { zoneOffsetHours } from "@/lib/geo";
 
@@ -107,6 +108,35 @@ function toBirth(p: P) {
   };
 }
 
+const LEVEL_LABEL: Record<string, string> = {
+  maha: "Mahādaśā", antar: "Antardaśā", pratyantar: "Pratyantar", sukshma: "Sūkṣma",
+};
+const ymd = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short" });
+
+function DashaStack({ s }: { s: ChartSummary }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <div className="mb-1 text-sm font-semibold text-amber-100">{s.name}</div>
+      <div className="mb-2 text-[11px] text-amber-100/50">
+        {s.lagnaSign} lagna · Moon {s.moonSign} · strongest {s.strongest}
+        {s.signatureYoga ? ` · ${s.signatureYoga}` : ""}
+      </div>
+      <div className="space-y-1">
+        {s.currentDasha.map((d) => (
+          <div key={d.level} className="flex items-baseline gap-2 text-xs">
+            <span className="w-20 shrink-0 uppercase tracking-wide text-amber-200/60">{LEVEL_LABEL[d.level]}</span>
+            <span className="font-medium text-amber-50">{d.lord}</span>
+            <span className="ml-auto tabular-nums text-amber-100/40">{ymd(d.from)} → {ymd(d.to)}</span>
+          </div>
+        ))}
+      </div>
+      <div className={`mt-2 text-[11px] ${s.sadeSati.active ? "text-rose-200/80" : "text-emerald-200/70"}`}>
+        {s.sadeSati.active ? `Sade Sati — ${s.sadeSati.phase} phase` : "Not in Sade Sati"}
+      </div>
+    </div>
+  );
+}
+
 export function CompatibilityView() {
   const [groom, setGroom] = useState(blank("Partner 1"));
   const [bride, setBride] = useState(blank("Partner 2"));
@@ -116,6 +146,7 @@ export function CompatibilityView() {
     bride: { isManglik: boolean; intensity: string; summary: string };
     match: { compatible: boolean; note: string };
   } | null>(null);
+  const [comparison, setComparison] = useState<ChartComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,6 +163,7 @@ export function CompatibilityView() {
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setResult(data.compatibility);
       setMangal(data.mangal ?? null);
+      setComparison(data.comparison ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -233,6 +265,72 @@ export function CompatibilityView() {
               <p className="mt-2 text-sm text-amber-50/85">{mangal.match.note}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {comparison && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-200/80">
+            Side-by-Side &amp; Current Periods
+          </h3>
+          {/* Key facts */}
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+            <table className="w-full text-sm">
+              <thead className="text-amber-200/70">
+                <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left [&>th]:font-medium">
+                  <th></th>
+                  <th>{comparison.a.name}</th>
+                  <th>{comparison.b.name}</th>
+                </tr>
+              </thead>
+              <tbody className="text-amber-50/90 [&_td]:px-3 [&_td]:py-2 [&_tr]:border-t [&_tr]:border-white/10">
+                {([
+                  ["Lagna", `${comparison.a.lagnaSign} (${comparison.a.lagnaLord})`, `${comparison.b.lagnaSign} (${comparison.b.lagnaLord})`],
+                  ["Moon", `${comparison.a.moonSign} · ${comparison.a.moonNakshatra}`, `${comparison.b.moonSign} · ${comparison.b.moonNakshatra}`],
+                  ["Strongest graha", comparison.a.strongest, comparison.b.strongest],
+                  ["Signature yoga", comparison.a.signatureYoga ?? "—", comparison.b.signatureYoga ?? "—"],
+                  ["Manglik", comparison.a.manglik ? "Yes" : "No", comparison.b.manglik ? "Yes" : "No"],
+                ] as [string, string, string][]).map(([k, av, bv]) => (
+                  <tr key={k}>
+                    <td className="text-amber-100/50">{k}</td>
+                    <td>{av}</td>
+                    <td>{bv}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Current daśā stacks to sūkṣma */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DashaStack s={comparison.a} />
+            <DashaStack s={comparison.b} />
+          </div>
+          {/* Synthesis */}
+          {(comparison.shared.length > 0 || comparison.contrasts.length > 0) && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {comparison.shared.length > 0 && (
+                <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.06] p-3">
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-emerald-200/80">Shared right now</div>
+                  <ul className="space-y-1 text-xs text-amber-50/85">
+                    {comparison.shared.map((s, i) => <li key={i}>• {s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {comparison.contrasts.length > 0 && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-200/70">Where they differ</div>
+                  <ul className="space-y-1 text-xs text-amber-50/85">
+                    {comparison.contrasts.map((s, i) => <li key={i}>• {s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-amber-100/40">
+            Each stack shows the running mahādaśā → antardaśā → pratyantar → sūkṣma for today.
+            The pratyantar and sūkṣma levels are only as precise as the birth time — confirm it
+            from a record before reading fine sub-period dates.
+          </p>
         </div>
       )}
     </div>
