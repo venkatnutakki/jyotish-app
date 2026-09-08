@@ -5,8 +5,8 @@
 //   • DeepSeek   — direct API (deepseek-chat / V3), very strong + very cheap
 //   • Cerebras   — free tier, very fast, Qwen-3-235B / Llama-3.3-70B
 //   • OpenRouter — free ":free" models incl. DeepSeek-V3 (no payment needed)
-//   • Gemini     — free tier, gemini-2.5-flash
-//   • Groq       — free tier, Llama-3.3-70B
+//   • Groq       — free tier, openai/gpt-oss-120b (primary for this app)
+//   • Gemini     — free tier, gemini-2.5-flash (fallback)
 //   • Ollama     — fully local, no key, offline (quality scales with hardware)
 // No provider configured → callers fall back to the classical rule-based reading.
 
@@ -297,7 +297,7 @@ async function chatWith(provider: Provider, system: string, user: string): Promi
       return { text, provider, model };
     }
     case "groq": {
-      const model = process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct";
+      const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
       const text = await chatOpenAICompatible(
         "https://api.groq.com/openai/v1",
         cfgKey("GROQ_API_KEY", "groqApiKey")!,
@@ -445,7 +445,7 @@ async function chatMessagesWith(provider: Provider, system: string, messages: Ch
       return { text: await msgsOpenAICompatible("https://api.deepseek.com/v1", cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")!, model, system, messages), provider, model };
     }
     case "groq": {
-      const model = process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct";
+      const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
       return { text: await msgsOpenAICompatible("https://api.groq.com/openai/v1", cfgKey("GROQ_API_KEY", "groqApiKey")!, model, system, messages), provider, model };
     }
     case "gemini": {
@@ -487,7 +487,7 @@ function providerConfig(p: Provider): { kind: "openai" | "gemini" | "anthropic" 
     case "deepseek":
       return { kind: "openai", base: "https://api.deepseek.com/v1", key: cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")!, model: process.env.DEEPSEEK_MODEL || fileConfig().deepseekModel || "deepseek-chat" };
     case "groq":
-      return { kind: "openai", base: "https://api.groq.com/openai/v1", key: cfgKey("GROQ_API_KEY", "groqApiKey")!, model: process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct" };
+      return { kind: "openai", base: "https://api.groq.com/openai/v1", key: cfgKey("GROQ_API_KEY", "groqApiKey")!, model: process.env.GROQ_MODEL || "openai/gpt-oss-120b" };
     case "cerebras":
       return { kind: "openai", base: "https://api.cerebras.ai/v1", key: cfgKey("CEREBRAS_API_KEY", "cerebrasApiKey")!, model: process.env.CEREBRAS_MODEL || fileConfig().cerebrasModel || "llama-3.3-70b" };
     case "openrouter":
