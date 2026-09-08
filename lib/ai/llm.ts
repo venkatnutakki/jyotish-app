@@ -148,10 +148,16 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * while a configured fallback (e.g. Groq) is still tried instantly first. Throws
  * AiUnavailableError (with the providers tried) when nothing succeeds.
  */
-async function failover<T>(run: (p: Provider) => Promise<T>, only?: Provider): Promise<T> {
+async function failover<T>(run: (p: Provider) => Promise<T>, only?: Provider, prefer?: Provider): Promise<T> {
   // `only` forces a single provider (the ?provider= test hook) — no fallover, so
-  // the caller sees exactly that model's output. Otherwise the normal chain.
-  const providers = only ? (hasKeyFor(only) ? [only] : []) : availableProviders();
+  // the caller sees exactly that model's output. `prefer` moves one provider to
+  // the head of the normal chain (keeping the rest as fallback) — e.g. Chat
+  // prefers a large-context provider because its full dossier exceeds Groq's
+  // free-tier request limit. An explicit `only` beats `prefer`.
+  let providers = only ? (hasKeyFor(only) ? [only] : []) : availableProviders();
+  if (!only && prefer && hasKeyFor(prefer)) {
+    providers = [prefer, ...providers.filter((p) => p !== prefer)];
+  }
   if (!providers.length) throw new AiUnavailableError([], false);
   const pass = async (): Promise<{ ok: true; val: T } | { ok: false; rl: boolean; err: unknown }> => {
     let lastErr: unknown;
@@ -587,7 +593,7 @@ export interface StreamStart {
  * BEFORE the first chunk (a provider that starts streaming owns the response).
  * Throws if no provider can start.
  */
-export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096, only?: Provider): Promise<StreamStart> {
+export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096, only?: Provider, prefer?: Provider): Promise<StreamStart> {
   // Failover happens only BEFORE the first chunk (a provider that starts streaming
   // owns the response); an empty stream counts as a failure so the next is tried.
   return failover(async (p) => {
@@ -599,10 +605,10 @@ export async function chatMessagesStream(system: string, messages: ChatMessage[]
       yield* gen;
     })();
     return { provider: p, model: providerConfig(p).model, stream: primed };
-  }, only);
+  }, only, prefer);
 }
 
 /** Multi-turn version of chat(): tries each configured provider until one succeeds. */
-export async function chatMessages(system: string, messages: ChatMessage[], only?: Provider): Promise<ChatResult> {
-  return failover((p) => chatMessagesWith(p, system, messages), only);
+export async function chatMessages(system: string, messages: ChatMessage[], only?: Provider, prefer?: Provider): Promise<ChatResult> {
+  return failover((p) => chatMessagesWith(p, system, messages), only, prefer);
 }

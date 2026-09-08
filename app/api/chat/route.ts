@@ -52,10 +52,14 @@ export async function POST(req: NextRequest) {
     const system = buildChatSystem(birth, lastUser);
     // Test hook: ?provider=groq forces one provider (no failover) for A/B comparison.
     const only = asProvider(req.nextUrl.searchParams.get("provider"));
+    // Chat sends the FULL chart dossier, which exceeds Groq's free-tier per-request
+    // token limit (413). Prefer Gemini (large context) for chat, while the smaller
+    // Ask stays Groq-first; Groq/others remain as fallback. An explicit ?provider= wins.
+    const prefer = "gemini" as const;
 
     if (stream) {
       try {
-        const { provider, model, stream: gen } = await chatMessagesStream(system, trimmed, 3000, only);
+        const { provider, model, stream: gen } = await chatMessagesStream(system, trimmed, 3000, only, prefer);
         const enc = new TextEncoder();
         const body = new ReadableStream<Uint8Array>({
           async start(controller) {
@@ -84,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const { text, provider, model } = await chatMessages(system, trimmed, only);
+      const { text, provider, model } = await chatMessages(system, trimmed, only, prefer);
       if (!text?.trim()) return classicalReply("The AI returned an empty reply; showing a classical answer.");
       return NextResponse.json({ source: "ai", provider, model, reply: text });
     } catch (e) {
