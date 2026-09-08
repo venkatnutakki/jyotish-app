@@ -28,6 +28,22 @@ describe("question-research", () => {
     expect(classifyQuestion("will I get a promotion this year?").shouldAskFirst).toBe(false);
   });
 
+  it("augments a foreign-acquisition question with the gains (11th) and foreign (9th) lenses", () => {
+    const a = classifyQuestion("I applied for a remote bookkeeping job with an Australian company — will I get it?");
+    const keys = a.topics.map((t) => t.key);
+    expect(keys).toContain("career"); // primary
+    expect(keys).toContain("gains"); // "will I get it" → the 11th
+    expect(keys).toContain("foreign"); // "Australian" → the 9th/12th
+  });
+
+  it("weighs the secondary matters and leads timing with the near-term period", () => {
+    const r = researchQuestion(OBAMA, "will I get a remote job with an Australian firm?");
+    const names = r.lenses.map((l) => l.name).join(" | ");
+    expect(names).toMatch(/Gains|Ashtakavarga Gains/i);
+    expect(names).toMatch(/Foreign channel/i);
+    if (r.timing) expect(r.timing).toMatch(/^Current period/);
+  });
+
   it("asks for clarification when no matter is identifiable", () => {
     const r = researchQuestion(OBAMA, "tell me something");
     expect(r.intent.needsClarification).toBe(true);

@@ -17,7 +17,7 @@ import { computeLifePredictions, type LifePrediction } from "./prediction";
 import { computeAshtakavarga } from "./ashtakavarga";
 import { activeDashaChain } from "./dasha-depth";
 import { dashaTenors, chartDashaTimeline, dashaTimingSummary } from "./dasha-tenor";
-import { matchTopics, isTimingQuestion, type Topic } from "./question";
+import { matchTopics, isTimingQuestion, acquisitionIntent, foreignContext, TOPICS, type Topic } from "./question";
 import type { BirthData } from "./types";
 
 export type QuestionMode = "yes_no" | "timing" | "quality" | "open";
@@ -68,6 +68,18 @@ const TF = /\b(this year|next year|this month|next month|coming (year|months|wee
 export function classifyQuestion(question: string): QuestionIntent {
   const q = (question || "").trim();
   const topics = matchTopics(q);
+  // Augment with the lenses a keyword match alone misses: an ACQUIRING question
+  // ("will I get/land it") is really about the 11th of gains; a FOREIGN context
+  // ("Australian company", "abroad") pulls in the 9th/12th. Add them as secondary
+  // matters when a primary matter is already present, so the convergence weighs them.
+  const addTopic = (key: string) => {
+    if (topics.length && !topics.some((t) => t.key === key)) {
+      const t = TOPICS.find((x) => x.key === key);
+      if (t) topics.push(t);
+    }
+  };
+  if (acquisitionIntent(q)) addTopic("gains");
+  if (foreignContext(q)) addTopic("foreign");
   const timing = isTimingQuestion(q);
   const yesno = YESNO.test(q);
   const mode: QuestionMode = timing ? "timing" : yesno ? "yes_no" : HOW.test(q) ? "quality" : "open";
@@ -147,19 +159,29 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
     }
   }
 
-  // Ashtakavarga resilience of the matter's primary house.
-  try {
-    const av = computeAshtakavarga(chart);
-    const houseSign = (chart.ascendantSignIndex + (topic.houses[0] - 1)) % 12;
-    const bindus = av.sav[houseSign];
-    const s: -1 | 0 | 1 = bindus >= 30 ? 1 : bindus <= 22 ? -1 : 0;
-    lenses.push({ name: "Ashtakavarga", signal: s, note: `${topic.houses[0]}th house = ${bindus} bindus (avg 28)` });
-  } catch { /* optional */ }
+  // Ashtakavarga resilience (computed once, reused for every weighed house).
+  const av = (() => { try { return computeAshtakavarga(chart); } catch { return null; } })();
+  const savLens = (house: number, label: string) => {
+    if (!av) return;
+    const b = av.sav[(chart.ascendantSignIndex + (house - 1)) % 12];
+    lenses.push({ name: `Ashtakavarga ${label}`, signal: b >= 30 ? 1 : b <= 22 ? -1 : 0, note: `${house}th house = ${b} bindus (avg 28)` });
+  };
+  savLens(topic.houses[0], `(${topic.houses[0]}th)`);
 
-  // Running-daśā activation + tenor.
+  // Secondary matters the question also implicates — gains (the "will it come to
+  // me" 11th) and foreign (the 9th/12th of overseas) — weighed by verdict + house.
+  for (const aux of intent.topics.slice(1)) {
+    const ap = predictions.find((p) => p.key === aux.key);
+    if (ap) lenses.push({ name: aux.label, signal: sgn(verdictScore(ap.verdict)), note: `${ap.title}: ${ap.verdict} (${aux.houses[0]}th)` });
+    savLens(aux.houses[0], `${aux.label} (${aux.houses[0]}th)`);
+  }
+
+  // Running-daśā activation + tenor (does any active-chain lord signify any weighed matter?).
   const tenors = dashaTenors(chart, shadbala);
   const chain = activeDashaChain(dasha, new Date(), 4);
-  const activates = chain.some((c) => c.lord && (topic.karakas.includes(c.lord as never)));
+  const chainLords = new Set(chain.map((c) => c.lord));
+  const allKarakas = intent.topics.flatMap((t) => t.karakas as string[]);
+  const activates = [...chainLords].some((l) => allKarakas.includes(l));
   const md = chain[0];
   const mdTenor = md ? tenors.get(md.lord)?.tenor : "mixed";
   const dsig: -1 | 0 | 1 = activates ? (mdTenor === "favourable" ? 1 : mdTenor === "difficult" ? -1 : 0) : 0;
@@ -168,6 +190,19 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
     signal: dsig,
     note: `${chain.map((c) => c.lord).join("–")}${activates ? " (activates this matter)" : " (matter not directly active now)"}, mahā tenor ${mdTenor}`,
   });
+
+  // Foreign channel: a node (Rāhu/Ketu) sitting in the 9th of foreign lands, or
+  // active in the running period, opens the overseas door — decisive for a foreign question.
+  if (intent.topics.some((t) => t.key === "foreign")) {
+    const ninthSign = (chart.ascendantSignIndex + 8) % 12;
+    const nodeInNinth = chart.planets.some((p) => (p.planet === "Rahu" || p.planet === "Ketu") && p.signIndex === ninthSign);
+    const nodeActive = chainLords.has("Rahu") || chainLords.has("Ketu");
+    lenses.push({
+      name: "Foreign channel (9th/nodes)",
+      signal: (nodeInNinth || nodeActive) ? 1 : 0,
+      note: `${nodeInNinth ? "a node sits in the 9th of foreign lands" : "no node in the 9th"}; ${nodeActive ? "a node is active in the current period" : "no node active now"}`,
+    });
+  }
 
   const supporting = lenses.filter((l) => l.signal > 0).length;
   const denying = lenses.filter((l) => l.signal < 0).length;
@@ -182,9 +217,17 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
     (pred?.confidence && /very high|high/i.test(pred.confidence) && agreementFrac >= 0.6) ? "high" :
     agreementFrac >= 0.55 ? "moderate" : "low";
 
-  // Timing (authoritative) from the tenor timeline.
+  // Timing (authoritative): the near-term running period FIRST (the immediate
+  // window a yes/no turns on), then the longer-range favourability summary.
   const tenorRows = chartDashaTimeline(chart, shadbala, dasha, new Date(), 12);
-  const timing = intent.mode === "timing" || intent.mode === "yes_no" ? dashaTimingSummary(tenorRows) : null;
+  let timing: string | null = null;
+  if (intent.mode === "timing" || intent.mode === "yes_no") {
+    const pd = chain.find((c) => c.level === "pratyantar");
+    const now = chain.length
+      ? `Current period: ${chain.map((c) => c.lord).join("–")}${pd ? ` — the ${pd.lord} sub-period runs to ${pd.end.toISOString().slice(0, 10)}` : ""} (mahā tenor ${mdTenor}).`
+      : "";
+    timing = [now, dashaTimingSummary(tenorRows)].filter(Boolean).join(" ");
+  }
 
   // Deterministic verdict sentence, phrased to the matter (not the fear).
   const dir =

@@ -90,6 +90,20 @@ export const TOPICS: Topic[] = [
     keywords: [
       "foreign", "abroad", "travel", "overseas", "immigration", "visa",
       "settle abroad", "relocate", "migration", "green card", "onsite",
+      "offshore", "international", "nri", "australia", "australian", "canada",
+      "canadian", "singapore", "dubai", "gulf", "germany", "europe", "new zealand",
+      "work abroad", "job abroad", "foreign company", "remote for",
+    ],
+  },
+  {
+    key: "gains",
+    label: "Gains & aspirations",
+    houses: [11, 2],
+    karakas: ["Jupiter", "Moon"],
+    keywords: [
+      "gain", "gains", "aspiration", "aspirations", "fulfil", "fulfill",
+      "fulfilment", "fulfillment", "get selected", "get the offer", "land the",
+      "win the", "achieve my", "reach my goal", "income growth", "windfall",
     ],
   },
   {
@@ -174,6 +188,20 @@ export function matchTopics(question: string): Topic[] {
 /** Whether the question asks about TIMING (so we should foreground the daśā). */
 export function isTimingQuestion(question: string): boolean {
   return /\b(when|what age|which year|how long|by when|timing|time frame|date|soon|next year)\b/i.test(
+    question
+  );
+}
+
+/** Asks about ACQUIRING/attaining something → also weigh the 11th of gains ("will it come to me"). */
+export function acquisitionIntent(question: string): boolean {
+  return /\b(will i (get|land|secure|receive|win|obtain|clear|crack)|will i be selected|chances? of|get selected|get (the|this|a|an) (job|offer|role|position|visa|admission|seat|contract)|land (the|a|an)|secure (the|a|an)|selected for|receive an offer|get it|good chance)\b/i.test(
+    question
+  );
+}
+
+/** Involves a foreign/overseas dimension → also bring in the 9th/12th (Rāhu). */
+export function foreignContext(question: string): boolean {
+  return /\b(foreign|abroad|overseas|offshore|international|visa|immigrat\w*|relocat\w*|migrat\w*|green card|onsite|australia\w*|canad\w*|singapore|dubai|gulf|germany|europe|new zealand|nri)\b/i.test(
     question
   );
 }
