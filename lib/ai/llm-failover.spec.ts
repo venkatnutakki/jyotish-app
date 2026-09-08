@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AiUnavailableError, describeAiFallback, chat, availableProviders } from "./llm";
+import { AiUnavailableError, describeAiFallback, chat, availableProviders, asProvider } from "./llm";
 
 describe("AI failover + diagnostics", () => {
   it("AiUnavailableError carries what was tried", () => {
@@ -20,6 +20,14 @@ describe("AI failover + diagnostics", () => {
     expect(describeAiFallback(new AiUnavailableError(["gemini", "groq"], false))).toMatch(/unavailable/i);
     // generic error
     expect(describeAiFallback(new Error("boom"))).toMatch(/boom/);
+  });
+
+  it("asProvider validates the ?provider= hook", () => {
+    expect(asProvider("groq")).toBe("groq");
+    expect(asProvider("GEMINI")).toBe("gemini");
+    expect(asProvider("nonsense")).toBeUndefined();
+    expect(asProvider(null)).toBeUndefined();
+    expect(asProvider(undefined)).toBeUndefined();
   });
 
   it("chat() throws a typed AiUnavailableError when no provider is configured", async () => {

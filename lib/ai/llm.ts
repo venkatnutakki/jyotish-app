@@ -90,6 +90,12 @@ export function detectProvider(): Provider | null {
   return availableProviders()[0] ?? null;
 }
 
+/** Validate a raw provider string (e.g. from a ?provider= test hook). */
+export function asProvider(raw?: string | null): Provider | undefined {
+  const p = raw?.toLowerCase();
+  return p && FALLBACK_ORDER.includes(p as Provider) ? (p as Provider) : undefined;
+}
+
 /** Thrown when every configured provider failed. Carries what was tried, for diagnostics. */
 export class AiUnavailableError extends Error {
   tried: Provider[];
@@ -138,8 +144,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * while a configured fallback (e.g. Groq) is still tried instantly first. Throws
  * AiUnavailableError (with the providers tried) when nothing succeeds.
  */
-async function failover<T>(run: (p: Provider) => Promise<T>): Promise<T> {
-  const providers = availableProviders();
+async function failover<T>(run: (p: Provider) => Promise<T>, only?: Provider): Promise<T> {
+  // `only` forces a single provider (the ?provider= test hook) — no fallover, so
+  // the caller sees exactly that model's output. Otherwise the normal chain.
+  const providers = only ? (hasKeyFor(only) ? [only] : []) : availableProviders();
   if (!providers.length) throw new AiUnavailableError([], false);
   const pass = async (): Promise<{ ok: true; val: T } | { ok: false; rl: boolean; err: unknown }> => {
     let lastErr: unknown;
@@ -363,8 +371,8 @@ async function chatWith(provider: Provider, system: string, user: string): Promi
  * Send a system+user prompt, trying each configured provider in order until one
  * succeeds (primary → fallbacks). Throws only if every provider fails / none set.
  */
-export async function chat(system: string, user: string): Promise<ChatResult> {
-  return failover((p) => chatWith(p, system, user));
+export async function chat(system: string, user: string, only?: Provider): Promise<ChatResult> {
+  return failover((p) => chatWith(p, system, user), only);
 }
 
 // ── Multi-turn chat (for the conversational /api/chat route) ─────────────────
@@ -575,7 +583,7 @@ export interface StreamStart {
  * BEFORE the first chunk (a provider that starts streaming owns the response).
  * Throws if no provider can start.
  */
-export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096): Promise<StreamStart> {
+export async function chatMessagesStream(system: string, messages: ChatMessage[], maxTokens = 4096, only?: Provider): Promise<StreamStart> {
   // Failover happens only BEFORE the first chunk (a provider that starts streaming
   // owns the response); an empty stream counts as a failure so the next is tried.
   return failover(async (p) => {
@@ -587,10 +595,10 @@ export async function chatMessagesStream(system: string, messages: ChatMessage[]
       yield* gen;
     })();
     return { provider: p, model: providerConfig(p).model, stream: primed };
-  });
+  }, only);
 }
 
 /** Multi-turn version of chat(): tries each configured provider until one succeeds. */
-export async function chatMessages(system: string, messages: ChatMessage[]): Promise<ChatResult> {
-  return failover((p) => chatMessagesWith(p, system, messages));
+export async function chatMessages(system: string, messages: ChatMessage[], only?: Provider): Promise<ChatResult> {
+  return failover((p) => chatMessagesWith(p, system, messages), only);
 }

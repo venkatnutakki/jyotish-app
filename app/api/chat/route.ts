@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildChatSystem } from "@/lib/astro/chat";
 import { askRoute } from "@/lib/compute";
-import { chatMessages, chatMessagesStream, detectProvider, describeAiFallback, type ChatMessage } from "@/lib/ai/llm";
+import { chatMessages, chatMessagesStream, detectProvider, describeAiFallback, asProvider, type ChatMessage } from "@/lib/ai/llm";
 import { validateBirth } from "@/lib/astro/validate";
 
 // AI generation can take a while — allow up to 60s (also the Vercel Hobby cap).
@@ -50,10 +50,12 @@ export async function POST(req: NextRequest) {
     // Keep the context bounded: last ~16 turns.
     const trimmed = messages.slice(-16);
     const system = buildChatSystem(birth, lastUser);
+    // Test hook: ?provider=groq forces one provider (no failover) for A/B comparison.
+    const only = asProvider(req.nextUrl.searchParams.get("provider"));
 
     if (stream) {
       try {
-        const { provider, model, stream: gen } = await chatMessagesStream(system, trimmed, 3000);
+        const { provider, model, stream: gen } = await chatMessagesStream(system, trimmed, 3000, only);
         const enc = new TextEncoder();
         const body = new ReadableStream<Uint8Array>({
           async start(controller) {
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const { text, provider, model } = await chatMessages(system, trimmed);
+      const { text, provider, model } = await chatMessages(system, trimmed, only);
       if (!text?.trim()) return classicalReply("The AI returned an empty reply; showing a classical answer.");
       return NextResponse.json({ source: "ai", provider, model, reply: text });
     } catch (e) {

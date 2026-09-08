@@ -17,7 +17,7 @@ import { areaEvidence, concordance, type ClassicalEvidence } from "@/lib/astro/c
 import { matchTopics, isTimingQuestion, TOPICS } from "@/lib/astro/question";
 import { researchQuestion, formatQuestionResearch } from "@/lib/astro/question-research";
 import { SIGNS, NAKSHATRAS } from "@/lib/astro/constants";
-import { chat, detectProvider, describeAiFallback } from "@/lib/ai/llm";
+import { chat, detectProvider, describeAiFallback, asProvider } from "@/lib/ai/llm";
 import { validateBirth } from "@/lib/astro/validate";
 
 // AI answers can take ~10-30s — allow up to 60s (also the Vercel Hobby cap).
@@ -206,8 +206,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Test hook: ?provider=groq forces one provider, no failover, so Gemini vs
+    // Groq can be compared on the same researched verdict.
+    const only = asProvider(req.nextUrl.searchParams.get("provider"));
     try {
-      const { text, provider, model } = await chat(SYSTEM, context);
+      const { text, provider, model } = await chat(SYSTEM, context, only);
       return NextResponse.json({
         source: "ai",
         provider,
