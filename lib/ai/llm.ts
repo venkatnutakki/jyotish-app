@@ -296,7 +296,7 @@ async function chatWith(provider: Provider, system: string, user: string): Promi
       return { text, provider, model };
     }
     case "groq": {
-      const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+      const model = process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct";
       const text = await chatOpenAICompatible(
         "https://api.groq.com/openai/v1",
         cfgKey("GROQ_API_KEY", "groqApiKey")!,
@@ -444,7 +444,7 @@ async function chatMessagesWith(provider: Provider, system: string, messages: Ch
       return { text: await msgsOpenAICompatible("https://api.deepseek.com/v1", cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")!, model, system, messages), provider, model };
     }
     case "groq": {
-      const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+      const model = process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct";
       return { text: await msgsOpenAICompatible("https://api.groq.com/openai/v1", cfgKey("GROQ_API_KEY", "groqApiKey")!, model, system, messages), provider, model };
     }
     case "gemini": {
@@ -486,7 +486,7 @@ function providerConfig(p: Provider): { kind: "openai" | "gemini" | "anthropic" 
     case "deepseek":
       return { kind: "openai", base: "https://api.deepseek.com/v1", key: cfgKey("DEEPSEEK_API_KEY", "deepseekApiKey")!, model: process.env.DEEPSEEK_MODEL || fileConfig().deepseekModel || "deepseek-chat" };
     case "groq":
-      return { kind: "openai", base: "https://api.groq.com/openai/v1", key: cfgKey("GROQ_API_KEY", "groqApiKey")!, model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile" };
+      return { kind: "openai", base: "https://api.groq.com/openai/v1", key: cfgKey("GROQ_API_KEY", "groqApiKey")!, model: process.env.GROQ_MODEL || "moonshotai/kimi-k2-instruct" };
     case "cerebras":
       return { kind: "openai", base: "https://api.cerebras.ai/v1", key: cfgKey("CEREBRAS_API_KEY", "cerebrasApiKey")!, model: process.env.CEREBRAS_MODEL || fileConfig().cerebrasModel || "llama-3.3-70b" };
     case "openrouter":

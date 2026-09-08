@@ -20,7 +20,7 @@ export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const DEFAULT_MODEL: Record<string, string> = {
   deepseek: "deepseek-chat",
-  groq: "llama-3.3-70b-versatile",
+  groq: "moonshotai/kimi-k2-instruct",
   gemini: "gemini-2.5-flash",
   cerebras: "llama-3.3-70b",
   openrouter: "deepseek/deepseek-chat-v3-0324:free",
