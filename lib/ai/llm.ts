@@ -100,12 +100,15 @@ export function asProvider(raw?: string | null): Provider | undefined {
 export class AiUnavailableError extends Error {
   tried: Provider[];
   rateLimited: boolean;
+  detail?: string;
   constructor(tried: Provider[], rateLimited: boolean, cause?: unknown) {
     const why = tried.length === 0 ? "no provider configured" : rateLimited ? "rate-limited" : "unavailable";
-    super(`AI ${why}${tried.length ? ` (tried: ${tried.join(", ")})` : ""}${cause instanceof Error ? ` — ${cause.message}` : ""}`);
+    const detail = cause instanceof Error ? cause.message : cause ? String(cause) : undefined;
+    super(`AI ${why}${tried.length ? ` (tried: ${tried.join(", ")})` : ""}${detail ? ` — ${detail}` : ""}`);
     this.name = "AiUnavailableError";
     this.tried = tried;
     this.rateLimited = rateLimited;
+    this.detail = detail;
   }
 }
 
@@ -119,7 +122,7 @@ export function describeAiFallback(err: unknown): string {
       return err.tried.length === 1
         ? `AI provider rate-limited (${who}) with no fallback configured — showing the classical answer. Add a second provider (e.g. GROQ_API_KEY) so it can fail over.`
         : `All AI providers were rate-limited (tried ${who}) — showing the classical answer; please retry shortly.`;
-    return `AI unavailable (tried ${who}) — showing the classical answer.`;
+    return `AI unavailable (tried ${who})${err.detail ? ` — ${err.detail.slice(0, 160)}` : ""} — showing the classical answer.`;
   }
   return `AI request failed (${err instanceof Error ? err.message : "error"}); showing the classical answer.`;
 }
