@@ -256,9 +256,15 @@ export function formatQuestionResearch(r: QuestionResearch): string {
     );
   }
   const lines = r.lenses.map((l) => `  • ${l.name}: ${l.signal > 0 ? "supports (+)" : l.signal < 0 ? "denies (−)" : "neutral (0)"} — ${l.note}`).join("\n");
+  // Secondary matters the question also implicates (the 11th of gains, the 9th of
+  // foreign, …) — the model must name them, not collapse the answer to the primary.
+  const secondary = r.intent.topics.slice(1).map((t) => `${t.label} (${t.houses[0]}th house)`);
   return (
     `QUESTION RESEARCH (deterministic — present this faithfully; do NOT re-derive or contradict it):\n` +
     `Matter: ${r.matter} · mode: ${r.intent.mode}${r.intent.negativePolarity ? " · asked as a worry about a negative outcome" : ""}${r.intent.timeframe ? ` · timeframe: ${r.intent.timeframe}` : ""}\n` +
+    (secondary.length
+      ? `ALSO IMPLICATED (name these explicitly in your answer — do not reduce it to the primary matter): ${secondary.join("; ")}. In particular, for an "will I get/gain it" question say plainly what the 11th of gains and its Ashtakavarga strength indicate, and for a foreign question what the 9th/12th (Rāhu) foreign channel indicates.\n`
+      : "") +
     `CONVERGENCE across independent lenses (${r.supporting} support · ${r.denying} deny · ${r.neutral} neutral):\n${lines}\n` +
     `RESEARCHED VERDICT: ${r.verdict}\n` +
     (r.timing ? `AUTHORITATIVE TIMING: ${r.timing}\n` : "") +

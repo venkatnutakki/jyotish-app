@@ -42,6 +42,8 @@ describe("question-research", () => {
     expect(names).toMatch(/Gains|Ashtakavarga Gains/i);
     expect(names).toMatch(/Foreign channel/i);
     if (r.timing) expect(r.timing).toMatch(/^Current period/);
+    // the block instructs the model to name the secondary matters explicitly
+    expect(formatQuestionResearch(r)).toMatch(/ALSO IMPLICATED/);
   });
 
   it("asks for clarification when no matter is identifiable", () => {
