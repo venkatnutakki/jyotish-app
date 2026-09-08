@@ -67,10 +67,11 @@ function hasKeyFor(p: Provider): boolean {
   }
 }
 
-// Default order when the app just has keys and no explicit preference. Gemini
-// leads (best quality for this task); Groq next (fast, generous free tier) — so
-// a Gemini quota/429 falls straight through to Groq. AI_PROVIDER overrides the head.
-const FALLBACK_ORDER: Provider[] = ["gemini", "groq", "cerebras", "deepseek", "openrouter", "openai", "anthropic", "ollama"];
+// Default order when the app just has keys and no explicit preference. Groq
+// leads (fast, generous limits; the account's gpt-oss-120b presents the research
+// block faithfully); Gemini next as the fallback — so a Groq quota/429 falls
+// straight through to Gemini. AI_PROVIDER overrides the head.
+const FALLBACK_ORDER: Provider[] = ["groq", "gemini", "cerebras", "deepseek", "openrouter", "openai", "anthropic", "ollama"];
 
 /**
  * The ordered list of configured providers to try (primary first, then
