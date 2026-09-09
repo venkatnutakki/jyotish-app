@@ -18,6 +18,7 @@ import { computeAshtakavarga } from "./ashtakavarga";
 import { activeDashaChain } from "./dasha-depth";
 import { dashaTenors, chartDashaTimeline, dashaTimingSummary } from "./dasha-tenor";
 import { matchTopics, isTimingQuestion, acquisitionIntent, foreignContext, TOPICS, type Topic } from "./question";
+import { extractDates, compareDates, formatDateComparison, type DateScore } from "./date-compare";
 import type { BirthData } from "./types";
 
 export type QuestionMode = "yes_no" | "timing" | "quality" | "open";
@@ -57,6 +58,8 @@ export interface QuestionResearch {
   verdict: string;
   /** Authoritative timing (from the tenor timeline) for the matter, if timing-relevant. */
   timing: string | null;
+  /** When the question names ≥2 concrete dates, the finer-resolution ranking of them. */
+  dateComparison: DateScore[] | null;
 }
 
 const NEG = /\b(lose|losing|loss|lost|fail|failure|failing|divorce|separat\w*|break\s?up|breakup|fired|sack\w*|laid\s?off|redundan\w*|quit|leave|problem|trouble|bad|worse|denied|deny|obstacl\w*|debt|disease|ill(ness)?|die|death|end|ruin|bankrupt)\b/i;
@@ -128,7 +131,7 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
       intent, matter: null, lenses: [], supporting: 0, denying: 0, neutral: 0,
       outlook: "mixed", confidence: "low",
       verdict: "The question needs to be narrowed to a life area before the chart can be researched.",
-      timing: null,
+      timing: null, dateComparison: null,
     };
   }
 
@@ -229,6 +232,14 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
     timing = [now, dashaTimingSummary(tenorRows)].filter(Boolean).join(" ");
   }
 
+  // Date comparison: when the question names two or more concrete dates ("Jan,
+  // April and May 2027"), the antardaśā-level timing above can't separate them —
+  // they often fall in one antardaśā. Drop to pratyantar/sūkṣma + the gochara at
+  // each date and rank them, so the answer can name the strongest instead of
+  // calling them all the same. Scored against the primary matter's house.
+  const qdates = extractDates(question);
+  const dateComparison = qdates.length >= 2 ? compareDates(birth, qdates, topic.houses) : null;
+
   // Deterministic verdict sentence, phrased to the matter (not the fear).
   const dir =
     outlook === "supported" ? `the chart's lenses converge in FAVOUR of ${topic.label.toLowerCase()} (${supporting} support, ${denying} deny)` :
@@ -244,7 +255,7 @@ export function researchQuestion(birth: BirthData, question: string): QuestionRe
     : "";
   const verdict = `On ${topic.label} — ${dir}. Overall outlook: ${outlook}, ${confidence} confidence.${feared}`;
 
-  return { intent, matter: topic.key, lenses, supporting, denying, neutral, outlook, confidence, verdict, timing };
+  return { intent, matter: topic.key, lenses, supporting, denying, neutral, outlook, confidence, verdict, timing, dateComparison };
 }
 
 /** Render the researched result as an authoritative prompt block for the AI. */
@@ -268,6 +279,7 @@ export function formatQuestionResearch(r: QuestionResearch): string {
     `CONVERGENCE across independent lenses (${r.supporting} support · ${r.denying} deny · ${r.neutral} neutral):\n${lines}\n` +
     `RESEARCHED VERDICT: ${r.verdict}\n` +
     (r.timing ? `AUTHORITATIVE TIMING: ${r.timing}\n` : "") +
+    (r.dateComparison ? formatDateComparison(r.dateComparison) + "\n" : "") +
     (r.intent.shouldAskFirst
       ? `ASK FIRST: the question has no time horizon — open by asking "${r.intent.clarifications[0]}" so the timing can be pinned, then give the reading.\n`
       : r.intent.clarifications.length
