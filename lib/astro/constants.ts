@@ -139,3 +139,25 @@ export const VIMSHOTTARI_ORDER = [
 export const NAKSHATRA_ARC = 360 / 27; // 13°20'
 export const PADA_ARC = NAKSHATRA_ARC / 4; // 3°20'
 export const SIGN_ARC = 30;
+
+// --- Dignities (BPHS Ch. 3) — the single source of truth. Import these instead
+// of redefining them per module. Values are sign indices (0 = Aries) except
+// EXALT_DEG, which is absolute ecliptic degrees. Rāhu/Ketu have no classical
+// exaltation, so the records are Partial. ---
+export const EXALT_SIGN: Record<string, number> = {
+  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
+};
+export const DEBIL_SIGN: Record<string, number> = {
+  Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0,
+};
+export const MULATRIKONA_SIGN: Record<string, number> = {
+  Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10,
+};
+export const OWN_SIGNS_BY_PLANET: Record<string, number[]> = {
+  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
+  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
+};
+// Deep-exaltation longitude (absolute degrees); debilitation = +180°.
+export const EXALT_DEG: Record<string, number> = {
+  Sun: 10, Moon: 33, Mars: 298, Mercury: 165, Jupiter: 95, Venus: 357, Saturn: 200,
+};

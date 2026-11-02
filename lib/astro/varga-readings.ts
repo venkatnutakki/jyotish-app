@@ -4,15 +4,10 @@
 // dignity, and where that lord sits, giving a "strong / mixed / weak foundation
 // for <domain>" line per division. Descriptive; it does not change any score.
 
-import { SIGNS, SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGNS, SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import { computeVarga } from "./varga";
 import type { Chart } from "./types";
 
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const DEBIL: Partial<Record<PlanetName, number>> = { Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0 };
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 
 // The key divisionals with a clear, single readable domain (D1 excluded — the
 // Rāśi is the whole chart; the obscure D27/D40/D45/D60 are omitted).

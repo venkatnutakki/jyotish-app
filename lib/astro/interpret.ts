@@ -2,7 +2,7 @@
 // backbone: deterministic Jyotish observations that an LLM then phrases into a
 // natural-language reading. Nothing here is AI-generated.
 
-import { NAKSHATRAS, PLANETS, SIGNS, type PlanetName } from "./constants";
+import { NAKSHATRAS, PLANETS, SIGNS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 import type { DashaPeriod } from "./dasha";
 import { BHRIGU } from "./bhrigu";
@@ -55,35 +55,6 @@ const KARAKA: Record<PlanetName, string> = {
 };
 
 // Exaltation / debilitation sign index per planet (nodes omitted).
-const EXALT: Partial<Record<PlanetName, number>> = {
-  Sun: 0,
-  Moon: 1,
-  Mars: 9,
-  Mercury: 5,
-  Jupiter: 3,
-  Venus: 11,
-  Saturn: 6,
-};
-const DEBIL: Partial<Record<PlanetName, number>> = {
-  Sun: 6,
-  Moon: 7,
-  Mars: 3,
-  Mercury: 11,
-  Jupiter: 9,
-  Venus: 5,
-  Saturn: 0,
-};
-
-// Own signs per planet.
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4],
-  Moon: [3],
-  Mars: [0, 7],
-  Mercury: [2, 5],
-  Jupiter: [8, 11],
-  Venus: [1, 6],
-  Saturn: [9, 10],
-};
 
 export interface Interpretation {
   headline: string;

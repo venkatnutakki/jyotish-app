@@ -10,9 +10,11 @@
 // (Raman's mean-motion tables would refine it slightly); Kala's Ayana and
 // Nathonnata use standard astronomical formulae.
 
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import * as Astronomy from "astronomy-engine";
+import { SIGN_LORDS, EXALT_DEG, MULATRIKONA_SIGN as MOOLATRIKONA, OWN_SIGNS_BY_PLANET as OWN_SIGNS, type PlanetName } from "./constants";
 import { computeVarga } from "./varga";
 import { declination, midheavenSidereal } from "./ephemeris";
+import { sunEvent } from "./sunrise";
 import { norm360, utcFromLocal } from "./time";
 import type { BirthData, Chart } from "./types";
 
@@ -27,25 +29,6 @@ const SB_PLANETS = [
 ] as const;
 type SBP = (typeof SB_PLANETS)[number];
 
-// Deep-exaltation longitudes (degrees). Debilitation = +180.
-const EXALT_DEG: Record<SBP, number> = {
-  Sun: 10, // 10° Aries
-  Moon: 33, // 3° Taurus
-  Mars: 298, // 28° Capricorn
-  Mercury: 165, // 15° Virgo
-  Jupiter: 95, // 5° Cancer
-  Venus: 357, // 27° Pisces
-  Saturn: 200, // 20° Libra
-};
-
-// Moolatrikona sign and own signs per planet (for Saptavargaja bala).
-const MOOLATRIKONA: Record<SBP, number> = {
-  Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10,
-};
-const OWN_SIGNS: Record<SBP, number[]> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 
 // Natural friendships (for compound relationship in Saptavargaja).
 const NAT_FRIEND: Record<PlanetName, PlanetName[]> = {
@@ -210,15 +193,101 @@ function pakshaBala(planet: SBP, sunLon: number, moonLon: number): number {
   return bala;
 }
 
+const MAX_KRANTI = 23.45; // 23°27′, the obliquity BPHS uses for Ayana bala
 function ayanaBala(planet: SBP, decl: number): number {
-  // 30 at equator; ± proportional to declination per course rule.
+  // BPHS 27.15-17 (simple form, per the chapter's own note):
+  //   Ayana bala = (23°27′ ± krānti) × 60/46°54′  = (23.45 ± krānti) × 1.2793
+  // → 30 virupas at the equator, 60 at full favourable krānti, 0 at full
+  // adverse. Course rule (27.17): north is favourable for Sun/Mars/Jupiter/
+  // Venus, south for Moon/Saturn, and Mercury is always favourable.
+  // (We feed the true geocentric declination rather than the sāyana-longitude
+  //  krānti of the śloka — astronomically exact and identical for the Sun.)
   const north = decl >= 0;
   const favNorth = ["Sun", "Jupiter", "Mars", "Venus", "Mercury"].includes(planet);
   const favourable = planet === "Mercury" ? true : favNorth ? north : !north;
-  const mag = (Math.abs(decl) / 24) * 30;
-  let bala = 30 + (favourable ? mag : -mag);
-  if (planet === "Sun") bala *= 2; // Sun's ayana bala is doubled
+  const signed = favourable ? Math.abs(decl) : -Math.abs(decl);
+  let bala = (MAX_KRANTI + signed) * (60 / (2 * MAX_KRANTI));
+  if (planet === "Sun") bala *= 2; // Sūrya's ayana bala is doubled
   return Math.max(0, Math.min(planet === "Sun" ? 120 : 60, bala));
+}
+
+// Tribhaga, Varsha/Masa/Dina/Hora bala all turn on the ASTROLOGICAL day (which
+// begins at sunrise, not midnight) and the planetary hour. Computed once per
+// chart. BPHS 27.12-13.
+const DAY_LORD_BY_WD: SBP[] = // getUTCDay index: 0=Sunday … 6=Saturday
+  ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+const HORA_SEQ: SBP[] = // Chaldean order; 1st hora of a day = that weekday's lord
+  ["Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars"];
+// Ahargana (days since Creation) at 1860-01-01 per Burgess's Sūrya Siddhānta;
+// calibrated so (ahargana mod 7) == 1 == Sunday, the actual weekday that date.
+const AHARGANA_1860 = 714404108573;
+
+interface KalaContext {
+  tribhaga: SBP[]; // planets that receive full (60) Tribhaga bala
+  horaLord: SBP;
+  yearLord: SBP;
+  monthLord: SBP;
+  dinaLord: SBP;
+}
+
+function kalaTimeContext(birth: BirthData, birthUTC: Date): KalaContext {
+  const observer = new Astronomy.Observer(birth.latitude, birth.longitude, 0);
+  const civilStart = new Date(
+    Date.UTC(birth.year, birth.month - 1, birth.day, 0, 0, 0) -
+      birth.tzOffsetHours * 3600000
+  );
+  // Sunrise governing the birth: if born before the day's sunrise, the
+  // astrological day (and its weekday/hora sequence) began the previous sunrise.
+  let sunrise = sunEvent(observer, +1, civilStart, 1)?.date ?? null;
+  let astroShift = 0;
+  if (sunrise && birthUTC < sunrise) {
+    astroShift = -1;
+    sunrise =
+      sunEvent(observer, +1, new Date(civilStart.getTime() - 86400000), 1)
+        ?.date ?? sunrise;
+  }
+  const sunset = sunrise ? sunEvent(observer, -1, sunrise, 1)?.date ?? null : null;
+  const nextSunrise = sunset ? sunEvent(observer, +1, sunset, 1)?.date ?? null : null;
+
+  const civilWd = new Date(
+    Date.UTC(birth.year, birth.month - 1, birth.day)
+  ).getUTCDay();
+  const astroWd = (((civilWd + astroShift) % 7) + 7) % 7;
+  const dinaLord = DAY_LORD_BY_WD[astroWd];
+
+  // Varsha & Masa lords via the ahargana (BPHS 27.13).
+  const astroMid =
+    Date.UTC(birth.year, birth.month - 1, birth.day) + astroShift * 86400000;
+  const ahargana =
+    AHARGANA_1860 + Math.round((astroMid - Date.UTC(1860, 0, 1)) / 86400000);
+  // BPHS remainder: 1=Sunday … 6=Friday … 0(=7)=Saturday.
+  const lordFromRem = (rem: number) =>
+    DAY_LORD_BY_WD[((((rem + 6) % 7) + 7) % 7)];
+  const yearLord = lordFromRem((Math.floor(ahargana / 60) * 3 + 1) % 7);
+  const monthLord = lordFromRem((Math.floor(ahargana / 30) * 2 + 1) % 7);
+
+  const tribhaga: SBP[] = ["Jupiter"]; // Guru gets Tribhaga bala at all times
+  let horaLord: SBP = dinaLord;
+  if (sunrise && sunset && nextSunrise) {
+    const t = birthUTC.getTime();
+    // Tribhaga: the day (sunrise→sunset) and night (sunset→nextSunrise) are each
+    // split into three (BPHS 27.12).
+    const isDay = t >= sunrise.getTime() && t < sunset.getTime();
+    const base = isDay ? sunrise.getTime() : sunset.getTime();
+    const span = isDay
+      ? sunset.getTime() - sunrise.getTime()
+      : nextSunrise.getTime() - sunset.getTime();
+    const third = Math.min(2, Math.max(0, Math.floor((t - base) / (span / 3))));
+    const dayThird: SBP[] = ["Mercury", "Sun", "Saturn"];
+    const nightThird: SBP[] = ["Moon", "Venus", "Mars"];
+    tribhaga.push((isDay ? dayThird : nightThird)[third]);
+    // Horā: the whole ahorātra (sunrise→nextSunrise) in 24 EQUAL hours, the
+    // first ruled by the weekday lord, then the Chaldean order (BPHS 27.13).
+    const horaSpan = (nextSunrise.getTime() - sunrise.getTime()) / 24;
+    const hi = Math.min(23, Math.max(0, Math.floor((t - sunrise.getTime()) / horaSpan)));
+    horaLord = HORA_SEQ[(HORA_SEQ.indexOf(dinaLord) + hi) % 7];
+  }
+  return { tribhaga, horaLord, yearLord, monthLord, dinaLord };
 }
 
 // --- Cheshta Bala ------------------------------------------------------------
@@ -338,6 +407,8 @@ export function computeShadbala(chart: Chart, birth: BirthData): ShadbalaResult 
   benefics.add("Venus");
   benefics.add("Mercury");
 
+  const kalaCtx = kalaTimeContext(birth, date);
+
   const planets = {} as Record<SBP, BalaBreakdown>;
 
   for (const planet of SB_PLANETS) {
@@ -363,12 +434,16 @@ export function computeShadbala(chart: Chart, birth: BirthData): ShadbalaResult 
     const ayana = ayanaBala(planet, decl);
     const paksha = pakshaBala(planet, sunLon, moonLon);
     const natho = nathonnataBala(planet, fromMidnight);
-    // Dina bala (weekday lord) — simple, 45 if planet rules the weekday.
-    const weekdayLord = [
-      "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
-    ][new Date(Date.UTC(birth.year, birth.month - 1, birth.day)).getUTCDay()];
-    const dina = weekdayLord === planet ? 45 : 0;
-    const kala = ayana + paksha + natho + dina;
+    // Varsha/Masa/Dina/Hora + Tribhaga balas (BPHS 27.12-13), on the
+    // astrological (sunrise-based) day. Yuddha bala is omitted — it applies only
+    // in a planetary war (two tārā-grahas within 1°), which none of these use.
+    // ponytail: add Yuddha if a chart ever has a sub-1° graha-yuddha.
+    const varsha = kalaCtx.yearLord === planet ? 15 : 0;
+    const masa = kalaCtx.monthLord === planet ? 30 : 0;
+    const dina = kalaCtx.dinaLord === planet ? 45 : 0;
+    const hora = kalaCtx.horaLord === planet ? 60 : 0;
+    const tribhaga = kalaCtx.tribhaga.includes(planet) ? 60 : 0;
+    const kala = ayana + paksha + natho + varsha + masa + dina + hora + tribhaga;
 
     // Cheshta
     const cheshta = cheshtaBala(planet, lon, sunLon, ayana, paksha);

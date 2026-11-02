@@ -20,15 +20,9 @@ import { signsAspectedBy } from "./rasi-drishti";
 import { computeRelationships } from "./sphuta-mks";
 import { arudhaPada, charaKarakas } from "./jaimini";
 import { computeVarga } from "./varga";
-import { SIGNS, SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGNS, SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, MULATRIKONA_SIGN as MOOLATRIKONA, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const DEBIL: Partial<Record<PlanetName, number>> = { Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0 };
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
-const MOOLATRIKONA: Partial<Record<PlanetName, number>> = { Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10 };
 const BENEFIC = new Set<PlanetName>(["Jupiter", "Venus", "Mercury", "Moon"]);
 const GOOD_HOUSES = [1, 4, 5, 7, 9, 10]; // kendra + trikoṇa
 const DUSTHANA = [6, 8, 12];

@@ -26,18 +26,8 @@
 // of highlighted — never a false claim about the chart.
 
 import type { Chart } from "./types";
-import { SIGNS, SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGNS, SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 
-const EXALT: Partial<Record<PlanetName, number>> = {
-  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
-};
-const DEBIL: Partial<Record<PlanetName, number>> = {
-  Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0,
-};
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 
 export type ClauseStatus = "applies" | "contradicts" | "neutral";
 

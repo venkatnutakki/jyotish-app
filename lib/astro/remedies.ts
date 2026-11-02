@@ -12,7 +12,7 @@
 //      it, since amplifying a structurally-challenging planet is the single
 //      most repeated caution in general remedial teaching.
 
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGN_LORDS, DEBIL_SIGN as DEBIL, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 import type { ShadbalaResult } from "./shadbala";
 import type { DashaPeriod } from "./dasha";
@@ -37,7 +37,6 @@ const REMEDY: Record<PlanetName, PlanetRemedy> = {
   Ketu: { gemstone: "Cat's Eye", mantra: "Oṃ Ketave Namaḥ", deity: "Gaṇeśa", day: "Tuesday", charity: "multi-coloured cloth or blankets" },
 };
 
-const DEBIL: Partial<Record<PlanetName, number>> = { Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0 };
 const DUSTHANA = [6, 8, 12];
 const TRIKONA = [1, 5, 9];
 

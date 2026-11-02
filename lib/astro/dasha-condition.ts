@@ -20,7 +20,7 @@
 // already known from the period.
 
 import type { Chart } from "./types";
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import { naturalBenefics } from "./bhava";
 import { computeVarga } from "./varga";
 
@@ -30,16 +30,6 @@ import { computeVarga } from "./varga";
 // rather than imported to keep this module self-contained, and every value is
 // pinned by dasha-condition.spec.ts against its classical definition so a typo
 // or a drift from the other copies fails a test.
-const EXALT: Partial<Record<PlanetName, number>> = {
-  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
-};
-const DEBIL: Partial<Record<PlanetName, number>> = {
-  Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0,
-};
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 const NAT_FRIEND: Partial<Record<PlanetName, PlanetName[]>> = {
   Sun: ["Moon", "Mars", "Jupiter"], Moon: ["Sun", "Mercury"], Mars: ["Sun", "Moon", "Jupiter"],
   Mercury: ["Sun", "Venus"], Jupiter: ["Sun", "Moon", "Mars"], Venus: ["Mercury", "Saturn"],

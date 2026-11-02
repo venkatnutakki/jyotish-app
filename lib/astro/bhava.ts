@@ -7,7 +7,7 @@
 // This module ties Raman's judging method to the computed Shadbala: the
 // "strength of the lord" that Raman repeatedly calls for is the lord's rupas.
 
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 import type { ShadbalaResult } from "./shadbala";
 
@@ -83,16 +83,6 @@ const KENDRA = [1, 4, 7, 10];
 const TRIKONA = [1, 5, 9];
 const DUSTHANA = [6, 8, 12];
 
-const EXALT: Partial<Record<PlanetName, number>> = {
-  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
-};
-const DEBIL: Partial<Record<PlanetName, number>> = {
-  Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0,
-};
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 
 function dignity(planet: PlanetName, sign: number): {
   label: string;

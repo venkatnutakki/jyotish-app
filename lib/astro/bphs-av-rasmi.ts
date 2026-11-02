@@ -5,7 +5,7 @@
 //   Ch. 71 — Longevity through the Aṣṭakavarga (a rough cross-check band).
 // Reuses the existing Aṣṭakavarga and Pañcadhā-maitrī engines.
 
-import { SIGNS, SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGNS, SIGN_LORDS, EXALT_DEG, EXALT_SIGN, MULATRIKONA_SIGN as MOOLA_SIGN, OWN_SIGNS_BY_PLANET as OWN_SIGNS, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 import { computeRelationships } from "./sphuta-mks";
 import type { Ashtakavarga } from "./ashtakavarga";
@@ -16,12 +16,6 @@ const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus
 
 // ───────────────────────── Ch. 73 — Graha Raśmi (rays) ─────────────────────────
 const RAYS_MAX: Record<string, number> = { Sun: 10, Moon: 9, Mars: 5, Mercury: 5, Jupiter: 7, Venus: 8, Saturn: 5 };
-const EXALT_DEG: Record<string, number> = { Sun: 10, Moon: 33, Mars: 298, Mercury: 165, Jupiter: 95, Venus: 357, Saturn: 200 };
-const EXALT_SIGN: Record<string, number> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const MOOLA_SIGN: Record<string, number> = { Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10 };
-const OWN_SIGNS: Record<string, number[]> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 
 function raysEffect(total: number): string {
   if (total <= 5) return "modest means, even if well-born";

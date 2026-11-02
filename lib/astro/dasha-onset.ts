@@ -21,6 +21,7 @@
 
 import type { Chart, PlanetPosition } from "./types";
 import type { PlanetName } from "./constants";
+import { EXALT_SIGN as EXALT, OWN_SIGNS_BY_PLANET as OWN } from "./constants";
 
 export type DashaThird = "early" | "middle" | "late";
 export type OnsetTenor = "favourable" | "mixed" | "difficult";
@@ -34,13 +35,6 @@ export interface DashaOnset {
   note: string;
 }
 
-const OWN: Record<string, number[]> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
-const EXALT: Record<string, number> = {
-  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
-};
 // Naisargika friendships (BPHS), used for the "friendly/inimical sign" test.
 const FRIENDS: Record<string, PlanetName[]> = {
   Sun: ["Moon", "Mars", "Jupiter"],
