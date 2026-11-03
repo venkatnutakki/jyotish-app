@@ -131,6 +131,30 @@ function bhavaDrishtiBala(chart: Chart, madhyaLon: number, bhavaSign: number): n
   return total / 4;
 }
 
+/**
+ * Bhāva Dig Bala — BPHS 27.26-29. Deduct a kendra cusp from the bhāva-madhya,
+ * the cusp chosen by the sign (and half) the madhya falls in: Cancer/Scorpio →
+ * Lagna; Gemini/Virgo/Libra/Aquarius & first-half Sagittarius → 7th; Aries/
+ * Taurus/Leo, first-half Capricorn & second-half Sagittarius → 4th; second-half
+ * Capricorn & Pisces → 10th. Reduce the arc to ≤ 6 rāśis (180°) and divide by 3
+ * → virupas (max 60).
+ */
+function bhavaDigBala(madhyaLon: number, ascendant: number): number {
+  const L = norm360(madhyaLon);
+  const sign = Math.floor(L / 30);
+  const deg = L - sign * 30;
+  let ref: number;
+  if (sign === 3 || sign === 7) ref = ascendant;                                   // Cancer, Scorpio → Lagna
+  else if (sign === 2 || sign === 5 || sign === 6 || sign === 10 ||
+           (sign === 8 && deg < 15)) ref = ascendant + 180;                        // → 7th (Yuvati)
+  else if (sign === 0 || sign === 1 || sign === 4 ||
+           (sign === 9 && deg < 15) || (sign === 8 && deg >= 15)) ref = ascendant + 90; // → 4th (Bandhu)
+  else ref = ascendant + 270;                                                      // 2nd-half Capricorn, Pisces → 10th (Karma)
+  let arc = Math.abs(L - norm360(ref));
+  if (arc > 180) arc = 360 - arc;
+  return arc / 3;
+}
+
 export interface BhavaBala {
   house: number;
   sign: string;
@@ -138,7 +162,8 @@ export interface BhavaBala {
   lordRupas: number;          // Bhavādhipati Bala (lord's Ṣaḍbala, rūpas)
   occupants: PlanetName[];
   drishtiBala: number;        // Bhāva Dṛṣṭi Bala (virupas; benefic + / malefic −)
-  total: number;              // rūpas: Bhavādhipati + Dṛṣṭi
+  digBala: number;            // Bhāva Dig Bala (virupas, 0-60; BPHS 27.26-29)
+  total: number;              // rūpas: Bhavādhipati + Dṛṣṭi + Dig
   rank: number;
 }
 
@@ -152,15 +177,15 @@ export function computeBhavaBala(chart: Chart, shadbala: ShadbalaResult): BhavaB
     // Equal-house bhāva madhya from the exact ascendant.
     const madhya = norm360(chart.ascendant + i * 30);
     const drishti = bhavaDrishtiBala(chart, madhya, sign);
+    const dig = bhavaDigBala(madhya, chart.ascendant);
     const bhavadhipati = rupasOf(lord);
-    // ponytail: Bhāva Dig Bala omitted — its exact BPHS virupa table is not
-    // pinned here; add it once sourced rather than guessing the values.
-    const total = bhavadhipati + drishti / 60; // virupas → rūpas
+    const total = bhavadhipati + (drishti + dig) / 60; // virupas → rūpas
     return {
       house, sign: SIGNS[sign], lord,
       lordRupas: Math.round(bhavadhipati * 100) / 100,
       occupants,
       drishtiBala: Math.round(drishti * 10) / 10,
+      digBala: Math.round(dig * 10) / 10,
       total: Math.round(total * 100) / 100,
       rank: 0,
     };

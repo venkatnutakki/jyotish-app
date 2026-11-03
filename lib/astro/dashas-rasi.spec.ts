@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { firstBalance, charaDasha, narayanaDasha } from "./dashas-extra";
+import { firstBalance, charaDasha, narayanaDasha, varnadaDasha } from "./dashas-extra";
 import { computeChart } from "./chart";
+import { computeSpecialPoints } from "./special-points";
 import type { BirthData } from "./types";
 
 const REF: BirthData = {
@@ -34,5 +35,18 @@ describe("rāśi-dasha balance-at-birth", () => {
     const span = n.reduce((s, p) => s + p.years, 0);
     expect(span).toBeLessThanOrEqual(144.01);
     expect(span).toBeGreaterThan(132); // at most one first-period (<12y) is shaved
+  });
+
+  it("Varṇada daśā: 12 periods, each ≤ 12 yrs, strictly increasing start times", () => {
+    const chart = computeChart(REF);
+    const hl = computeSpecialPoints(chart, REF).find((p) => p.abbr === "HL")!.signIndex;
+    const v = varnadaDasha(chart, hl);
+    expect(v).toHaveLength(12);
+    for (const p of v) {
+      expect(p.years).toBeGreaterThanOrEqual(0);
+      expect(p.years).toBeLessThanOrEqual(12);
+    }
+    for (let i = 1; i < v.length; i++)
+      expect(new Date(v[i].start).getTime()).toBeGreaterThan(new Date(v[i - 1].start).getTime());
   });
 });
