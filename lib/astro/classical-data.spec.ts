@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SIGNIFICATIONS } from "./significations";
 import { BHRIGU } from "./bhrigu";
+import { SARAVALI_HOUSE } from "./saravali-house";
 import { BPHS_LORD_IN_HOUSE } from "./bphs-lords";
 
 // Guards the classical TEXT tables against extraction corruption / truncation —
@@ -26,6 +27,18 @@ describe("classical data integrity", () => {
     expect(BHRIGU.Rahu, "Rahu key undefined").toBeTruthy();
     expect(BHRIGU.Rahu).toBe(BHRIGU.Ketu);
     expect(Object.keys(BHRIGU.Ketu!).length).toBe(12);
+  });
+
+  it("sourced cells present: BHRIGU Moon-5 & Venus-6, SARAVALI Mercury-3 & Saturn-10", () => {
+    // Previously-missing single-source cells, now sourced from Bhṛgu/Sārāvalī.
+    expect(BHRIGU.Moon?.[5]).toMatch(/fifth house/);
+    expect(BHRIGU.Venus?.[6]).toMatch(/sixth house/);
+    expect(SARAVALI_HOUSE.Mercury?.[3]).toMatch(/3rd/);
+    expect(SARAVALI_HOUSE.Saturn?.[10]).toMatch(/10th/);
+    // and the seven-planet Bhṛgu house tables are now complete (1..12 each)
+    for (const p of ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"] as const) {
+      expect(Object.keys(BHRIGU[p]!).length, `${p} missing a Bhṛgu house`).toBe(12);
+    }
   });
 
   it("BPHS_LORD_IN_HOUSE: no cell ends truncated at 'weak in'", () => {

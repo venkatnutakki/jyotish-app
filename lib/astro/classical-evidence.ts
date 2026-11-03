@@ -13,6 +13,7 @@ import type { Chart } from "./types";
 import { BHRIGU } from "./bhrigu";
 import { SARAVALI_SIGN } from "./saravali";
 import { SARAVALI_HOUSE } from "./saravali-house";
+import { conjunctionPhala } from "./conjunction-phala";
 import { SIGNIFICATIONS } from "./significations";
 import { BPHS_LORD_IN_HOUSE } from "./bphs-lords";
 import { HORASARA_HOUSE } from "./horasara-house";
@@ -134,6 +135,21 @@ export function areaEvidence(
       `sign placement of the ${ord(p.house)}-house occupant`,
       SARAVALI_SIGN[p.planet]?.[p.signIndex]
     );
+  }
+
+  // 1b. Two of the area's occupants SHARING a house — Sārāvalī Ch. 15 yuti.
+  const areaPlanets = chart.planets.filter((p) => houses.includes(p.house));
+  for (let i = 0; i < areaPlanets.length; i++) {
+    for (let j = i + 1; j < areaPlanets.length; j++) {
+      const p = areaPlanets[i], q = areaPlanets[j];
+      if (p.house !== q.house) continue;
+      push(
+        "Sārāvalī",
+        `${p.planet} and ${q.planet} together in the ${ord(p.house)} house`,
+        `two significators of this area conjoin in the ${ord(p.house)} house`,
+        conjunctionPhala(p.planet, q.planet)
+      );
+    }
   }
 
   // 2. Placement of the RULING LORD of each area house. The lord of a house

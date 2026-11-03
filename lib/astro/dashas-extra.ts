@@ -4,6 +4,7 @@
 
 import { NAKSHATRA_ARC, PADA_ARC, SIGN_LORDS, SIGNS } from "./constants";
 import { signsAspectedBy } from "./rasi-drishti";
+import { varnadaSign } from "./varnada";
 import type { Chart } from "./types";
 import type { DashaPeriod } from "./dasha";
 
@@ -294,9 +295,9 @@ const occupants = (chart: Chart, s: number) =>
   chart.planets.filter((p) => p.signIndex === s && p.planet !== "Rahu" && p.planet !== "Ketu").length;
 
 function runRasiDasha(
-  chart: Chart, seed: number, yearsOf: (sign: number) => number
+  chart: Chart, seed: number, yearsOf: (sign: number) => number,
+  forward = isOddSign(seed)
 ): CharaPeriod[] {
-  const forward = isOddSign(seed);
   const ascDeg = chart.ascendant % 30;
   const birth = new Date(chart.julianDay * 86400000 - 2440587.5 * 86400000);
   const out: CharaPeriod[] = [];
@@ -338,4 +339,28 @@ export function drigDasha(chart: Chart): CharaPeriod[] {
   aspecting.sort((a, b) => occupants(chart, b) - occupants(chart, a));
   const seed = aspecting[0] ?? ninth;
   return runRasiDasha(chart, seed, (s) => charaYears(s, chart));
+}
+
+/**
+ * Varṇada Daśā (BPHS ch. 36, v. 10-24) — the longevity rāśi daśā built on the
+ * Varṇada Lagna. Each bhāva carries its own Varṇada (the Varṇada-Lagna rule
+ * applied to that bhāva's sign); a bhāva's daśā length = the rāśis counted from
+ * the natal Lagna to its Varṇada (a full 12 when they coincide). The sequence
+ * begins from the stronger of the natal Lagna / Horā Lagna and runs by the natal
+ * Lagna's parity — odd forward (clockwise), even reverse (BPHS 14-15, 21-24).
+ * `horaSign` is the sunrise-based Horā Lagna sign (from computeSpecialPoints).
+ *
+ * ponytail: "stronger of Lagna/Horā" uses the occupant-count proxy already used
+ * by narayanaSeed/shoolaDasha (tie → Lagna), not a full Ṣaḍbala of the rāśis.
+ */
+export function varnadaDasha(chart: Chart, horaSign: number): CharaPeriod[] {
+  const asc = chart.ascendantSignIndex;
+  const forward = isOddSign(asc);
+  const seed = occupants(chart, horaSign) > occupants(chart, asc) ? horaSign : asc;
+  const lengthOf = (sign: number) => {
+    const vn = varnadaSign(sign, horaSign);
+    const d = forward ? (vn - asc + 12) % 12 : (asc - vn + 12) % 12;
+    return d === 0 ? 12 : d;
+  };
+  return runRasiDasha(chart, seed, lengthOf, forward);
 }

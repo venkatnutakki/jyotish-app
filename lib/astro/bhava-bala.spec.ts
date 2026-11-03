@@ -20,14 +20,23 @@ describe("Bhāva Bala with Dṛṣṭi component", () => {
     expect(new Set(rows.map((r) => r.rank))).toEqual(new Set(Array.from({ length: 12 }, (_, i) => i + 1)));
   });
 
-  it("total = Bhavādhipati (lordRupas) + Dṛṣṭi (virupas/60)", () => {
+  it("total = Bhavādhipati (lordRupas) + (Dṛṣṭi + Dig) virupas/60", () => {
     for (const r of rows) {
       expect(Number.isFinite(r.drishtiBala)).toBe(true);
-      expect(r.total).toBeCloseTo(r.lordRupas + r.drishtiBala / 60, 1);
+      expect(r.total).toBeCloseTo(r.lordRupas + (r.drishtiBala + r.digBala) / 60, 1);
     }
   });
 
   it("Dṛṣṭi bala varies across houses (not a constant)", () => {
     expect(new Set(rows.map((r) => r.drishtiBala)).size).toBeGreaterThan(1);
+  });
+
+  it("Dig bala (BPHS 27.26-29) is a virupa value within 0..60", () => {
+    for (const r of rows) {
+      expect(r.digBala).toBeGreaterThanOrEqual(0);
+      expect(r.digBala).toBeLessThanOrEqual(60);
+    }
+    // not every house shares the same arc, so it must vary
+    expect(new Set(rows.map((r) => r.digBala)).size).toBeGreaterThan(1);
   });
 });

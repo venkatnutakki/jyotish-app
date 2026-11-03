@@ -47,6 +47,7 @@ export const SARAVALI_HOUSE: Partial<Record<PlanetName, Record<number, string>>>
   Mercury: {
     1: "Should Mercury occupy the Ascendant, the native will have a flawless physique, be intelligent, will know proper(beneficial) place and time, be well-versed in poetry and mathematics, be a skillful and sweet speaker and be long-lived.",
     2: "If Mercury is in the 2nd, the native will earn wealth through his own wisdom, will enjoy food and drinks, be auspicious in speech and will have good course of conduct.",
+    3: "If Mercury occupies the 3rd, the native will always toil hard, be devoid of near and dear, skillful, endowed with co-born, very cunning and fickle-minded.",
     4: "If Mercury is in 4th, the native will be endowed with money and relatives, be fortunate, will have conve yances, all paraphernalia and relatives and be very learned.",
     5: "If Mercury occupies the 5th, the native will be an expert in Mantras (sacred spells) and Abhicara (malevolent spells), will have many sons, be endowed with learning, happiness and efficacy and be delighted.",
     6: "If Mercury occupies the 6th, the native will always be successful in litigations and disputes, will contract diseases, be indolent, not given to anger, be harsh in speech and much insulted.",
@@ -95,6 +96,7 @@ export const SARAVALI_HOUSE: Partial<Record<PlanetName, Record<number, string>>>
     7: "If Saturn is posited in the 7th, the native will always be subjected to ill health, will lose his wife, be bereft of wealth, will present himself ugly, be sinful and will do very mean acts.",
     8: "If Saturn occupies the 8th, the native will suffer from leprosy and fistula in the anus, or pudendum, will have short life and will fail in his undertakings.",
     9: "If Saturn occupies the 9th, the native will be devoid of religious merits, will not have much wealth, be bereft of co-born, sons and happiness and will cause sorrow to others.",
+    10: "If Saturn occupies the 10th, the native will be wealthy, learned, valorous and be a minister, or a justice, or be the leader of a group, city, or village.",
     11: "If Saturn occupies the 11th, the native will be long-lived, endowed with lasting riche s, be courageous, will have knowledge of arts, be devoid of sickness and be endowed with money, people and wealth.",
     12: "If Saturn occupies the 12th, the native will be distressed, fallen in moral sense, talkative, will have defective eyesight, be unkind, shameless, will spend much and be insulted.",
   },

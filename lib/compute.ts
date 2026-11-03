@@ -24,7 +24,7 @@ import { computeLifePredictions, formatPredictionDossier } from "./astro/predict
 import { computeForecast } from "./astro/forecast";
 import { computeUpagraha } from "./astro/upagraha";
 import { interpretChart } from "./astro/interpret";
-import { ashtottariDasha, charaDasha, narayanaDasha, kalachakraDasha, shoolaDasha, sudasaDasha, drigDasha } from "./astro/dashas-extra";
+import { ashtottariDasha, charaDasha, narayanaDasha, kalachakraDasha, shoolaDasha, sudasaDasha, drigDasha, varnadaDasha } from "./astro/dashas-extra";
 import { conditionalDashas } from "./astro/dashas-conditional";
 import { computeSpecialPoints } from "./astro/special-points";
 import { computeArgala } from "./astro/argala";
@@ -84,6 +84,8 @@ export function reportRoute(birth: BirthData) {
   const yogas = computeYogas(chart);
   const bhavas = analyzeBhavas(chart, shadbala);
   const ashtakavarga = computeAshtakavarga(chart);
+  const specialPoints = computeSpecialPoints(chart, birth);
+  const horaLagnaSign = specialPoints.find((p) => p.abbr === "HL")?.signIndex ?? chart.ascendantSignIndex;
   return {
     chart, panchang: computePanchang(chart, weekday), dasha,
     currentDasha: (() => { const tn = dashaTenors(chart, shadbala); return activeDashaChain(dasha, new Date(), 4).map((c) => ({ level: c.level, lord: c.lord, start: c.start.toISOString(), end: c.end.toISOString(), tenor: tn.get(c.lord)?.tenor ?? "mixed" })); })(),
@@ -96,11 +98,11 @@ export function reportRoute(birth: BirthData) {
     yogini: yoginiDasha(chart), upagraha: computeUpagraha(chart, birth),
     remedies: computeRemedies(chart, shadbala, dasha), interpretation: interpretChart(chart, dasha),
     ashtottari: ashtottariDasha(chart), chara: charaDasha(chart), narayana: narayanaDasha(chart), kalachakra: kalachakraDasha(chart),
-    specialPoints: computeSpecialPoints(chart, birth), argala: computeArgala(chart), yogi: computeYogi(chart),
+    specialPoints, argala: computeArgala(chart), yogi: computeYogi(chart),
     rasiDrishti: computeRasiDrishti(chart).aspectingPlanetsByHouse, planetStates: computePlanetStates(chart),
     varshaphal: computeVarshaphal(chart, birth, new Date().getUTCFullYear()), mangalDosha: computeMangalDosha(chart),
     ishtaKashta: computeIshtaKashta(shadbala), vimsopaka: computeVimsopaka(chart), bhavaBala: computeBhavaBala(chart, shadbala),
-    shoola: shoolaDasha(chart), sudasa: sudasaDasha(chart), drig: drigDasha(chart),
+    shoola: shoolaDasha(chart), sudasa: sudasaDasha(chart), drig: drigDasha(chart), varnadaDasha: varnadaDasha(chart, horaLagnaSign),
     panchangExtra: computePanchangExtra(birth), sphutas: computeSphutas(chart, computeUpagraha(chart, birth)?.gulika.longitude ?? 0),
     mks: computeMks(chart), relationships: computeRelationships(chart),
     ayurdaya: computeAyurdaya(chart), balarishta: computeBalarishta(chart),
