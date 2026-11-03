@@ -85,6 +85,15 @@ export interface CharaPeriod {
 // "Odd" (Aries, Gemini, Leo, Libra, Sag, Aquarius) count forward; even reverse.
 const isOddSign = (s: number) => s % 2 === 0; // Aries(0) is the 1st (odd)
 
+// First-period balance at birth (Parāśara / K.N. Rao convention): the Lagna's
+// progress through its sign has already consumed part of the first rāśi period.
+// A forward dasha loses the elapsed fraction f = ascDeg/30; a backward dasha
+// loses (1 − f). The elapsed remainder is dropped, as with the nakṣatra dashas.
+export function firstBalance(years: number, ascDeg: number, forward: boolean): number {
+  const f = ascDeg / 30;
+  return years * (forward ? 1 - f : f);
+}
+
 function charaYears(sign: number, chart: Chart): number {
   const lord = SIGN_LORDS[sign];
   // Scorpio & Aquarius have co-lords (Ketu/Mars, Rahu/Saturn) — use the main.
@@ -103,11 +112,12 @@ export function charaDasha(chart: Chart): CharaPeriod[] {
   const asc = chart.ascendantSignIndex;
   const birth = new Date(chart.julianDay * 86400000 - 2440587.5 * 86400000);
   const forward = isOddSign(asc);
+  const ascDeg = chart.ascendant % 30;
   const out: CharaPeriod[] = [];
   let cursor = birth;
   for (let i = 0; i < 12; i++) {
     const sign = forward ? (asc + i) % 12 : ((asc - i) % 12 + 12) % 12;
-    const years = charaYears(sign, chart);
+    const years = i === 0 ? firstBalance(charaYears(sign, chart), ascDeg, forward) : charaYears(sign, chart);
     const end = addYears(cursor, years);
     out.push({
       sign,
@@ -166,7 +176,8 @@ export function narayanaDasha(chart: Chart): NarayanaPeriod[] {
     out.push({ sign, signName: SIGNS[sign], years, cycle, start: cursor.toISOString(), end: end.toISOString() });
     cursor = end;
   };
-  order.forEach((sign, i) => push(sign, firstYears[i], 1));
+  const ascDeg = chart.ascendant % 30;
+  order.forEach((sign, i) => push(sign, i === 0 ? firstBalance(firstYears[i], ascDeg, forward) : firstYears[i], 1));
   order.forEach((sign, i) => push(sign, 12 - firstYears[i], 2));
   return out;
 }
@@ -286,12 +297,13 @@ function runRasiDasha(
   chart: Chart, seed: number, yearsOf: (sign: number) => number
 ): CharaPeriod[] {
   const forward = isOddSign(seed);
+  const ascDeg = chart.ascendant % 30;
   const birth = new Date(chart.julianDay * 86400000 - 2440587.5 * 86400000);
   const out: CharaPeriod[] = [];
   let cursor = birth;
   for (let i = 0; i < 12; i++) {
     const sign = forward ? (seed + i) % 12 : ((seed - i) % 12 + 12) % 12;
-    const years = yearsOf(sign);
+    const years = i === 0 ? firstBalance(yearsOf(sign), ascDeg, forward) : yearsOf(sign);
     const end = addYears(cursor, years);
     out.push({ sign, signName: SIGNS[sign], years, start: cursor.toISOString(), end: end.toISOString() });
     cursor = end;

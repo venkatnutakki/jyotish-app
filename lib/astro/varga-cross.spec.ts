@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { crossVargaVerify } from "./varga-cross";
+import { crossVargaVerify, VAISESHIKAMSA } from "./varga-cross";
 import { computeChart } from "./chart";
 import { computeVarga, vargaSign } from "./varga";
 import { SIGN_LORDS, type PlanetName } from "./constants";
@@ -70,6 +70,25 @@ describe("varga-cross — structure and bounds", () => {
       for (const p of SEVEN) {
         const c = crossVargaVerify(ch, "career", p, true);
         expect(c.vaiseshikamsa).toBe(tiers[c.dignifiedCount] ?? null);
+      }
+    }
+  });
+
+  it("extends the full Daśavarga Vaiśeṣikāṃśa ladder to Śrīdhāma (tiers 7–10)", () => {
+    expect(VAISESHIKAMSA[7]).toBe("Devalokāṃśa");
+    expect(VAISESHIKAMSA[8]).toBe("Brahmalokāṃśa");
+    expect(VAISESHIKAMSA[9]).toBe("Śakravāhanāṃśa");
+    expect(VAISESHIKAMSA[10]).toBe("Śrīdhāmāṃśa");
+  });
+
+  it("bounds the Daśavarga count to 0..10 and maps its tier via the ladder", () => {
+    for (const b of corpus(80)) {
+      const ch = computeChart(b);
+      for (const p of SEVEN) {
+        const c = crossVargaVerify(ch, "career", p, true);
+        expect(c.dasavargaDignifiedCount).toBeGreaterThanOrEqual(0);
+        expect(c.dasavargaDignifiedCount).toBeLessThanOrEqual(10);
+        expect(c.dasavargaVaiseshikamsa).toBe(VAISESHIKAMSA[c.dasavargaDignifiedCount] ?? null);
       }
     }
   });

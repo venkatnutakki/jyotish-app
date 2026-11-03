@@ -6,9 +6,10 @@
 
 import { SIGN_LORDS, SIGNS, EXALT_SIGN as EXALT, MULATRIKONA_SIGN as MOOLA, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import { vargaSign } from "./varga";
+import { norm360 } from "./time";
 import type { Chart } from "./types";
 import { computeRelationships } from "./sphuta-mks";
-import type { ShadbalaResult } from "./shadbala";
+import { sputaDrishti, type ShadbalaResult } from "./shadbala";
 
 const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
 
@@ -107,14 +108,37 @@ export function computeVimsopaka(chart: Chart): Vimsopaka[] {
 
 // ---- Bhāva Bala (composite house strength) ----------------------------------
 const BENEFIC = new Set<PlanetName>(["Jupiter", "Venus", "Mercury", "Moon"]);
+// Special (full) aspects by whole-sign offset, as in Drik Bala (BPHS 26.9-12).
+const DRIK_SPECIAL: Partial<Record<PlanetName, number[]>> = {
+  Saturn: [2, 9], Mars: [3, 7], Jupiter: [4, 8],
+};
+
+/**
+ * Bhāva Dṛṣṭi Bala — the net aspectual strength on a bhāva-madhya: every graha's
+ * Sputa-Dṛṣṭi onto the house cusp, benefics positive, malefics negative, scaled
+ * to virupas (BPHS Bhāva Bala). Natural benefic/malefic classes (standard
+ * simplification; functional nuance omitted).
+ */
+function bhavaDrishtiBala(chart: Chart, madhyaLon: number, bhavaSign: number): number {
+  let total = 0;
+  for (const other of SEVEN) {
+    const op = chart.planets.find((p) => p.planet === other)!;
+    let v = sputaDrishti(op.longitude, madhyaLon);
+    const special = DRIK_SPECIAL[other];
+    if (special && special.includes((bhavaSign - op.signIndex + 12) % 12)) v = Math.max(v, 60);
+    total += BENEFIC.has(other) ? v : -v;
+  }
+  return total / 4;
+}
 
 export interface BhavaBala {
   house: number;
   sign: string;
   lord: PlanetName;
-  lordRupas: number;
+  lordRupas: number;          // Bhavādhipati Bala (lord's Ṣaḍbala, rūpas)
   occupants: PlanetName[];
-  total: number; // composite strength (rūpas-scale)
+  drishtiBala: number;        // Bhāva Dṛṣṭi Bala (virupas; benefic + / malefic −)
+  total: number;              // rūpas: Bhavādhipati + Dṛṣṭi
   rank: number;
 }
 
@@ -125,13 +149,21 @@ export function computeBhavaBala(chart: Chart, shadbala: ShadbalaResult): BhavaB
     const sign = (chart.ascendantSignIndex + i) % 12;
     const lord = SIGN_LORDS[sign];
     const occupants = chart.planets.filter((p) => p.house === house).map((p) => p.planet);
-    // Lord's strength + occupant contributions (benefics add, malefics subtract).
-    let total = rupasOf(lord);
-    for (const o of occupants) {
-      if (o === "Rahu" || o === "Ketu") { total += BENEFIC.has(o) ? 0.25 : -0.25; continue; }
-      total += (BENEFIC.has(o) ? 0.5 : -0.25) * rupasOf(o);
-    }
-    return { house, sign: SIGNS[sign], lord, lordRupas: Math.round(rupasOf(lord) * 100) / 100, occupants, total: Math.round(total * 100) / 100, rank: 0 };
+    // Equal-house bhāva madhya from the exact ascendant.
+    const madhya = norm360(chart.ascendant + i * 30);
+    const drishti = bhavaDrishtiBala(chart, madhya, sign);
+    const bhavadhipati = rupasOf(lord);
+    // ponytail: Bhāva Dig Bala omitted — its exact BPHS virupa table is not
+    // pinned here; add it once sourced rather than guessing the values.
+    const total = bhavadhipati + drishti / 60; // virupas → rūpas
+    return {
+      house, sign: SIGNS[sign], lord,
+      lordRupas: Math.round(bhavadhipati * 100) / 100,
+      occupants,
+      drishtiBala: Math.round(drishti * 10) / 10,
+      total: Math.round(total * 100) / 100,
+      rank: 0,
+    };
   });
   [...rows].sort((a, b) => b.total - a.total).forEach((r, i) => (r.rank = i + 1));
   return rows;
