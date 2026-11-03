@@ -332,3 +332,66 @@ export function transitTimeline(
   }
   return events.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
+
+export interface EclipseEvent {
+  kind: "solar" | "lunar";
+  date: Date;
+  moonNodeDistance: number; // degrees from the Moon to the nearest node
+  label: string;
+}
+
+/**
+ * Eclipses in the range. An eclipse is a syzygy near the Rāhu–Ketu axis: a solar
+ * eclipse at the new Moon within ~15.5° of a node, a lunar eclipse at the full
+ * Moon within ~12°. (Eclipse geometry is ayanāṁśa-independent; the sidereal node
+ * is used only to measure the separation.)
+ */
+export function findEclipses(from: Date, to: Date, nodeType: "mean" | "true" = "mean"): EclipseEvent[] {
+  const phase = (t: number) => norm360(transitLongitude("Moon", new Date(t)) - transitLongitude("Sun", new Date(t)));
+  const nodeDist = (t: number) => {
+    const m = transitLongitude("Moon", new Date(t));
+    const r = transitLongitude("Rahu", new Date(t), nodeType);
+    return Math.min(Math.abs(signedDiff(m, r)), Math.abs(signedDiff(m, r + 180)));
+  };
+  const SOLAR_LIMIT = 15.5;
+  const LUNAR_LIMIT = 12;
+  const step = (SCAN_STEP.Moon ?? 0.08) * DAY_MS;
+  const tol = 1 / (24 * 60); // 1 minute, in days
+  const end = to.getTime();
+  const out: EclipseEvent[] = [];
+  let t0 = from.getTime();
+  let d0 = phase(t0);
+
+  while (t0 < end) {
+    const t1 = Math.min(t0 + step, end);
+    const d1 = phase(t1);
+
+    // Full Moon — phase crosses 180 upward → candidate lunar eclipse.
+    if (d0 < 180 && d1 >= 180) {
+      let lo = t0, hi = t1;
+      while ((hi - lo) / DAY_MS > tol) {
+        const mid = (lo + hi) / 2;
+        if (phase(mid) - 180 < 0) lo = mid; else hi = mid;
+      }
+      const t = (lo + hi) / 2;
+      const nd = nodeDist(t);
+      if (nd <= LUNAR_LIMIT) out.push({ kind: "lunar", date: new Date(t), moonNodeDistance: nd, label: "Lunar eclipse (full Moon near the node axis)" });
+    }
+
+    // New Moon — phase wraps 360→0 (sharp drop) → candidate solar eclipse.
+    if (d1 < d0 - 180) {
+      let lo = t0, hi = t1;
+      while ((hi - lo) / DAY_MS > tol) {
+        const mid = (lo + hi) / 2;
+        if (phase(mid) > 180) lo = mid; else hi = mid;
+      }
+      const t = (lo + hi) / 2;
+      const nd = nodeDist(t);
+      if (nd <= SOLAR_LIMIT) out.push({ kind: "solar", date: new Date(t), moonNodeDistance: nd, label: "Solar eclipse (new Moon near the node axis)" });
+    }
+
+    t0 = t1;
+    d0 = d1;
+  }
+  return out;
+}

@@ -36,10 +36,15 @@ const SHADVARGA: { n: number; code: string; name: string }[] = [
   { n: 30, code: "D30", name: "Triṃśāṃśa" },
 ];
 
-// Vaiśeṣikāṃśa named tiers by count of dignified vargas (classical ladder).
-const VAISESHIKAMSA: Record<number, string> = {
+// Vaiśeṣikāṃśa named tiers by count of dignified vargas — the full classical
+// ladder (2 → 10). Tiers 7-10 can only arise over the Daśavarga (10) set.
+export const VAISESHIKAMSA: Record<number, string> = {
   2: "Pārijātāṃśa", 3: "Uttamāṃśa", 4: "Gopurāṃśa", 5: "Siṃhāsanāṃśa", 6: "Pārāvatāṃśa",
+  7: "Devalokāṃśa", 8: "Brahmalokāṃśa", 9: "Śakravāhanāṃśa", 10: "Śrīdhāmāṃśa",
 };
+
+// The Daśavarga (10 divisions) — the classical basis of the Vaiśeṣikāṃśa ladder.
+const DASAVARGA = [1, 2, 3, 7, 9, 10, 12, 16, 30, 60];
 
 export type VargaDignity = "exalted" | "own" | "friendly" | "neutral" | "enemy" | "debilitated";
 
@@ -56,8 +61,12 @@ export interface CrossVargaCheck {
   placements: VargaPlacement[];
   /** How many of the six divisions the significator is dignified in (0–6). */
   dignifiedCount: number;
-  /** Named Vaiśeṣikāṃśa tier for that count, or null below Pārijātāṃśa. */
+  /** Named tier for the Ṣaḍvarga count, or null below Pārijātāṃśa. */
   vaiseshikamsa: string | null;
+  /** Dignified count over the Daśavarga (10) — the classical Vaiśeṣikāṃśa basis. */
+  dasavargaDignifiedCount: number;
+  /** Full Vaiśeṣikāṃśa tier (can reach Devaloka…Śrīdhāma) over the Daśavarga. */
+  dasavargaVaiseshikamsa: string | null;
   /** Same sign in D1 and D9 — the strongest single cross-chart confirmation. */
   vargottama: boolean;
   /** The topic's dedicated varga check (reused), for reference. */
@@ -112,6 +121,18 @@ export function crossVargaVerify(
   const afflictedCount = placements.filter((p) => p.dignity === "debilitated" || p.dignity === "enemy").length;
   const vargottama = d1Sign >= 0 && d1Sign === d9Sign;
   const vaiseshikamsa = VAISESHIKAMSA[dignifiedCount] ?? null;
+
+  // Full Vaiśeṣikāṃśa over the Daśavarga (10 divisions) — the classical basis,
+  // reported separately so it does not perturb the Ṣaḍvarga-based verification.
+  let dasavargaDignifiedCount = 0;
+  for (const n of DASAVARGA) {
+    const vchart = n === 1 ? chart : computeVarga(chart, n);
+    const pos = vchart.planets.find((p) => p.planet === significator);
+    if (!pos) continue;
+    const dg = dignityIn(significator, pos.signIndex, relOf);
+    if (dg === "exalted" || dg === "own" || dg === "friendly") dasavargaDignifiedCount++;
+  }
+  const dasavargaVaiseshikamsa = VAISESHIKAMSA[dasavargaDignifiedCount] ?? null;
   const topic = confirmInVarga(chart, areaKey, significator);
 
   // Verification: how strongly the native's OWN charts back the D1 reading.
@@ -145,7 +166,7 @@ export function crossVargaVerify(
           ? `The divisional charts give little support: ${significator} is dignified in only ${across}, so this rests mainly on the D1 chart.`
           : `Partly confirmed: ${significator} is dignified in ${across}${vargottama ? ", and vargottama" : ""} — moderate cross-chart support.`;
 
-  return { significator, placements, dignifiedCount, vaiseshikamsa, vargottama, topic, verification, note };
+  return { significator, placements, dignifiedCount, vaiseshikamsa, dasavargaDignifiedCount, dasavargaVaiseshikamsa, vargottama, topic, verification, note };
 }
 
 export { AREA_VARGA };

@@ -94,7 +94,31 @@ function panchavargeeya(pravesh: Chart, planet: PlanetName): PanchavargeeyaRow {
 }
 
 export interface Saham { name: string; longitude: number; sign: string; degree: number; }
-export interface MuddaPeriod { lord: PlanetName | string; days: number; start: string; end: string; }
+export interface MuddaSubPeriod { lord: string; days: number; start: string; end: string; }
+export interface MuddaPeriod { lord: PlanetName | string; days: number; start: string; end: string; sub?: MuddaSubPeriod[]; }
+export interface HarshaRow { planet: PlanetName; inHouseOfJoy: boolean; inOwnHemisphere: boolean; total: number; }
+
+const HARSHA_SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+// Tājika house of joy (the defining Harṣa condition).
+const HARSHA_HOUSE: Record<string, number> = { Sun: 9, Moon: 3, Mars: 6, Mercury: 1, Jupiter: 11, Venus: 5, Saturn: 12 };
+
+/**
+ * Harṣa Bala (Tājika "joy strength"), two core components of 5 units each:
+ * (1) the planet in its house of joy; (2) in its own hemisphere — diurnal grahas
+ * (Sun/Jupiter/Saturn) above the horizon (houses 7-12), nocturnal (Moon/Venus/
+ * Mars) below (1-6), Mercury either. Gender/other components are omitted
+ * (source-variant) rather than guessed.
+ */
+function harshaBala(pravesh: Chart): HarshaRow[] {
+  return HARSHA_SEVEN.map((p) => {
+    const pos = pravesh.planets.find((x) => x.planet === p)!;
+    const inHouseOfJoy = pos.house === HARSHA_HOUSE[p];
+    const above = pos.house >= 7 && pos.house <= 12;
+    const diurnal = p === "Sun" || p === "Jupiter" || p === "Saturn";
+    const inOwnHemisphere = p === "Mercury" || diurnal === above;
+    return { planet: p, inHouseOfJoy, inOwnHemisphere, total: (inHouseOfJoy ? 5 : 0) + (inOwnHemisphere ? 5 : 0) };
+  });
+}
 
 export interface Varshaphal {
   year: number;
@@ -104,6 +128,7 @@ export interface Varshaphal {
   muntha: { signIndex: number; sign: string; house: number; lord: PlanetName };
   yearLord: { planet: PlanetName; strength: number; candidates: PanchavargeeyaRow[] };
   muddaDasha: MuddaPeriod[];
+  harshaBala: HarshaRow[];
   sahams: Saham[];
   /**
    * Tajika verdicts per life area — whether the matter PERFECTS this year.
@@ -168,13 +193,29 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
   const natalMoonNak = natal.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;
   const startLord = NAKSHATRAS[natalMoonNak].lord as string;
   const startIdx = VIMSHOTTARI_ORDER.indexOf(startLord as (typeof VIMSHOTTARI_ORDER)[number]);
+  // Antardaśā within a Mudda mahādaśā: the mahā's days split in Vimśottari
+  // proportion, starting from the mahā lord.
+  const muddaSub = (mahaLord: string, totalDays: number, startMs: number): MuddaSubPeriod[] => {
+    const idx = VIMSHOTTARI_ORDER.indexOf(mahaLord as (typeof VIMSHOTTARI_ORDER)[number]);
+    const out: MuddaSubPeriod[] = [];
+    let c = startMs;
+    for (let j = 0; j < 9; j++) {
+      const sl = VIMSHOTTARI_ORDER[(idx + j) % 9];
+      const d = totalDays * (VIMSHOTTARI_YEARS[sl] / 120);
+      const e = c + d * DAY_MS;
+      out.push({ lord: sl, days: Math.round(d * 10) / 10, start: new Date(c).toISOString(), end: new Date(e).toISOString() });
+      c = e;
+    }
+    return out;
+  };
+
   const muddaDasha: MuddaPeriod[] = [];
   let cursor = returnDate.getTime();
   for (let i = 0; i < 9; i++) {
     const lord = VIMSHOTTARI_ORDER[(startIdx + i) % 9];
     const days = (VIMSHOTTARI_YEARS[lord] / 120) * 365.2425;
     const end = cursor + days * DAY_MS;
-    muddaDasha.push({ lord, days: Math.round(days * 10) / 10, start: new Date(cursor).toISOString(), end: new Date(end).toISOString() });
+    muddaDasha.push({ lord, days: Math.round(days * 10) / 10, start: new Date(cursor).toISOString(), end: new Date(end).toISOString(), sub: muddaSub(lord, days, cursor) });
     cursor = end;
   }
 
@@ -183,6 +224,8 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
   const sun = pravesh.planets.find((p) => p.planet === "Sun")!.longitude;
   const moon = pravesh.planets.find((p) => p.planet === "Moon")!.longitude;
   const jup = pravesh.planets.find((p) => p.planet === "Jupiter")!.longitude;
+  const ven = pravesh.planets.find((p) => p.planet === "Venus")!.longitude;
+  const sat = pravesh.planets.find((p) => p.planet === "Saturn")!.longitude;
   const sunHouse = pravesh.planets.find((p) => p.planet === "Sun")!.house;
   const isDay = sunHouse >= 7 && sunHouse <= 12;
 
@@ -198,7 +241,11 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
     saham("Puṇya (merit/fortune)", moon - sun + asc, sun - moon + asc),
     saham("Vidyā (learning)", sun - moon + asc, moon - sun + asc),
     saham("Yaśas (fame)", jup - punya + asc, punya - jup + asc),
+    saham("Vivāha (marriage)", ven - sat + asc, sat - ven + asc),
+    saham("Putra (children)", jup - moon + asc, moon - jup + asc),
   ];
+  // ponytail: the full Tājika Nīlakaṇṭhī set (~40 sahams) + Patyāyinī daśā need a
+  // pinned source edition — added here only the formulas attested across sources.
 
   // --- Tajika judgment: does each matter perfect this year? ---------------
   const praveshAsc = pravesh.ascendantSignIndex;
@@ -229,6 +276,7 @@ export function computeVarshaphal(natal: Chart, birth: BirthData, year: number):
     muntha: { signIndex: munthaSign, sign: SIGNS[munthaSign], house: munthaHouse, lord: munthaLord },
     yearLord,
     muddaDasha,
+    harshaBala: harshaBala(pravesh),
     sahams,
     judgments,
     munthaVerdict,

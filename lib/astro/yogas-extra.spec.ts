@@ -29,6 +29,17 @@ describe("node-axis and affliction yogas", () => {
     expect(names(broken).has("Kāla Sarpa Yoga")).toBe(false);
   });
 
+  it("detects Āngāraka when Mars is conjunct a node", () => {
+    expect(names(mkChart({ Mars: 8, Rahu: 8 })).has("Āngāraka Dōṣa")).toBe(true);
+    expect(names(mkChart({ Mars: 3, Rahu: 8, Ketu: 2 })).has("Āngāraka Dōṣa")).toBe(false);
+  });
+
+  it("labels the Ketu-led hem as Kāla Amṛita, not Kāla Sarpa", () => {
+    const amrita = mkChart({ Rahu: 0, Ketu: 6, Sun: 7, Moon: 8, Mars: 9, Mercury: 10, Jupiter: 11, Venus: 7, Saturn: 8 });
+    expect(names(amrita).has("Kāla Amṛita Yoga")).toBe(true);
+    expect(names(amrita).has("Kāla Sarpa Yoga")).toBe(false);
+  });
+
   it("detects Grahaṇa only when a luminary is conjunct a node", () => {
     expect(names(mkChart({ Sun: 8, Rahu: 8 })).has("Grahaṇa Yoga")).toBe(true);
     expect(names(mkChart({ Sun: 0, Moon: 5, Rahu: 8, Ketu: 2 })).has("Grahaṇa Yoga")).toBe(false);
@@ -48,5 +59,66 @@ describe("node-axis and affliction yogas", () => {
       const y = find(c, n);
       if (y) expect(y.category, n).toBe("Other");
     }
+  });
+});
+
+describe("Nābhasa Ākṛti + Dala completeness", () => {
+  it("Śakaṭa (Nābhasa): all seven in the 1st & 7th, not mislabelled Nauka", () => {
+    const c = mkChart({ Sun: 0, Mars: 0, Jupiter: 0, Moon: 6, Mercury: 6, Venus: 6, Saturn: 6 });
+    expect(names(c).has("Śakaṭa (Nābhasa) Yoga")).toBe(true);
+    expect(names(c).has("Nauka Yoga")).toBe(false);
+  });
+
+  it("Nauka: seven planets spread across the 1st-7th", () => {
+    const c = mkChart({ Sun: 0, Moon: 1, Mars: 2, Mercury: 3, Jupiter: 4, Venus: 5, Saturn: 6 });
+    expect(names(c).has("Nauka Yoga")).toBe(true);
+  });
+
+  it("Hala: all seven in one non-lagna trinal set (4/8/12)", () => {
+    const c = mkChart({ Sun: 3, Moon: 7, Mars: 11, Mercury: 3, Jupiter: 7, Venus: 11, Saturn: 3 });
+    expect(names(c).has("Hala Yoga")).toBe(true);
+    expect(names(c).has("Śṛṅgāṭaka Yoga")).toBe(false);
+  });
+
+  it("Mālā: three benefics in three distinct angles (not Sarpa)", () => {
+    const c = mkChart({ Jupiter: 0, Venus: 3, Mercury: 6, Sun: 1, Mars: 1, Saturn: 1, Moon: 1 });
+    expect(names(c).has("Mālā (Srik) Yoga")).toBe(true);
+    expect(names(c).has("Sarpa Yoga")).toBe(false);
+  });
+});
+
+describe("Kemadruma bhaṅga (cancellation)", () => {
+  // Moon unflanked: all five TARA grahas parked in sign 7, away from the Moon's
+  // 2nd/12th/own sign.
+  const isolate = { Mars: 7, Mercury: 7, Jupiter: 7, Venus: 7, Saturn: 7, Sun: 9 } as const;
+
+  it("reports uncancelled Kemadruma when the Moon is non-angular, undignified, unsupported", () => {
+    const c = mkChart({ Moon: 2, ...isolate }); // Moon house 3, not kendra
+    expect(names(c).has("Kemadruma Yoga")).toBe(true);
+    expect(names(c).has("Kemadruma Yoga (cancelled)")).toBe(false);
+  });
+
+  it("cancels Kemadruma when the Moon is angular from the Lagna", () => {
+    const c = mkChart({ Moon: 0, ...isolate }); // Moon in Lagna (kendra)
+    expect(names(c).has("Kemadruma Yoga (cancelled)")).toBe(true);
+    expect(names(c).has("Kemadruma Yoga")).toBe(false);
+  });
+});
+
+describe("Rāja yoga by mutual aspect", () => {
+  it("fires when a kendra lord and trikoṇa lord mutually aspect (not just conjoin)", () => {
+    // Aries asc: Moon (4th lord, kendra) at sign 1, Jupiter (9th lord, trikoṇa)
+    // at sign 7 — mutual 7th-house aspect, no conjunction.
+    const c = mkChart({ Moon: 1, Jupiter: 7, Mars: 2, Venus: 4, Saturn: 10, Sun: 5 });
+    const y = find(c, "Rāja Yoga");
+    expect(y, "Rāja Yoga not detected by aspect").toBeTruthy();
+    expect(y!.description).toContain("mutually aspect");
+  });
+
+  it("still labels a conjunction pair as conjoin", () => {
+    const c = mkChart({ Moon: 7, Jupiter: 7, Mars: 2, Venus: 4, Saturn: 10, Sun: 5 });
+    const y = find(c, "Rāja Yoga");
+    expect(y, "Rāja Yoga not detected by conjunction").toBeTruthy();
+    expect(y!.description).toContain("conjoin");
   });
 });

@@ -158,7 +158,7 @@ export const BPHS_LORD_IN_HOUSE: Record<number, Record<number, string>> = {
     12: "If Labhs Lord is in Vyaya Bhava, the native will always depend on good deeds, be sensuous, will have many wives and will befriend barbarians.",
   },
   12: {
-    1: "If Vyayas Lord is in Tanu Bhava, the native will be a spendthrift, be weak in",
+    1: "If Vyayas Lord is in Tanu Bhava, the native will be a spendthrift, be weak in physique and be bereft of happiness; he will squander his wealth and accomplish little in his undertakings.",
     2: "If Vyayas Lord is in Dhan Bhava, the native will always spend on inauspicious deeds, be religious, will speak sweetly and will be endowed with virtues and happiness.",
     3: "If Vyayas Lord is in Sahaj Bhava, the native will be devoid of fraternal bliss, will hate others and will promote self-nourishment.",
     4: "If Vyayas Lord is in Bandhu Bhava, the native will be devoid of maternal happiness and will day by day accrue losses with respect to lands, conveyances and houses.",

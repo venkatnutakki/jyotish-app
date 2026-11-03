@@ -50,11 +50,12 @@ import { computeMuhurtaTimings } from "./astro/muhurta-timings";
 import { computeVarnada } from "./astro/varnada";
 import { computeNaraBodyMap, computeChandraKriya } from "./astro/prasna-nara";
 import { computeAvReduction } from "./astro/ashtakavarga-reduce";
-import { computeTransits } from "./astro/transits";
+import { computeTransits, planetaryReturns } from "./astro/transits";
 import { computeTaraBala } from "./astro/tarabala";
-import { computeGochara } from "./astro/gochara";
+import { computeGochara, computeGocharaFromLagna } from "./astro/gochara";
 import { computeGocharaStrength } from "./astro/gochara-strength";
 import { computeNakshatraVedha } from "./astro/nakshatra-vedha";
+import { findEclipses } from "./astro/transit-events";
 import { muhurtaWindow } from "./astro/muhurta";
 import { computeCompatibility, type Person } from "./astro/compatibility";
 import { compareCharts } from "./astro/chart-comparison";
@@ -159,10 +160,14 @@ export function transitsRoute(birth: BirthData) {
   const transits = computeTransits(natal, new Date());
   const janmaNak = natal.planets.find((p) => p.planet === "Moon")!.nakshatraIndex;
   const gochara = computeGochara(transits.positions.map((p) => ({ planet: p.planet, houseFromMoon: p.houseFromMoon })));
+  const gocharaFromLagna = computeGocharaFromLagna(transits.positions.map((p) => ({ planet: p.planet, houseFromLagna: p.houseFromLagna })));
   return {
     transits,
     taraBala: computeTaraBala(janmaNak, transits.positions.map((p) => ({ planet: p.planet, nakshatraIndex: p.nakshatraIndex }))),
     gochara,
+    gocharaFromLagna,
+    returns: planetaryReturns(natal, new Date()),
+    upcomingEclipses: findEclipses(new Date(), new Date(Date.now() + 400 * 86_400_000)),
     gocharaStrength: computeGocharaStrength(natal, gochara, transits.positions),
     sarvatobhadra: computeNakshatraVedha(janmaNak, transits.positions.map((p) => ({ planet: p.planet, nakshatraIndex: p.nakshatraIndex }))),
   };

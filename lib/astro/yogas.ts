@@ -33,6 +33,14 @@ const TARA = ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"]; // non-luminary,
 const rel = (fromSign: number, toSign: number) =>
   ((toSign - fromSign + 12) % 12) + 1; // house of `to` counted from `from`
 
+// Whole-sign graha dṛṣṭi: every graha aspects the 7th; Mars/Jupiter/Saturn add
+// their special aspects. Used for aspect-based Rāja yoga.
+const SPECIAL_ASPECT: Partial<Record<PlanetName, number[]>> = { Mars: [4, 8], Jupiter: [5, 9], Saturn: [3, 10] };
+const aspectsSign = (from: PlanetPosition, toSign: number): boolean => {
+  const h = rel(from.signIndex, toSign);
+  return h === 7 || (SPECIAL_ASPECT[from.planet] ?? []).includes(h);
+};
+
 export function computeYogas(chart: Chart): Yoga[] {
   const P = Object.fromEntries(
     chart.planets.map((p) => [p.planet, p])
@@ -53,8 +61,21 @@ export function computeYogas(chart: Chart): Yoga[] {
     yogas.push({ name: "Sunapha Yoga", category: "Lunar", description: "Planet in the 2nd from the Moon — self-earned wealth, intelligence, and good repute." });
   else if (in12FromMoon.length)
     yogas.push({ name: "Anapha Yoga", category: "Lunar", description: "Planet in the 12th from the Moon — well-formed body, ease, renunciation and dignity." });
-  if (!in2FromMoon.length && !in12FromMoon.length && !conjMoon.length)
-    yogas.push({ name: "Kemadruma Yoga", category: "Lunar", description: "The Moon is isolated (no planets in the 2nd/12th) — struggles and dependence unless cancelled by other supports." });
+  if (!in2FromMoon.length && !in12FromMoon.length && !conjMoon.length) {
+    // Kemadruma forms (Moon unflanked). Apply the classical bhaṅga: Moon angular
+    // from Lagna, a benefic angular from the Moon, Jupiter aspecting the Moon, or
+    // the Moon in its own/exaltation sign — any one cancels the dosha.
+    const moonAngular = KENDRA.includes(P.Moon.house);
+    const beneficKendraFromMoon = ["Jupiter", "Venus", "Mercury"].some(
+      (n) => KENDRA.includes(rel(moonSign, P[n as PlanetName].signIndex))
+    );
+    const jupiterAspectsMoon = [5, 7, 9].includes(rel(P.Jupiter.signIndex, moonSign));
+    const moonDignified = OWN.Moon.includes(moonSign) || EXALT.Moon === moonSign;
+    if (moonAngular || beneficKendraFromMoon || jupiterAspectsMoon || moonDignified)
+      yogas.push({ name: "Kemadruma Yoga (cancelled)", category: "Lunar", description: "The Moon is unflanked, but the Kemadruma is cancelled (bhaṅga) — the Moon is angular, dignified, or supported by a benefic or Jupiter's aspect — so its isolation does not bite." });
+    else
+      yogas.push({ name: "Kemadruma Yoga", category: "Lunar", description: "The Moon is isolated (no planets in the 2nd/12th) and uncancelled — struggles, instability and dependence, especially in early life." });
+  }
 
   // Gaja Kesari: Jupiter in a kendra from the Moon.
   if (KENDRA.includes(rel(moonSign, P.Jupiter.signIndex)))
@@ -123,23 +144,52 @@ export function computeYogas(chart: Chart): Yoga[] {
   const trikonaLords = new Set(TRIKONA.map((h) => SIGN_LORDS[(asc + h - 1) % 12]));
   const rajaPairs: string[] = [];
   const rajaPairPlanets: [PlanetName, PlanetName][] = [];
+  const rajaRelations: string[] = [];
+  const rajaSeen = new Set<string>();
   for (const kl of kendraLords) {
     for (const tl of trikonaLords) {
       if (kl === tl) continue;
-      if (P[kl].signIndex === P[tl].signIndex) {
+      const key = [kl, tl].sort().join("+");
+      if (rajaSeen.has(key)) continue;
+      const conj = P[kl].signIndex === P[tl].signIndex;
+      // Mutual aspect = genuine association (not one-sided), the classical form.
+      const mutualAspect = aspectsSign(P[kl], P[tl].signIndex) && aspectsSign(P[tl], P[kl].signIndex);
+      if (conj || mutualAspect) {
+        rajaSeen.add(key);
         rajaPairs.push(`${kl}+${tl}`);
         rajaPairPlanets.push([kl, tl]);
+        rajaRelations.push(conj ? "conjoin" : "mutually aspect");
       }
     }
   }
   if (rajaPairs.length)
-    yogas.push({ name: "Rāja Yoga", category: "Raja", description: `Kendra and trikoṇa lords conjoin (${rajaPairs[0]}) — power, status and success through one's own efforts.`, planets: rajaPairPlanets[0] });
+    yogas.push({ name: "Rāja Yoga", category: "Raja", description: `Kendra and trikoṇa lords ${rajaRelations[0]} (${rajaPairs[0]}${rajaPairs.length > 1 ? `, +${rajaPairs.length - 1} more` : ""}) — power, status and success through one's own efforts.`, planets: rajaPairPlanets[0] });
 
-  // ---- Dhana Yoga: 2nd and 11th lords conjoin ----
-  const l2 = SIGN_LORDS[(asc + 1) % 12];
-  const l11 = SIGN_LORDS[(asc + 10) % 12];
-  if (l2 !== l11 && P[l2].signIndex === P[l11].signIndex)
-    yogas.push({ name: "Dhana Yoga", category: "Dhana", description: "Lords of the 2nd and 11th conjoin — strong potential for accumulated wealth and income.", planets: [l2, l11] });
+  // ---- Dhana Yoga: lords of the wealth houses (2, 5, 9, 11) associate by
+  // conjunction or mutual aspect. 2 & 11 are the dhana-sthānas; 5 & 9 the Lakṣmī
+  // trikoṇas — their link to the gain-houses is the classical wealth-giver. ----
+  const DHANA_HOUSES = [2, 5, 9, 11];
+  const dhanaLords = DHANA_HOUSES.map((h) => ({ h, lord: SIGN_LORDS[(asc + h - 1) % 12] }));
+  const dhanaPairs: string[] = [];
+  let dhanaPlanets: [PlanetName, PlanetName] | undefined;
+  const dhanaSeen = new Set<string>();
+  for (let i = 0; i < dhanaLords.length; i++) {
+    for (let j = i + 1; j < dhanaLords.length; j++) {
+      const a = dhanaLords[i].lord, b = dhanaLords[j].lord;
+      if (a === b) continue;
+      const key = [a, b].sort().join("+");
+      if (dhanaSeen.has(key)) continue;
+      const conj = P[a].signIndex === P[b].signIndex;
+      const mutualAspect = aspectsSign(P[a], P[b].signIndex) && aspectsSign(P[b], P[a].signIndex);
+      if (conj || mutualAspect) {
+        dhanaSeen.add(key);
+        dhanaPairs.push(`${dhanaLords[i].h}L+${dhanaLords[j].h}L`);
+        if (!dhanaPlanets) dhanaPlanets = [a, b];
+      }
+    }
+  }
+  if (dhanaPairs.length)
+    yogas.push({ name: "Dhana Yoga", category: "Dhana", description: `Wealth-house lords associate (${dhanaPairs.join(", ")}) — strong potential for accumulated wealth and income.`, planets: dhanaPlanets });
 
   // ---- Neecha Bhanga: a debilitated planet whose debilitation is classically
   // cancelled. BPHS lists several independent cancellation conditions; meeting
@@ -306,11 +356,55 @@ export function computeYogas(chart: Chart): Yoga[] {
   else if (inRange(4, 7)) yogas.push({ name: "Iṣu (Śara) Yoga", category: "Other", description: "All planets within the 4th-7th — sharp and penetrating; may work in defence, hunting or precision trades." });
   else if (inRange(7, 10)) yogas.push({ name: "Śakti Yoga", category: "Other", description: "All planets within the 7th-10th — capable and enduring, success later in life through effort." });
   else if (inRange(10, 1)) yogas.push({ name: "Daṇḍa Yoga", category: "Other", description: "All planets within the 10th-1st — hardships and wandering; results ripen through perseverance." });
+  // 7-consecutive-house Ākṛti: anchored on a kendra (Nauka/Kūṭa/Chatra/Dhanus),
+  // else from a non-angle (Ardha-Chandra). Tighter 4-house yogas above win first;
+  // require a genuine spread (≥5 occupied houses) so clumped 1&7 / 4&10 charts
+  // stay Śakaṭa/Vihaga rather than masquerading as a 7-house shape.
+  else if (new Set(houses7).size >= 5 && inRange(1, 7)) yogas.push({ name: "Nauka Yoga", category: "Other", description: "All seven planets within the 1st-7th houses — a Nābhasa Nauka (boat): resourceful, earning through water, travel or trade, with fluctuating fortunes." });
+  else if (new Set(houses7).size >= 5 && inRange(4, 10)) yogas.push({ name: "Kūṭa Yoga", category: "Other", description: "All seven planets within the 4th-10th — Kūṭa: a hard, self-reliant nature, frontier or confined work, candour that can turn blunt." });
+  else if (new Set(houses7).size >= 5 && inRange(7, 1)) yogas.push({ name: "Chatra Yoga", category: "Other", description: "All seven planets within the 7th-1st — Chatra (umbrella): protective and helpful to kin, with growing comfort in the middle and later life." });
+  else if (new Set(houses7).size >= 5 && inRange(10, 4)) yogas.push({ name: "Dhanus (Chāpa) Yoga", category: "Other", description: "All seven planets within the 10th-4th — Dhanus (bow): a wanderer, fond of the forest/frontier, skilled with aim and strategy." });
+  else if (new Set(houses7).size >= 5 && [2, 3, 5, 6, 8, 9, 11, 12].some((s) => inRange(s, ((s + 5) % 12) + 1)))
+    yogas.push({ name: "Ardha-Chandra Yoga", category: "Raja", description: "Seven planets in seven consecutive houses from a non-angle — Ardha-Chandra (half-moon): comely, strong-willed, a commander who wins the favour of those in power." });
 
   // ---- Gada Yoga — all planets in two adjacent kendras ----
   const kendraPairs = [[1, 4], [4, 7], [7, 10], [10, 1]];
   if (kendraPairs.some(([a, b]) => houses7.every((h) => h === a || h === b)))
     yogas.push({ name: "Gadā Yoga", category: "Dhana", description: "All planets in two adjacent angles — wealth, ritual merit and steady accumulation of resources." });
+
+  // ---- Remaining Ākṛti (discrete-house patterns) + Dala yogas --------------
+  // Nabhasa classes benefics as Jupiter/Venus/Mercury/Moon and malefics as
+  // Sun/Mars/Saturn (the standard simplification; waxing-Moon/assoc. nuance omitted).
+  const BEN4: PlanetName[] = ["Moon", "Jupiter", "Venus", "Mercury"];
+  const MAL3: PlanetName[] = ["Sun", "Mars", "Saturn"];
+  const hAll = (planets: PlanetName[], set: number[]) => planets.every((n) => set.includes(P[n].house));
+
+  // Śakaṭa (Nābhasa) — all seven in the 1st & 7th only (distinct from the
+  // Moon-6/8/12-from-Jupiter Śakaṭa above).
+  if (houses7.every((h) => h === 1 || h === 7))
+    yogas.push({ name: "Śakaṭa (Nābhasa) Yoga", category: "Other", description: "All seven planets in the 1st and 7th — the Nābhasa cart: fortunes that rise and fall, livelihood through effort and movement." });
+  // Vihaga (Pakṣī) — all seven in the 4th & 10th only.
+  else if (houses7.every((h) => h === 4 || h === 10))
+    yogas.push({ name: "Vihaga (Pakṣī) Yoga", category: "Other", description: "All seven planets in the 4th and 10th — the bird: restless, far-travelling, living by wit and messages." });
+
+  // Vajra — benefics in the 1st/7th, malefics in the 4th/10th.
+  if (hAll([...BEN4, ...MAL3], [1, 4, 7, 10]) && hAll(BEN4, [1, 7]) && hAll(MAL3, [4, 10]))
+    yogas.push({ name: "Vajra Yoga", category: "Raja", description: "Benefics hold the 1st/7th and malefics the 4th/10th — the diamond: happy and brave at the start and end of life, bold in the middle." });
+  // Yava — malefics in the 1st/7th, benefics in the 4th/10th (the inverse).
+  else if (hAll([...BEN4, ...MAL3], [1, 4, 7, 10]) && hAll(MAL3, [1, 7]) && hAll(BEN4, [4, 10]))
+    yogas.push({ name: "Yava Yoga", category: "Other", description: "Malefics hold the 1st/7th and benefics the 4th/10th — the barley: hardship at the start and end, ease and charity through the middle of life." });
+
+  // Hala — all seven in one set of mutual trines other than the lagna-trikoṇa.
+  if ([[2, 6, 10], [3, 7, 11], [4, 8, 12]].some((set) => houses7.every((h) => set.includes(h))))
+    yogas.push({ name: "Hala Yoga", category: "Other", description: "All seven planets in one trinal set away from the Lagna — the plough: a hard-working, agrarian, enduring life, often of modest means." });
+
+  // Dala yogas — the three benefics vs the three malefics occupying the kendras.
+  const benKendras = new Set((["Jupiter", "Venus", "Mercury"] as PlanetName[]).map((n) => P[n].house).filter((h) => KENDRA.includes(h)));
+  if (benKendras.size === 3)
+    yogas.push({ name: "Mālā (Srik) Yoga", category: "Raja", description: "The three natural benefics occupy three different angles — the garland: lasting comforts, pleasures and the support of good people." });
+  const malKendras = new Set((["Sun", "Mars", "Saturn"] as PlanetName[]).map((n) => P[n].house).filter((h) => KENDRA.includes(h)));
+  if (malKendras.size === 3)
+    yogas.push({ name: "Sarpa Yoga", category: "Other", description: "The three natural malefics occupy three different angles — the serpent: a harder, more combative life calling for patience and restraint." });
 
   // ---- Kalānidhi — Jupiter in the 2nd or 5th, with Mercury/Venus ----
   const jupH = P.Jupiter.house;
@@ -397,13 +491,21 @@ export function computeYogas(chart: Chart): Yoga[] {
     const ds = SEVEN.map((n) => arc(P[n].longitude));
     const allFwd = ds.every((d) => d > 0 && d < 180);
     const allBwd = ds.every((d) => d > 180);
-    if (allFwd || allBwd)
-      yogas.push({ name: "Kāla Sarpa Yoga", category: "Other", description: "All seven grahas are hemmed between Rāhu and Ketu — intensity, karmic pressure and pronounced ups and downs; eased when a planet sits outside the axis or the nodes are well placed." });
+    if (allFwd)
+      yogas.push({ name: "Kāla Sarpa Yoga", category: "Other", description: "All seven grahas are hemmed on the Rāhu→Ketu side of the axis — intensity, karmic pressure and pronounced ups and downs; eased when a planet sits outside the axis or the nodes are well placed." });
+    else if (allBwd)
+      yogas.push({ name: "Kāla Amṛita Yoga", category: "Other", description: "All seven grahas lie on the Ketu→Rāhu side of the axis — the benevolent variant of Kāla Sarpa: the same karmic intensity, but tending to deliver its rewards and spiritual gains after an early period of struggle." });
   }
 
   // Guru-Chāṇḍāla — Jupiter conjunct a node: wisdom and ethics tested.
   if (rahu && (P.Jupiter.signIndex === rahu.signIndex || (ketu && P.Jupiter.signIndex === ketu.signIndex)))
     yogas.push({ name: "Guru-Chāṇḍāla Yoga", category: "Other", description: "Jupiter is conjunct a node — the guru principle (wisdom, faith, dharma) is intensified and complicated. It resolves to one of two poles: profound, sometimes unorthodox devotion (Ketu is the mokṣa-kāraka), or a mind that questions received wisdom and authority. Either way it runs deep and asks for conscious discernment.", planets: ["Jupiter"] });
+
+  // Āngāraka (Kuja–Rāhu/Ketu) — Mars conjunct a node.
+  if (rahu && (P.Mars.signIndex === rahu.signIndex || (ketu && P.Mars.signIndex === ketu.signIndex))) {
+    const withRahu = P.Mars.signIndex === rahu.signIndex;
+    yogas.push({ name: "Āngāraka Dōṣa", category: "Other", description: `Mars is conjunct ${withRahu ? "Rāhu" : "Ketu"} — the Āngāraka combination: heightened aggression, impulsiveness and a risk of conflict, accidents or surgery; channelled consciously it becomes decisive drive and technical skill.`, planets: ["Mars"] });
+  }
 
   // Grahaṇa (eclipse) — a luminary conjunct a node.
   const sunNode = rahu && (P.Sun.signIndex === rahu.signIndex || (ketu && P.Sun.signIndex === ketu.signIndex));
