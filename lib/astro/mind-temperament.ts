@@ -32,7 +32,7 @@
 
 import { naturalBenefics } from "./bhava";
 import type { ShadbalaResult } from "./shadbala";
-import { SIGNS, SIGN_LORDS, NAKSHATRAS, type PlanetName } from "./constants";
+import { SIGNS, SIGN_LORDS, NAKSHATRAS, EXALT_SIGN as EXALT, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import { nakshatraProfile } from "./nakshatra-attributes";
 import type { Chart, PlanetPosition } from "./types";
 
@@ -70,13 +70,6 @@ const MOON_SIGN_DISPOSITION: string[] = [
 
 // Local dignity tables (sign indices). Kept module-local so the reading is
 // self-contained and testable.
-const OWN: Record<string, number[]> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5],
-  Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
-const EXALT: Record<string, number> = {
-  Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6,
-};
 
 // Graha dṛṣṭi: houses a planet aspects, counted from its own house. Everyone
 // casts the 7th; Mars adds 4/8, Jupiter 5/9, Saturn 3/10. Nodes: 7th only

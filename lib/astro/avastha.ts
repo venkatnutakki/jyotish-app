@@ -5,7 +5,7 @@
 //   • Jāgradādi avasthā — awake/dreaming/sleeping by dignity in its dispositor's sign.
 // All computed from the natal longitudes; nothing here is AI-generated.
 
-import { type PlanetName } from "./constants";
+import { EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 import { eclipticLatitude } from "./ephemeris";
 
@@ -31,11 +31,6 @@ const NATURAL_MALEFIC: Partial<Record<PlanetName, boolean>> = {
 };
 
 // Exaltation / debilitation / own signs (for Jāgradādi).
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const DEBIL: Partial<Record<PlanetName, number>> = { Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0 };
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 // Natural friendships (Parāśara). f = friend, e = enemy, n = neutral.
 const FRIENDS: Partial<Record<PlanetName, PlanetName[]>> = {
   Sun: ["Moon", "Mars", "Jupiter"], Moon: ["Sun", "Mercury"],

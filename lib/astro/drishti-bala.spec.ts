@@ -38,7 +38,7 @@ describe("graha drishti value (BPHS 26.6-8)", () => {
 });
 
 describe("special (full) aspects in Drik bala (BPHS 26.9-12)", () => {
-  type P = PlanetName;
+  type P = Exclude<PlanetName, "Rahu" | "Ketu">; // the 7 graha-bala planets (SBP)
   const benefics = new Set<P>(["Jupiter", "Venus", "Mercury", "Moon"] as P[]);
   // Place the target (Sun) at 15° Cancer (sign 3). An aspecting planet placed
   // so the target sits in its special house should register a full aspect.

@@ -4,19 +4,26 @@
 // not literal ages, so we report the āyu band and the māraka (death-dealing)
 // planets rather than a single number.
 
-import { SIGN_LORDS, SIGNS, type PlanetName } from "./constants";
+import { SIGN_LORDS, SIGNS, EXALT_DEG, type PlanetName } from "./constants";
 import type { Chart } from "./types";
 
 const norm360 = (x: number) => ((x % 360) + 360) % 360;
 const sep = (a: number, b: number) => { const d = Math.abs(norm360(a - b)); return d > 180 ? 360 - d : d; };
 
 // Deep-exaltation longitudes; Piṇḍa max years; Naisarga years.
-const EXALT_DEG: Record<string, number> = { Sun: 10, Moon: 33, Mars: 298, Mercury: 165, Jupiter: 95, Venus: 357, Saturn: 200 };
 const PINDA_MAX: Record<string, number> = { Sun: 19, Moon: 25, Mars: 15, Mercury: 12, Jupiter: 15, Venus: 21, Saturn: 20 };
 const NAISARGA: Record<string, number> = { Sun: 20, Moon: 1, Mars: 2, Mercury: 9, Jupiter: 18, Venus: 20, Saturn: 50 };
 const COMBUST: Record<string, number> = { Moon: 12, Mars: 17, Mercury: 14, Jupiter: 11, Venus: 10, Saturn: 15 };
 const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
 const MALEFIC = new Set<PlanetName>(["Sun", "Mars", "Saturn", "Rahu", "Ketu"]);
+// Natural enemies (BPHS Ch.3), for the śatru-kṣetra harana (43.9).
+const NAT_ENEMY: Record<string, PlanetName[]> = {
+  Sun: ["Venus", "Saturn"], Moon: [], Mars: ["Mercury"], Mercury: ["Moon"],
+  Jupiter: ["Mercury", "Venus"], Venus: ["Sun", "Moon"], Saturn: ["Sun", "Moon", "Mars"],
+};
+// Graha-dṛṣṭi house offsets (7th universal; Mars 4/8, Jupiter 5/9, Saturn 3/10).
+const ASPECT_OFFSETS = (pl: PlanetName): number[] =>
+  pl === "Mars" ? [6, 3, 7] : pl === "Jupiter" ? [6, 4, 8] : pl === "Saturn" ? [6, 2, 9] : [6];
 
 export interface Ayurdaya {
   pindayu: number;
@@ -33,33 +40,63 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
   const byName = Object.fromEntries(chart.planets.map((p) => [p.planet, p])) as Record<PlanetName, (typeof chart.planets)[number]>;
   const sunLon = byName.Sun.longitude;
 
-  const contributions = SEVEN.map((p) => {
+  // Krūrodaya harana (BPHS 43.12-13): a malefic in the Lagna loses a share set by
+  // the Lagna sphuṭa (its minutes / 21600 = longitude/360); a benefic dṛṣṭi on the
+  // Lagna halves that loss.
+  const lagnaLossFraction = chart.ascendant / 360;
+  const beneficAspectsLagna = (["Jupiter", "Venus", "Mercury"] as PlanetName[]).some(
+    (b) => ASPECT_OFFSETS(b).some((off) => ((byName[b].house - 1 + off) % 12) + 1 === 1)
+  );
+
+  // Per-planet base: exaltation-proportional (BPHS 43.8 / Saravali 40.16 — full at
+  // exaltation, HALF at debilitation), then the astaṅgata (combust → ½, Venus &
+  // Saturn exempt) and śatru-kṣetra (enemy sign, not retrograde → −⅓) haranas.
+  const base = SEVEN.map((p) => {
     const lon = byName[p].longitude;
     const debil = norm360(EXALT_DEG[p] + 180);
-    let years = PINDA_MAX[p] * (sep(lon, debil) / 180); // full at exaltation, 0 at debilitation
-    // Combustion halves the contribution (except the Moon lightly).
-    if (p !== "Sun" && COMBUST[p] && sep(lon, sunLon) <= COMBUST[p]) years /= 2;
-    // A planet in the "invisible" (setting) half — houses 7-12 — loses a third.
-    if (byName[p].house >= 7) years *= 2 / 3;
-    return { planet: p, pinda: Math.round(years * 10) / 10 };
+    let years = PINDA_MAX[p] * (0.5 + sep(lon, debil) / 360);
+    if (p !== "Sun" && p !== "Venus" && p !== "Saturn" && COMBUST[p] && sep(lon, sunLon) <= COMBUST[p]) years /= 2;
+    if (!byName[p].retrograde && NAT_ENEMY[p].includes(SIGN_LORDS[byName[p].signIndex])) years *= 2 / 3;
+    return { planet: p, years, house: byName[p].house };
   });
+
+  // Chakrārdha (Vyāyādi) harana — Saravali 40.11-12: in the visible half a MALEFIC
+  // loses 1/(13−house) of its contribution (12th all, 11th ½, 10th ⅓, 9th ¼, 8th ⅕,
+  // 7th ⅙); a benefic loses half of that; and when several grahas share a house,
+  // only the strongest (largest current contribution) suffers the reduction.
+  const strongestInHouse = new Map<number, PlanetName>();
+  for (const b of base) {
+    if (b.house < 7) continue;
+    const cur = strongestInHouse.get(b.house);
+    if (cur === undefined || b.years > base.find((x) => x.planet === cur)!.years)
+      strongestInHouse.set(b.house, b.planet);
+  }
+  for (const b of base) {
+    if (b.house >= 7 && strongestInHouse.get(b.house) === b.planet)
+      b.years *= 1 - (1 / (13 - b.house)) * (MALEFIC.has(b.planet) ? 1 : 0.5);
+    // Krūrodaya harana (BPHS 43.12-13 / Saravali): a malefic in the Lagna.
+    if (MALEFIC.has(b.planet) && b.house === 1)
+      b.years *= 1 - lagnaLossFraction * (beneficAspectsLagna ? 0.5 : 1);
+  }
+
+  const contributions = base.map((b) => ({ planet: b.planet, pinda: Math.round(Math.max(0, b.years) * 10) / 10 }));
   const pindayu = Math.round(contributions.reduce((a, c) => a + c.pinda, 0) * 10) / 10;
   const naisargayu = Math.round(SEVEN.reduce((a, p) => {
     const debil = norm360(EXALT_DEG[p] + 180);
     return a + NAISARGA[p] * (sep(byName[p].longitude, debil) / 180);
   }, 0) * 10) / 10;
 
-  // Aṁśāyu (BPHS 43.18-22): each contributor's years = (longitude-in-signs × 108)
-  // reduced by multiples of 12, read as Rāśis→years; same combustion / invisible-
-  // half reductions, with exaltation/own-sign trebling.
+  // Aṁśāyu (BPHS 43.18-22): each contributor's years = the navāṁśas gained from
+  // Aries (9 per sign), cast down by multiples of 12 → 0-12 years; same
+  // combustion / visible-half reductions, with exaltation trebling.
   const amsaContrib = (lon: number, house: number, planet?: PlanetName) => {
-    let years = ((lon / 30) * 108) % 12; // 0-12
+    let years = ((lon / 30) * 9) % 12; // navāṁśas (9 per sign) from Aries, 0-12
     if (planet) {
       const debil = norm360(EXALT_DEG[planet] + 180);
       const exaltDist = sep(lon, debil) / 180; // 1 at exaltation
       if (exaltDist > 0.98) years *= 3;        // deep exaltation → treble (dominant rule)
-      else if (planet !== "Sun" && COMBUST[planet] && sep(lon, sunLon) <= COMBUST[planet]) years /= 2;
-      else if (house >= 7) years *= 2 / 3;
+      else if (planet !== "Sun" && planet !== "Venus" && planet !== "Saturn" && COMBUST[planet] && sep(lon, sunLon) <= COMBUST[planet]) years /= 2;
+      else if (house >= 7) years *= 1 - (1 / (13 - house)) * (MALEFIC.has(planet) ? 1 : 0.5); // Chakrārdha (Saravali 40.11-12)
     }
     return years;
   };

@@ -20,12 +20,8 @@
 // nothing and only a genuinely well-testified 3rd is lifted.
 
 import type { Chart } from "./types";
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGN_LORDS, EXALT_SIGN as EXALT, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 const KENDRA = new Set([1, 4, 7, 10]);
 
 // Mars dṛṣṭi: the universal 7th plus its special 4th and 8th aspects.

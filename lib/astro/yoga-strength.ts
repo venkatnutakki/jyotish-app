@@ -6,7 +6,7 @@
 // Only yogas with `planets` populated (yogas.ts) can be graded; the rest are
 // returned ungraded (strengthTier: null) rather than guessed at.
 
-import { SIGN_LORDS, type PlanetName } from "./constants";
+import { SIGN_LORDS, EXALT_SIGN as EXALT, DEBIL_SIGN as DEBIL, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import type { ShadbalaResult } from "./shadbala";
 import type { Yoga } from "./yogas";
 import type { Chart } from "./types";
@@ -65,11 +65,6 @@ export function gradeYogas(yogas: Yoga[], shadbala: ShadbalaResult): GradedYoga[
 // Saturn from combustion penalties, so a combust Venus or Saturn does NOT
 // cancel a yoga it forms.
 
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const DEBIL: Partial<Record<PlanetName, number>> = { Sun: 6, Moon: 7, Mars: 3, Mercury: 11, Jupiter: 9, Venus: 5, Saturn: 0 };
-const OWN: Partial<Record<PlanetName, number[]>> = {
-  Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10],
-};
 const NAT_FRIEND: Partial<Record<PlanetName, PlanetName[]>> = {
   Sun: ["Moon", "Mars", "Jupiter"], Moon: ["Sun", "Mercury"], Mars: ["Sun", "Moon", "Jupiter"],
   Mercury: ["Sun", "Venus"], Jupiter: ["Sun", "Moon", "Mars"], Venus: ["Mercury", "Saturn"],

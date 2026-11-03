@@ -4,7 +4,7 @@
 //   • Vimśopaka Bala — dignity across the divisional charts, weighted, out of 20.
 //   • Bhāva Bala — a composite strength of each house.
 
-import { SIGN_LORDS, SIGNS, type PlanetName } from "./constants";
+import { SIGN_LORDS, SIGNS, EXALT_SIGN as EXALT, MULATRIKONA_SIGN as MOOLA, OWN_SIGNS_BY_PLANET as OWN, type PlanetName } from "./constants";
 import { vargaSign } from "./varga";
 import type { Chart } from "./types";
 import { computeRelationships } from "./sphuta-mks";
@@ -12,9 +12,6 @@ import type { ShadbalaResult } from "./shadbala";
 
 const SEVEN: PlanetName[] = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
 
-const EXALT: Partial<Record<PlanetName, number>> = { Sun: 0, Moon: 1, Mars: 9, Mercury: 5, Jupiter: 3, Venus: 11, Saturn: 6 };
-const MOOLA: Partial<Record<PlanetName, number>> = { Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10 };
-const OWN: Partial<Record<PlanetName, number[]>> = { Sun: [4], Moon: [3], Mars: [0, 7], Mercury: [2, 5], Jupiter: [8, 11], Venus: [1, 6], Saturn: [9, 10] };
 
 // Full BPHS Vimśopaka dignity gradation (own/exalt 20 · great-friend 18 ·
 // friend 15 · neutral 10 · enemy 7 · great-enemy 5) using the compound
