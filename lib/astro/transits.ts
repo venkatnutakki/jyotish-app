@@ -50,10 +50,32 @@ export interface SadeSati {
   upcomingStart: string | null; // next Sade Sati start, when not currently active
 }
 
+export interface PlanetaryReturn {
+  planet: "Jupiter" | "Saturn";
+  natalLongitude: number;
+  date: string;            // next return on/after the query date
+  approxCycleYears: number;
+}
+
 export interface Transits {
   date: string;
   positions: TransitPosition[];
   sadeSati: SadeSati;
+}
+
+// Next Jupiter (~12 yr) and Saturn (~29.5 yr) return — when the transiting
+// planet regains its natal sidereal longitude. Retrograde re-crossings near the
+// return mean the first future crossing is the operative one.
+export function planetaryReturns(natal: Chart, at: Date): PlanetaryReturn[] {
+  const specs: [("Jupiter" | "Saturn"), number, number][] = [["Jupiter", 13, 12], ["Saturn", 31, 29.5]];
+  const out: PlanetaryReturn[] = [];
+  for (const [planet, horizonYrs, cycle] of specs) {
+    const natalLon = natal.planets.find((p) => p.planet === planet)!.longitude;
+    const next = findCrossings(planet, natalLon, at, new Date(at.getTime() + horizonYrs * YEAR_MS))
+      .find((d) => d.getTime() >= at.getTime());
+    if (next) out.push({ planet, natalLongitude: natalLon, date: next.toISOString(), approxCycleYears: cycle });
+  }
+  return out;
 }
 
 const houseFrom = (sign: number, from: number) => ((sign - from + 12) % 12) + 1;

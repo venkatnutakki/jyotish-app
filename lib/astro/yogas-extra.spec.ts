@@ -62,6 +62,31 @@ describe("node-axis and affliction yogas", () => {
   });
 });
 
+describe("Nābhasa Ākṛti + Dala completeness", () => {
+  it("Śakaṭa (Nābhasa): all seven in the 1st & 7th, not mislabelled Nauka", () => {
+    const c = mkChart({ Sun: 0, Mars: 0, Jupiter: 0, Moon: 6, Mercury: 6, Venus: 6, Saturn: 6 });
+    expect(names(c).has("Śakaṭa (Nābhasa) Yoga")).toBe(true);
+    expect(names(c).has("Nauka Yoga")).toBe(false);
+  });
+
+  it("Nauka: seven planets spread across the 1st-7th", () => {
+    const c = mkChart({ Sun: 0, Moon: 1, Mars: 2, Mercury: 3, Jupiter: 4, Venus: 5, Saturn: 6 });
+    expect(names(c).has("Nauka Yoga")).toBe(true);
+  });
+
+  it("Hala: all seven in one non-lagna trinal set (4/8/12)", () => {
+    const c = mkChart({ Sun: 3, Moon: 7, Mars: 11, Mercury: 3, Jupiter: 7, Venus: 11, Saturn: 3 });
+    expect(names(c).has("Hala Yoga")).toBe(true);
+    expect(names(c).has("Śṛṅgāṭaka Yoga")).toBe(false);
+  });
+
+  it("Mālā: three benefics in three distinct angles (not Sarpa)", () => {
+    const c = mkChart({ Jupiter: 0, Venus: 3, Mercury: 6, Sun: 1, Mars: 1, Saturn: 1, Moon: 1 });
+    expect(names(c).has("Mālā (Srik) Yoga")).toBe(true);
+    expect(names(c).has("Sarpa Yoga")).toBe(false);
+  });
+});
+
 describe("Kemadruma bhaṅga (cancellation)", () => {
   // Moon unflanked: all five TARA grahas parked in sign 7, away from the Moon's
   // 2nd/12th/own sign.

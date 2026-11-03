@@ -356,11 +356,55 @@ export function computeYogas(chart: Chart): Yoga[] {
   else if (inRange(4, 7)) yogas.push({ name: "Iṣu (Śara) Yoga", category: "Other", description: "All planets within the 4th-7th — sharp and penetrating; may work in defence, hunting or precision trades." });
   else if (inRange(7, 10)) yogas.push({ name: "Śakti Yoga", category: "Other", description: "All planets within the 7th-10th — capable and enduring, success later in life through effort." });
   else if (inRange(10, 1)) yogas.push({ name: "Daṇḍa Yoga", category: "Other", description: "All planets within the 10th-1st — hardships and wandering; results ripen through perseverance." });
+  // 7-consecutive-house Ākṛti: anchored on a kendra (Nauka/Kūṭa/Chatra/Dhanus),
+  // else from a non-angle (Ardha-Chandra). Tighter 4-house yogas above win first;
+  // require a genuine spread (≥5 occupied houses) so clumped 1&7 / 4&10 charts
+  // stay Śakaṭa/Vihaga rather than masquerading as a 7-house shape.
+  else if (new Set(houses7).size >= 5 && inRange(1, 7)) yogas.push({ name: "Nauka Yoga", category: "Other", description: "All seven planets within the 1st-7th houses — a Nābhasa Nauka (boat): resourceful, earning through water, travel or trade, with fluctuating fortunes." });
+  else if (new Set(houses7).size >= 5 && inRange(4, 10)) yogas.push({ name: "Kūṭa Yoga", category: "Other", description: "All seven planets within the 4th-10th — Kūṭa: a hard, self-reliant nature, frontier or confined work, candour that can turn blunt." });
+  else if (new Set(houses7).size >= 5 && inRange(7, 1)) yogas.push({ name: "Chatra Yoga", category: "Other", description: "All seven planets within the 7th-1st — Chatra (umbrella): protective and helpful to kin, with growing comfort in the middle and later life." });
+  else if (new Set(houses7).size >= 5 && inRange(10, 4)) yogas.push({ name: "Dhanus (Chāpa) Yoga", category: "Other", description: "All seven planets within the 10th-4th — Dhanus (bow): a wanderer, fond of the forest/frontier, skilled with aim and strategy." });
+  else if (new Set(houses7).size >= 5 && [2, 3, 5, 6, 8, 9, 11, 12].some((s) => inRange(s, ((s + 5) % 12) + 1)))
+    yogas.push({ name: "Ardha-Chandra Yoga", category: "Raja", description: "Seven planets in seven consecutive houses from a non-angle — Ardha-Chandra (half-moon): comely, strong-willed, a commander who wins the favour of those in power." });
 
   // ---- Gada Yoga — all planets in two adjacent kendras ----
   const kendraPairs = [[1, 4], [4, 7], [7, 10], [10, 1]];
   if (kendraPairs.some(([a, b]) => houses7.every((h) => h === a || h === b)))
     yogas.push({ name: "Gadā Yoga", category: "Dhana", description: "All planets in two adjacent angles — wealth, ritual merit and steady accumulation of resources." });
+
+  // ---- Remaining Ākṛti (discrete-house patterns) + Dala yogas --------------
+  // Nabhasa classes benefics as Jupiter/Venus/Mercury/Moon and malefics as
+  // Sun/Mars/Saturn (the standard simplification; waxing-Moon/assoc. nuance omitted).
+  const BEN4: PlanetName[] = ["Moon", "Jupiter", "Venus", "Mercury"];
+  const MAL3: PlanetName[] = ["Sun", "Mars", "Saturn"];
+  const hAll = (planets: PlanetName[], set: number[]) => planets.every((n) => set.includes(P[n].house));
+
+  // Śakaṭa (Nābhasa) — all seven in the 1st & 7th only (distinct from the
+  // Moon-6/8/12-from-Jupiter Śakaṭa above).
+  if (houses7.every((h) => h === 1 || h === 7))
+    yogas.push({ name: "Śakaṭa (Nābhasa) Yoga", category: "Other", description: "All seven planets in the 1st and 7th — the Nābhasa cart: fortunes that rise and fall, livelihood through effort and movement." });
+  // Vihaga (Pakṣī) — all seven in the 4th & 10th only.
+  else if (houses7.every((h) => h === 4 || h === 10))
+    yogas.push({ name: "Vihaga (Pakṣī) Yoga", category: "Other", description: "All seven planets in the 4th and 10th — the bird: restless, far-travelling, living by wit and messages." });
+
+  // Vajra — benefics in the 1st/7th, malefics in the 4th/10th.
+  if (hAll([...BEN4, ...MAL3], [1, 4, 7, 10]) && hAll(BEN4, [1, 7]) && hAll(MAL3, [4, 10]))
+    yogas.push({ name: "Vajra Yoga", category: "Raja", description: "Benefics hold the 1st/7th and malefics the 4th/10th — the diamond: happy and brave at the start and end of life, bold in the middle." });
+  // Yava — malefics in the 1st/7th, benefics in the 4th/10th (the inverse).
+  else if (hAll([...BEN4, ...MAL3], [1, 4, 7, 10]) && hAll(MAL3, [1, 7]) && hAll(BEN4, [4, 10]))
+    yogas.push({ name: "Yava Yoga", category: "Other", description: "Malefics hold the 1st/7th and benefics the 4th/10th — the barley: hardship at the start and end, ease and charity through the middle of life." });
+
+  // Hala — all seven in one set of mutual trines other than the lagna-trikoṇa.
+  if ([[2, 6, 10], [3, 7, 11], [4, 8, 12]].some((set) => houses7.every((h) => set.includes(h))))
+    yogas.push({ name: "Hala Yoga", category: "Other", description: "All seven planets in one trinal set away from the Lagna — the plough: a hard-working, agrarian, enduring life, often of modest means." });
+
+  // Dala yogas — the three benefics vs the three malefics occupying the kendras.
+  const benKendras = new Set((["Jupiter", "Venus", "Mercury"] as PlanetName[]).map((n) => P[n].house).filter((h) => KENDRA.includes(h)));
+  if (benKendras.size === 3)
+    yogas.push({ name: "Mālā (Srik) Yoga", category: "Raja", description: "The three natural benefics occupy three different angles — the garland: lasting comforts, pleasures and the support of good people." });
+  const malKendras = new Set((["Sun", "Mars", "Saturn"] as PlanetName[]).map((n) => P[n].house).filter((h) => KENDRA.includes(h)));
+  if (malKendras.size === 3)
+    yogas.push({ name: "Sarpa Yoga", category: "Other", description: "The three natural malefics occupy three different angles — the serpent: a harder, more combative life calling for patience and restraint." });
 
   // ---- Kalānidhi — Jupiter in the 2nd or 5th, with Mercury/Venus ----
   const jupH = P.Jupiter.house;

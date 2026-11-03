@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTransits } from "./transits";
+import { computeTransits, planetaryReturns } from "./transits";
 import { transitLongitude } from "./transit-events";
 import type { Chart } from "./types";
 
@@ -12,6 +12,14 @@ function natalWithMoon(signIdx: number): Chart {
       { planet: "Moon", signIndex: signIdx, longitude: signIdx * 30 + 15, degreeInSign: 15, nakshatraIndex: 0, pada: 1, house: signIdx + 1, retrograde: false },
     ],
   } as unknown as Chart;
+}
+
+function natalWithPlanets(lons: Record<string, number>): Chart {
+  const planets = Object.entries(lons).map(([planet, longitude]) => ({
+    planet, signIndex: Math.floor(longitude / 30), longitude, degreeInSign: longitude % 30,
+    nakshatraIndex: 0, pada: 1, house: Math.floor(longitude / 30) + 1, retrograde: false,
+  }));
+  return { ascendantSignIndex: 0, ascendant: 5, planets } as unknown as Chart;
 }
 
 const at = new Date("2024-06-01T00:00:00Z");
@@ -40,5 +48,22 @@ describe("Sade Sati dating", () => {
     expect(t.sadeSati.active).toBe(false);
     expect(t.sadeSati.span).toBeNull();
     expect(t.sadeSati.upcomingStart).toBeTruthy();
+  });
+});
+
+describe("planetary returns", () => {
+  it("finds the next Jupiter and Saturn returns at their natal longitude", () => {
+    const natal = natalWithPlanets({ Jupiter: 100, Saturn: 200, Moon: 50 });
+    const r = planetaryReturns(natal, at);
+    const jup = r.find((x) => x.planet === "Jupiter");
+    const sat = r.find((x) => x.planet === "Saturn");
+    expect(jup).toBeTruthy();
+    expect(sat).toBeTruthy();
+    for (const x of [jup!, sat!]) {
+      expect(ms(x.date)).toBeGreaterThanOrEqual(at.getTime());
+      const lon = transitLongitude(x.planet, new Date(x.date));
+      const diff = Math.abs(((lon - x.natalLongitude + 540) % 360) - 180);
+      expect(diff, `${x.planet} not at natal longitude`).toBeLessThan(1.5);
+    }
   });
 });
