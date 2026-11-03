@@ -43,28 +43,61 @@ export interface GocharaResult {
   verdict: string;
 }
 
-export function computeGochara(
-  positions: { planet: PlanetName; houseFromMoon: number }[]
-): GocharaResult[] {
-  const houseOf = new Map(positions.map((p) => [p.planet, p.houseFromMoon]));
+export interface GocharaLagnaResult {
+  planet: PlanetName;
+  houseFromLagna: number;
+  benefic: boolean;
+  vedhaBy: PlanetName | null;
+  verdict: string;
+}
+
+interface GocharaCore {
+  planet: PlanetName;
+  house: number;
+  benefic: boolean;
+  vedhaBy: PlanetName | null;
+  verdict: string;
+}
+
+// Core Parāśari gochara + Vedha, from any reference sign. The good-house and
+// Vedha tables are classically stated from the Moon; the same house rules are
+// applied from the Lagna as a recognised secondary frame.
+function gocharaCore(
+  positions: { planet: PlanetName; house: number }[],
+  ref: "Moon" | "Lagna"
+): GocharaCore[] {
   return positions.map((p) => {
-    const h = p.houseFromMoon;
+    const h = p.house;
     const benefic = GOOD_HOUSES[p.planet].includes(h);
-    // Is the (good or bad) result obstructed by a Vedha?
     let vedhaBy: PlanetName | null = null;
     const vh = VEDHA[p.planet]?.[h];
     if (vh) {
       for (const q of positions) {
         if (q.planet === p.planet) continue;
         if (NO_VEDHA.some(([a, b]) => a === p.planet && b === q.planet)) continue;
-        if (q.houseFromMoon === vh) { vedhaBy = q.planet; break; }
+        if (q.house === vh) { vedhaBy = q.planet; break; }
       }
     }
     const verdict = benefic
       ? vedhaBy
-        ? `Favourable transit (${h}th from Moon), but obstructed by ${vedhaBy} (Vedha).`
-        : `Favourable transit — ${h}th from the Moon.`
-      : `Ordinary/testing transit — ${h}th from the Moon${vedhaBy ? `; its difficulty is eased by ${vedhaBy} (Vedha).` : "."}`;
-    return { planet: p.planet, houseFromMoon: h, benefic, vedhaBy, verdict };
+        ? `Favourable transit (${h}th from ${ref}), but obstructed by ${vedhaBy} (Vedha).`
+        : `Favourable transit — ${h}th from the ${ref}.`
+      : `Ordinary/testing transit — ${h}th from the ${ref}${vedhaBy ? `; its difficulty is eased by ${vedhaBy} (Vedha).` : "."}`;
+    return { planet: p.planet, house: h, benefic, vedhaBy, verdict };
   });
+}
+
+export function computeGochara(
+  positions: { planet: PlanetName; houseFromMoon: number }[]
+): GocharaResult[] {
+  return gocharaCore(positions.map((p) => ({ planet: p.planet, house: p.houseFromMoon })), "Moon")
+    .map((r) => ({ planet: r.planet, houseFromMoon: r.house, benefic: r.benefic, vedhaBy: r.vedhaBy, verdict: r.verdict }));
+}
+
+// Secondary gochara read from the Lagna (same house rules as from the Moon).
+export function computeGocharaFromLagna(
+  positions: { planet: PlanetName; houseFromLagna: number }[]
+): GocharaLagnaResult[] {
+  return gocharaCore(positions.map((p) => ({ planet: p.planet, house: p.houseFromLagna })), "Lagna")
+    .map((r) => ({ planet: r.planet, houseFromLagna: r.house, benefic: r.benefic, vedhaBy: r.vedhaBy, verdict: r.verdict }));
 }

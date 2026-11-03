@@ -2,8 +2,30 @@
 
 import { SIGN_ARC, NAKSHATRA_ARC, PLANETS, type PlanetName } from "./constants";
 import { planetSidereal, rahuSidereal } from "./ephemeris";
+import { findCrossings, transitLongitude } from "./transit-events";
 import { norm360 } from "./time";
 import type { Chart } from "./types";
+
+const YEAR_MS = 365.25 * 24 * 3600 * 1000;
+const signedDiff = (a: number, b: number) => ((a - b + 540) % 360) - 180;
+
+// Date Saturn makes its first FORWARD entry into `signIdx` within [from, to],
+// or null. Retrograde re-crossings of the same cusp are skipped (not forward).
+function saturnForwardEntry(signIdx: number, from: Date, to: Date): Date | null {
+  const cusp = signIdx * 30;
+  for (const date of findCrossings("Saturn", cusp, from, to)) {
+    const before = transitLongitude("Saturn", new Date(date.getTime() - 6 * 3600_000));
+    if (signedDiff(cusp, before) > 0) return date; // moving up into the sign
+  }
+  return null;
+}
+
+export interface SadeSatiSpan {
+  start: string;   // Saturn enters 12th from Moon
+  peak: string;    // enters the Moon sign
+  setting: string; // enters 2nd from Moon
+  end: string;     // leaves the 2nd (enters 3rd from Moon)
+}
 
 export interface TransitPosition {
   planet: PlanetName;
@@ -22,6 +44,10 @@ export interface SadeSati {
   moonSign: number;
   description: string;
   smallPanoti: "Kantaka (4th)" | "Ashtama (8th)" | null;
+  // Dated phases (sign-ingress based, approximate to a few weeks near Saturn's
+  // retrograde boundaries). Present whenever the span can be bracketed.
+  span: SadeSatiSpan | null;
+  upcomingStart: string | null; // next Sade Sati start, when not currently active
 }
 
 export interface Transits {
@@ -76,12 +102,35 @@ export function computeTransits(natal: Chart, at: Date): Transits {
   const smallPanoti =
     hFromMoon === 4 ? "Kantaka (4th)" : hFromMoon === 8 ? "Ashtama (8th)" : null;
 
+  const active = phase !== "None";
+  const sign12 = (moonSign + 11) % 12;
+  const sign2 = (moonSign + 1) % 12;
+  const sign3 = (moonSign + 2) % 12;
+  let span: SadeSatiSpan | null = null;
+  let upcomingStart: string | null = null;
+  if (active) {
+    const start = saturnForwardEntry(sign12, new Date(at.getTime() - 8 * YEAR_MS), new Date(at.getTime() + 0.25 * YEAR_MS));
+    if (start) {
+      const windowEnd = new Date(start.getTime() + 9 * YEAR_MS);
+      const peak = saturnForwardEntry(moonSign, start, windowEnd);
+      const setting = saturnForwardEntry(sign2, start, windowEnd);
+      const end = saturnForwardEntry(sign3, new Date(start.getTime() + 0.5 * YEAR_MS), windowEnd);
+      if (peak && setting && end)
+        span = { start: start.toISOString(), peak: peak.toISOString(), setting: setting.toISOString(), end: end.toISOString() };
+    }
+  } else {
+    const next = saturnForwardEntry(sign12, at, new Date(at.getTime() + 30 * YEAR_MS));
+    upcomingStart = next ? next.toISOString() : null;
+  }
+
   const sadeSati: SadeSati = {
-    active: phase !== "None",
+    active,
     phase,
     saturnSign: saturn.signIndex,
     moonSign,
     smallPanoti,
+    span,
+    upcomingStart,
     description:
       phase === "Rising"
         ? "Saturn in the 12th from the Moon — the first phase: rising responsibilities, expenses, and change."

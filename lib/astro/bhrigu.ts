@@ -116,3 +116,8 @@ export const BHRIGU: Partial<Record<PlanetName, Record<number, string>>> = {
     "12": "The native will have few children and suffer from eye troubles. He will go to hell after death. Phaldeepika Rahu-The native will incur lot of wasteful expenditure and indulge in sinful deeds. Ketu-The native will commit sins secretly and incur expenditure for evil purposes. He will also suffer from eye troubles."
   }
 };
+
+// The Bhṛgu node sūtras are written "If Rāhu or Ketu …", so Rāhu shares Ketu's
+// placements. Without this, BHRIGU["Rahu"] is undefined and a Rāhu placement
+// silently gets no Bhṛgu phala at all.
+BHRIGU.Rahu = BHRIGU.Ketu;
