@@ -518,8 +518,22 @@ export function computeLifePredictions(
     //     read only "Favourable" — the celebrity validation showed Jobs/Monroe
     //     undercalled. This bounded term rewards the AGREEMENT of ≥2 distinct
     //     lenses, so ordinary charts (0–1 lens) gain nothing while genuine
-    //     convergence lifts the verdict. Career only.
-    if (area.key === "career") {
+    //     convergence lifts the verdict.
+    //
+    //     Worldly eminence is not a career-only matter: the 9th (bhāgya/rāja)
+    //     and 11th (lābha/gains) carry the same raja/dhana testimonies, and the
+    //     celebrity pass showed those areas undercalled for the same reason the
+    //     career area did. The SAME strict ≥3-lens convergence now applies to
+    //     all three success houses, each judged against its OWN house-lord and
+    //     topic varga — not a loosened gate, the identical one on a wider axis.
+    const EMINENCE: Record<string, { lordName: string; vargaName: string }> = {
+      career: { lordName: "10th-lord", vargaName: "Daśāṃśa (D10)" },
+      fortune: { lordName: "9th-lord", vargaName: "Navāṃśa (D9)" },
+      gains: { lordName: "11th-lord", vargaName: "Rudrāṃśa (D11)" },
+    };
+    if (EMINENCE[area.key]) {
+      const { lordName, vargaName } = EMINENCE[area.key];
+      const eminenceLabel = area.key === "career" ? "Career eminence" : area.key === "fortune" ? "Fortune eminence" : "Gains eminence";
       const strongYoga = (name: string) => (deliveryOf.get(name)?.multiplier ?? 0) >= 1;
       // Each lens is deliberately STRICT so it marks genuine eminence, not a
       // commonplace condition. A first cut with loose lenses (any raja yoga, the
@@ -532,16 +546,16 @@ export function computeLifePredictions(
       const rajaCount = yogas.filter((y) => y.category === "Raja" && strongYoga(y.name)).length;
       const rajaLens = mahapurushaLens || rajaCount >= 2; // a Mahāpuruṣa, or ≥2 rāja yogas
       const dhanaLens = yogas.filter((y) => y.category === "Dhana" && strongYoga(y.name)).length >= 2;
-      // D10 lens: the 10th-lord must be EXALTED or in OWN sign there — not merely
-      // angular or friendly (those are too common to signal eminence).
-      const d10Lens = vargaConfirmation?.dignity === "exalted" || vargaConfirmation?.dignity === "own sign";
-      // 10th-lord lens: clearly strong, not merely passing (1.25× the threshold).
-      const tenthLordSB = shadbala.planets[lordOfPrimary as keyof ShadbalaResult["planets"]];
-      const lordLens = !!tenthLordSB && tenthLordSB.rupas >= tenthLordSB.required * 1.25;
+      // Varga lens: the house-lord must be EXALTED or in OWN sign in the topic's
+      // divisional chart — not merely angular or friendly (too common to signal).
+      const vargaLens = vargaConfirmation?.dignity === "exalted" || vargaConfirmation?.dignity === "own sign";
+      // Lord lens: clearly strong, not merely passing (1.25× the threshold).
+      const primLordSB = shadbala.planets[lordOfPrimary as keyof ShadbalaResult["planets"]];
+      const lordLens = !!primLordSB && primLordSB.rupas >= primLordSB.required * 1.25;
       const lensNames = [
         rajaLens && "multiple/Mahāpuruṣa-grade yogas",
-        d10Lens && "the 10th-lord exalted or own in the Daśāṃśa (D10)",
-        lordLens && "the 10th-lord markedly strong in Ṣaḍbala",
+        vargaLens && `the ${lordName} exalted or own in the ${vargaName}`,
+        lordLens && `the ${lordName} markedly strong in Ṣaḍbala`,
         dhanaLens && "two or more delivered Dhana yogas",
       ].filter(Boolean) as string[];
       // Require THREE independent strong testimonies to converge; a small bonus.
@@ -549,7 +563,7 @@ export function computeLifePredictions(
         const bonus = Math.min((lensNames.length - 2) * 0.4, 0.8);
         score += bonus;
         factors.push(
-          `Career eminence: ${lensNames.length} strong, independent testimonies of worldly success converge — ${lensNames.join("; ")}. Such convergence is uncommon and marks genuine eminence, so the reading is lifted.`
+          `${eminenceLabel}: ${lensNames.length} strong, independent testimonies of worldly success converge — ${lensNames.join("; ")}. Such convergence is uncommon and marks genuine eminence, so the reading is lifted.`
         );
       }
     }
