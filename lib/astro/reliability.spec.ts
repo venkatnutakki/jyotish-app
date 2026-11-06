@@ -348,7 +348,7 @@ describe("per-area verdict distribution — the guard the aggregate one hides", 
       }
     }
     console.log("  per-area verdict distribution:");
-    const SUCCESS = new Set(["career", "wealth"]);
+    const SUCCESS = new Set(["career", "wealth", "fortune", "gains"]);
     for (const [key, m] of per) {
       const tot = [...m.values()].reduce((a, c) => a + c, 0);
       const rows = [...m.entries()].sort((a, b) => b[1] - a[1]);

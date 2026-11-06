@@ -37,4 +37,18 @@ describe("Āyurdāya band follows the chosen method", () => {
       expect(years, `${b.year}: chosen ${a.chosen}=${years} must sit in ${a.band}`).toBeLessThanOrEqual(hi);
     }
   });
+
+  it("range brackets all three methods and flags wide divergence as uncertain", () => {
+    for (const b of CHARTS) {
+      const a = computeAyurdaya(computeChart(b));
+      const [lo, hi] = a.range;
+      for (const y of [a.pindayu, a.naisargayu, a.amsayu]) {
+        expect(y).toBeGreaterThanOrEqual(lo);
+        expect(y).toBeLessThanOrEqual(hi);
+      }
+      expect(a.uncertain).toBe(hi - lo > 32);
+      // an uncertain span must say so in the note (honest, not false-confident)
+      if (a.uncertain) expect(a.note).toMatch(/UNCERTAIN/);
+    }
+  });
 });

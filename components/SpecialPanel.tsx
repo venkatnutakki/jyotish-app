@@ -45,7 +45,7 @@ interface Details {
   mks?: { planet: string; inMks: boolean; house: number; mksHouse: number }[];
   relationships?: { planet: string; relations: Record<string, string> }[];
   prastara?: { planet: string; rows: { contributor: string; bindus: number[] }[]; totals: number[] }[];
-  ayurdaya?: { pindayu: number; naisargayu: number; amsayu?: number; chosen?: string; band: string; marakas: string[]; note: string };
+  ayurdaya?: { pindayu: number; naisargayu: number; amsayu?: number; chosen?: string; band: string; range?: [number, number]; uncertain?: boolean; marakas: string[]; note: string };
   balarishta?: { present: boolean; cancelled: boolean; summary: string };
   femaleIndications?: { marriage: string; progeny: string; character: string };
   elements?: { dominant: string; ruler: string; trait: string; balance: { element: string; planets: string; strong: boolean }[] };
@@ -225,6 +225,11 @@ export function SpecialPanel({ birth }: { birth: BirthData }) {
               <div className="mt-0.5 text-sm font-semibold text-amber-100">{d.ayurdaya.band}</div>
             </div>
           </div>
+          {d.ayurdaya.uncertain && (
+            <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-xs text-amber-100/80">
+              ⚠ The three methods disagree widely{d.ayurdaya.range && <> ({d.ayurdaya.range[0]}–{d.ayurdaya.range[1]} yrs)</>}, so this band is <b>uncertain</b>. Longevity is the least reliable computation in the śāstra — read it only alongside the cross-checks, never alone.
+            </p>
+          )}
           <p className="mt-2 text-xs text-amber-100/55">
             Māraka (critical-period) planets: <b className="text-amber-100">{d.ayurdaya.marakas.join(", ")}</b>.
             {d.ayurdaya.chosen && <> By the strength of Lagna/Sun/Moon the <b className="text-amber-100">{d.ayurdaya.chosen}</b> method is preferred.</>} These are classical bands, not literal ages.

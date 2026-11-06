@@ -31,6 +31,11 @@ export interface Ayurdaya {
   amsayu: number;
   band: "Alpāyu (short)" | "Madhyāyu (middle)" | "Pūrṇāyu (full)";
   chosen: string;
+  /** Spread across the three methods [min, max] — the honest uncertainty. */
+  range: [number, number];
+  /** True when the methods diverge by more than a band's width (>32 yrs): the
+   *  single chosen band is then not trustworthy and is flagged as such. */
+  uncertain: boolean;
   contributions: { planet: PlanetName; pinda: number }[];
   marakas: PlanetName[];
   note: string;
@@ -107,14 +112,15 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
   // Choice of method (BPHS 43.30): whichever of Lagna / Sun / Moon is strongest →
   // Aṁśāyu / Piṇḍāyu / Naisargāyu respectively. Strength approximated by each
   // reference's own occupied-sign dignity (exalt/own > friend > neutral > debil).
-  const dignity = (lon: number, ref: "lagna" | PlanetName) => {
-    const sign = Math.floor(lon / 30);
-    if (ref === "lagna") return 2; // the ascendant's own sign is its seat
+  const dignity = (lon: number, ref: PlanetName) => {
     const debil = norm360(EXALT_DEG[ref] + 180);
     return sep(lon, debil) / 180; // 0 (debil) … 1 (exalt)
   };
+  // "Strength of the Lagna" for the Aṁśāyu branch is read through its LORD's
+  // dignity, not a flat constant — the lagna has no graha of its own to weigh.
+  const lagnaLord = SIGN_LORDS[chart.ascendantSignIndex];
   const strengths: { who: string; method: string; s: number }[] = [
-    { who: "Lagna", method: "Aṁśāyu", s: 0.6 },
+    { who: "Lagna", method: "Aṁśāyu", s: dignity(byName[lagnaLord].longitude, lagnaLord) },
     { who: "Sun", method: "Piṇḍāyu", s: dignity(byName.Sun.longitude, "Sun") },
     { who: "Moon", method: "Naisargāyu", s: dignity(byName.Moon.longitude, "Moon") },
   ].sort((a, b) => b.s - a.s);
@@ -123,6 +129,12 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
   // Piṇḍāyu — else band and the "preferred" note disagree for a Naisarga/Aṁśa pick.
   const chosenYears = chosen === "Piṇḍāyu" ? pindayu : chosen === "Naisargāyu" ? naisargayu : amsayu;
   const band = chosenYears < 32 ? "Alpāyu (short)" : chosenYears <= 70 ? "Madhyāyu (middle)" : "Pūrṇāyu (full)";
+  // Honest uncertainty: when the three methods disagree by more than a whole
+  // band (>32 yrs — Monroe's span is 28–90), the single chosen band is not
+  // trustworthy. Surface the spread instead of a false-confident number.
+  const vals = [pindayu, naisargayu, amsayu];
+  const range: [number, number] = [Math.min(...vals), Math.max(...vals)];
+  const uncertain = range[1] - range[0] > 32;
 
   // Marakas: lords of the 2nd & 7th, and planets occupying them.
   const asc = chart.ascendantSignIndex;
@@ -131,8 +143,8 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
   const marakas = [...new Set<PlanetName>([l2, l7, ...inMaraka].filter((x) => x !== "Rahu" && x !== "Ketu"))];
 
   return {
-    pindayu, naisargayu, amsayu, band, chosen, contributions, marakas,
-    note: `Piṇḍāyu ≈ ${pindayu}, Naisargāyu ≈ ${naisargayu}, Aṁśāyu ≈ ${amsayu} yrs — the three classical methods. By the strength of Lagna/Sun/Moon, the ${chosen} estimate is preferred here. Māraka (critical-period) planets: ${marakas.join(", ")}. Indicative bands, not literal life-spans.`,
+    pindayu, naisargayu, amsayu, band, chosen, range, uncertain, contributions, marakas,
+    note: `Piṇḍāyu ≈ ${pindayu}, Naisargāyu ≈ ${naisargayu}, Aṁśāyu ≈ ${amsayu} yrs — the three classical methods. By the strength of Lagna/Sun/Moon, the ${chosen} estimate is preferred here (${chosenYears} yrs → ${band}).${uncertain ? ` The methods disagree widely (${range[0]}–${range[1]} yrs), so this band is UNCERTAIN — longevity is the least reliable computation in the śāstra and is cross-checked, never read alone.` : ""} Māraka (critical-period) planets: ${marakas.join(", ")}. Indicative bands, not literal life-spans.`,
   };
 }
 
