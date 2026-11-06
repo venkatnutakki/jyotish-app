@@ -54,7 +54,7 @@ export const BPHS_LORD_IN_HOUSE: Record<number, Record<number, string>> = {
     6: "If Bandhu's Lord is in Ari Bhava, the native will be devoid of maternal happiness, be given to anger, be a thief and a conjurer, be independent in action and be indisposed.",
     7: "If Bandhu's Lord is in Yuvati Bhava, the native will be endowed with a high degree of education, will sacrifice his patrimony and be akin to the dumb in an assembly.",
     8: "If Bandhu's Lord is in Randhra Bhava, the native will be devoid of domestic and other comforts, will not enjoy much parental happiness and be equal to a neuter.",
-    9: "If Bandhu's Lord is in Dharma Bhava, the native will be dear to one and all, be devoted to God, be virtuous, honourable and endowed with every land of happiness.",
+    9: "If Bandhu's Lord is in Dharma Bhava, the native will be dear to one and all, be devoted to God, be virtuous, honourable and endowed with every kind of happiness.",
     10: "If Bandhu's Lord is in Karma Bhava, the native will enjoy royal honours, be an alchemist, be extremely pleased, will enjoy pleasures and will conquer his five senses.",
     11: "If Bandhu's Lord is in Labha Bhava, the native will have fear of secret disease, he will be liberal, virtuous, charitable and helpful to others.",
     12: "If Bandhu's Lord is in Vyaya Bhava the native will be devoid of domestic and other comforts, will have vices and be foolish and indolent.",
