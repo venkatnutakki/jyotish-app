@@ -49,4 +49,16 @@ describe("classical data integrity", () => {
       }
     }
   });
+
+  it("BPHS_LORD_IN_HOUSE: free of the OCR/transliteration artifacts that were cleaned", () => {
+    // Guards against a re-extraction re-introducing "Lagns Lord" / "Karm Bhava"
+    // etc. The possessive must read "Lagna's Lord"; house names keep the final a.
+    const ARTIFACT = /\b(Lagns|Sahajs|Bandhus|Putrs|Dharms|Karms|Labhs|Vyayas|Randhrs|Dhans|Ripus|Yuvatis) (Lord|Bhava)|\b(Karm|Dharm|Randhr|Labh|Sahaj|Putr|Dhan) Bhava\b|vttll/;
+    for (let lord = 1; lord <= 12; lord++) {
+      for (let house = 1; house <= 12; house++) {
+        const cell = BPHS_LORD_IN_HOUSE[lord]?.[house];
+        if (cell) expect(ARTIFACT.test(cell), `lord ${lord} in ${house} has an OCR artifact: ${cell.slice(0, 50)}`).toBe(false);
+      }
+    }
+  });
 });
