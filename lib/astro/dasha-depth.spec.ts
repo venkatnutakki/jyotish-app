@@ -84,6 +84,16 @@ describe("activeDashaChain — structure", () => {
     expect(a).toEqual(b);
   });
 
+  it("wraps a date past the 120-yr cycle instead of returning empty", () => {
+    // A 1879 chart read in 2026 is past its single natal cycle; Vimśottarī
+    // repeats, so the lookup must resolve (not come back empty).
+    const old = computeChart({ ...REF, year: 1879, month: 3, day: 14 } as BirthData);
+    const oldDasha = vimshottariDasha(old);
+    const chain = activeDashaChain(oldDasha, utc(2026, 7, 22), 4);
+    expect(chain.length).toBeGreaterThanOrEqual(2);
+    expect(chain[0].level).toBe("maha");
+  });
+
   it("holds the classical sub-period proportion at every level", () => {
     // Each level's length must equal parentYears × lordYears / 120 — the same
     // proportional rule that defines antardaśā, applied all the way down.

@@ -104,8 +104,6 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
   for (const p of SEVEN) amsayu += amsaContrib(byName[p].longitude, byName[p].house, p);
   amsayu = Math.round(amsayu * 10) / 10;
 
-  const band = pindayu < 32 ? "Alpāyu (short)" : pindayu <= 70 ? "Madhyāyu (middle)" : "Pūrṇāyu (full)";
-
   // Choice of method (BPHS 43.30): whichever of Lagna / Sun / Moon is strongest →
   // Aṁśāyu / Piṇḍāyu / Naisargāyu respectively. Strength approximated by each
   // reference's own occupied-sign dignity (exalt/own > friend > neutral > debil).
@@ -121,6 +119,10 @@ export function computeAyurdaya(chart: Chart): Ayurdaya {
     { who: "Moon", method: "Naisargāyu", s: dignity(byName.Moon.longitude, "Moon") },
   ].sort((a, b) => b.s - a.s);
   const chosen = strengths[0].method;
+  // Band must reflect the CHOSEN method's years (BPHS prefers one), not always
+  // Piṇḍāyu — else band and the "preferred" note disagree for a Naisarga/Aṁśa pick.
+  const chosenYears = chosen === "Piṇḍāyu" ? pindayu : chosen === "Naisargāyu" ? naisargayu : amsayu;
+  const band = chosenYears < 32 ? "Alpāyu (short)" : chosenYears <= 70 ? "Madhyāyu (middle)" : "Pūrṇāyu (full)";
 
   // Marakas: lords of the 2nd & 7th, and planets occupying them.
   const asc = chart.ascendantSignIndex;
