@@ -72,8 +72,20 @@ function activeChild(parentLord: string, parentStart: Date, parentYears: number,
  * deeper tree needs to be precomputed or stored.
  */
 export function activeDashaChain(dasha: DashaPeriod[], at: Date, maxDepth = 4): DashaLink[] {
-  const t = at.getTime();
   const chain: DashaLink[] = [];
+  if (dasha.length === 0) return chain;
+
+  // Vimśottarī repeats exactly every 120 yrs. For a date past the single natal
+  // cycle (e.g. a historical chart read "now"), wrap it back into the cycle so
+  // the lookup resolves instead of returning empty. Returned dates are then the
+  // cycle-1 equivalents — nominal, which is all they can be for a 2nd cycle.
+  // ponytail: wrap the query, don't materialise a 2nd cycle just to index it.
+  const cycleStart = dasha[0].start.getTime();
+  const cycleEnd = dasha[dasha.length - 1].end.getTime();
+  let t = at.getTime();
+  if (t >= cycleEnd && cycleEnd > cycleStart) {
+    t = cycleStart + ((t - cycleStart) % (cycleEnd - cycleStart));
+  }
 
   const maha = dasha.find((d) => d.start.getTime() <= t && t < d.end.getTime());
   if (!maha) return chain;
